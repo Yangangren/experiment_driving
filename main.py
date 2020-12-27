@@ -1,8 +1,15 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+# =====================================
+# @Time    : 2020/12/27
+# @Author  : Yangang Ren (Tsinghua Univ.)
+# @FileName: Online application of trained network.py
+# =====================================
+
 from __future__ import print_function
-import numpy as np
-import torch
-import torch.multiprocessing as mp
-from torch.multiprocessing import Process, Queue
+import multiprocessing as mp
+from multiprocessing import Process, Queue
 import os
 import time
 from publisher import Publisher
@@ -11,13 +18,13 @@ from subscriber_radar import Subscriber_Radar
 from plot_online import Plot
 
 
-def publisher_agent(shared_list,Info_List,State_Other_List,receive_index,if_save,if_radar,lock):
-    publisher_=Publisher(shared_list,Info_List,State_Other_List,receive_index,if_save,if_radar,lock)
+def publisher_agent(shared_list, Info_List, State_Other_List,receive_index,if_save,if_radar,lock):
+    publisher_ = Publisher(shared_list,Info_List, State_Other_List,receive_index,if_save,if_radar,lock)
     time.sleep(0.5)
     publisher_.run()
 
 
-def subscriber_agent(shared_list,Info_List,receive_index,lock):
+def subscriber_agent(shared_list, Info_List, receive_index,lock):
     subscriber_ = Subscriber(shared_list,Info_List,receive_index,lock)
     subscriber_.run()
 
@@ -48,7 +55,7 @@ def main():
     # else:
     #     if_radar = False
     if_save = True
-    if_radar = True
+    if_radar = True               # True: with digital twin system
 
     shared_list = mp.Manager().list([0]*4)
     Info_List = mp.Manager().list([0.0]*8)

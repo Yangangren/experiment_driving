@@ -7,10 +7,12 @@ import os
 from datetime import datetime
 import numpy as np
 
+
 def mkdir(path):
     folder = os.path.exists(path)
-    if not folder:  # 判断是否存在文件夹如果不存在则创建为文件夹
+    if not folder:         # 判断是否存在文件夹如果不存在则创建为文件夹
         os.makedirs(path)  # makedirs 创建文件时如果路径不存在会创建这个路径
+
 
 class Publisher():
     def __init__(self,shared_list,Info_List,State_Other_List,receive_index,if_save,if_radar,lock):
@@ -35,7 +37,7 @@ class Publisher():
         self.step = 0
         self.if_save = if_save
         self.if_radar = if_radar
-        self.save_path = '/home/fawang_troy_zhang/Desktop/record/' + datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.save_path = './record/' + datetime.now().strftime("%Y%m%d_%H%M%S")
         mkdir(self.save_path)
         self.x_next = [21277020.000, 21277060.000]
         self.y_next = [3447700.252461, 3447702.714812]
@@ -58,9 +60,9 @@ class Publisher():
                     self.read_index_old = shared_index
                     self.Time = []
                     if time.time()-time_start > 0.1:
-                        print("time!!!!!",time.time()-time_start)
+                        print("time!!!!!", time.time()-time_start)
                     else:
-                        print("time:",time.time()-time_start)
+                        print("time:", time.time()-time_start)
                     time_start = time.time()
                     with self.lock:
                         State_ego = self.shared_list[0].copy()
@@ -68,14 +70,13 @@ class Publisher():
                         time_receive_can= self.shared_list[2]
                         if self.if_radar:
                             time_receive_radar = self.shared_list[3]
-
                         else:
-                            time_receive_radar=0
+                            time_receive_radar = 0
 
                     self.time_in = time.time()
                     self.E2E.input(State_ego)
 
-                    if self.if_radar:
+                    if self.if_radar:   # todo；若存在数字孪生系统，交通流直接读取
                         with self.lock:
                             State_Other = self.State_Other_List[0].copy()
                             # print(State_Other)
@@ -93,8 +94,9 @@ class Publisher():
                     else:
                         if self.step != 0:
                             self.t_interval = time.time()-time_last
+                            # todo:手动产生交通流
                             self.x_next, self.y_next, self.v_next,self.heading_next = self.E2E.generate_flow(self.t_interval)
-                        delta_heading_next = np.zeros(len(self.heading_next),dtype=np.float32).tolist()
+                        delta_heading_next = np.zeros(len(self.heading_next), dtype=np.float32).tolist()
 
                     time_last = time.time()
 

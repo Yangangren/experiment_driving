@@ -4,10 +4,12 @@ import time
 import math
 import numpy as np
 
+
 def load_map():
+    # todo：map里面的数据是大地坐标系，角度是朝东的道路和北向的夹角
     lane_width = 3.5
     a = np.loadtxt('./map/roadMap_2.txt')
-    road_info = a[:,1:4]
+    road_info = a[:, 1:4]
     for i in range(len(road_info[:,0])):
         if road_info[i,2] < 260:
             stop_point = i
@@ -28,28 +30,29 @@ def load_map():
     road_angle_rad = (road_angle - 270)*math.pi/180
 
     lane_list[0][:,0] = lane_center_list[0][:,0] + 0.5*lane_width*np.sin(road_angle_rad)
-    lane_list[0][:,1] =lane_center_list[0][:,1]+ 0.5*lane_width*np.cos(road_angle_rad)
+    lane_list[0][:,1] = lane_center_list[0][:,1] + 0.5*lane_width*np.cos(road_angle_rad)
 
-    lane_list[1][:,0] = lane_center_list[0][:,0] - 0.5*lane_width*np.sin(road_angle_rad)
-    lane_list[1][:,1] =lane_center_list[0][:,1] - 0.5*lane_width*np.cos(road_angle_rad)
+    lane_list[1][:,0] = lane_center_list[0][:, 0] - 0.5*lane_width*np.sin(road_angle_rad)
+    lane_list[1][:,1] = lane_center_list[0][:, 1] - 0.5*lane_width*np.cos(road_angle_rad)
 
-    lane_list[2][:,0] = lane_center_list[0][:,0] - 1.5*lane_width*np.sin(road_angle_rad)
-    lane_list[2][:,1] = lane_center_list[0][:,1] - 1.5*lane_width*np.cos(road_angle_rad)
+    lane_list[2][:,0] = lane_center_list[0][:, 0] - 1.5*lane_width*np.sin(road_angle_rad)
+    lane_list[2][:,1] = lane_center_list[0][:, 1] - 1.5*lane_width*np.cos(road_angle_rad)
 
-    lane_center_list[1][:,0] = lane_center_list[0][:,0] - 1.*lane_width*np.sin(road_angle_rad)
-    lane_center_list[1][:,1] = lane_center_list[0][:,1] - 1.*lane_width*np.cos(road_angle_rad)
+    lane_center_list[1][:,0] = lane_center_list[0][:, 0] - 1.*lane_width*np.sin(road_angle_rad)
+    lane_center_list[1][:,1] = lane_center_list[0][:, 1] - 1.*lane_width*np.cos(road_angle_rad)
 
     return lane_list, lane_center_list, road_angle
 
+
 class Subscriber():
-    def __init__(self,shared_list,Info_List,receive_index,lock):
+    def __init__(self, shared_list, Info_List, receive_index, lock):
         self.shared_list = shared_list
         self.Info_List = Info_List
         self.receive_index_shared = receive_index
         self.receive_index = 0
         self.time_start_can = 0.
         self.time_start_gps = 0.
-        self.lock=lock
+        self.lock = lock
         self.lane_list, self.lane_center_list, self.road_angle = load_map()
         self.position_index = 0
         self.x_bias = 1.4
@@ -68,9 +71,10 @@ class Subscriber():
         self.socket_gps.connect("tcp://127.0.0.1:6666")  # 上车
         self.socket_gps.setsockopt(zmq.SUBSCRIBE, "".encode('utf-8'))  # 接收所有消息
 
-    def _get_modified_X_Y(self,ego_x,ego_y,ego_angle):
+    # todo:RTK传来的自车位置不是在车辆正中心（车辆后轴）,需要换算到车辆的正中心
+    def _get_modified_X_Y(self, ego_x, ego_y, ego_angle):
         for i in range(max(self.position_index-100,0),len(self.road_angle)-1,1):
-            if ego_x<=self.lane_list[1][i, 0] and ego_x>=self.lane_list[1][i+1, 0]:
+            if ego_x <= self.lane_list[1][i, 0] and ego_x >= self.lane_list[1][i+1, 0]:
                 self.position_index = i
                 break
             if i == len(self.road_angle)-2:
@@ -80,7 +84,7 @@ class Subscriber():
         # print("math.cos(delta_angle*math.pi/180)",-math.cos(delta_angle*math.pi/180))
         y_modified = ego_y - self.x_bias * math.sin(delta_angle*math.pi/180)
         # print("math.sin(delta_angle*math.pi/180",-math.sin(delta_angle*math.pi/180))
-        return  x_modified,y_modified
+        return x_modified, y_modified
 
     def run(self):
         State_ego = {}
@@ -108,6 +112,7 @@ class Subscriber():
                 data_gps = self.socket_gps.recv(zmq.NOBLOCK).decode('utf-8')
                 if (data_gps != b'null\n'):
                     GpsJson = json.loads(data_gps)
+                    # todo: gps的经纬度数据经高斯投影在大地坐标系下的x,y
                     x_rear_axle = GpsJson["Gps"]["Gps"]["GaussX"]
                     y_rear_axle = 0.1+GpsJson["Gps"]["Gps"]["GaussY"]
                     State_ego['Heading'] = 1. + GpsJson["Gps"]["Gps"]["Heading"]
@@ -124,12 +129,16 @@ class Subscriber():
                     self.time_start_gps = time.time()
             except zmq.ZMQError:
                 pass
+
             try:
                 data_can = self.socket_can.recv(zmq.NOBLOCK).decode('utf-8')
                 CanJson = json.loads(data_can)
                 if CanJson["CAN"]["VehicleStatues"]["IsValid"] == True:
+                    # todo: 车辆实际执行的动作大小，由于车辆的物理响应，实际执行动作和网络输出动作可能不同，也可能存在时延
                     State_ego['VehicleSPeedAct'] = CanJson["CAN"]["VehicleStatues"]["VehicleSpeedAct"]
+                    # todo: 车轮转角的零位存在偏差，单位（°），实际需要测试标定，方法是给车发送0的控制量，看看实际反馈是多少
                     State_ego['SteerAngleAct'] = -1.7 + CanJson["CAN"]["VehicleStatues"]["SteerAngleAct"]
+
                     State_ego['AutoGear'] = CanJson["CAN"]["VehicleStatues"]["AutoGear"]
                     State_ego['VehicleMode'] = CanJson["CAN"]["VehicleStatues"]["VehicleMode"]
                     State_ego['Throttle'] = CanJson["CAN"]["VehicleStatues"]["Throttle"]
@@ -138,12 +147,17 @@ class Subscriber():
                     self.time_start_can = time.time()
             except zmq.ZMQError:
                 pass
-            self.receive_index +=1
+            self.receive_index += 1
+
             with self.lock:
                 self.shared_list[0] = State_ego.copy()
                 self.shared_list[1] = time_receive_gps
                 self.shared_list[2] = time_receive_can
             self.receive_index_shared.value = self.receive_index
+            # todo: 看下接收can和gps的时间是不是很大，存不存在延迟
             if time_receive_can > 0.1 or time_receive_gps > 0.1:
-                print("Subscriber!!!!!!!!!!!1",time_receive_can,time_receive_gps)
+                print("Subscriber!!!!!!!!!!!1", time_receive_can, time_receive_gps)
 
+
+if __name__ == '__main__':
+    load_map()
