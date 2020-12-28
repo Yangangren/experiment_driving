@@ -8,6 +8,7 @@ import os
 import matplotlib.patches as mpathes
 import math
 
+
 class Plot():
     def __init__(self,Info_List,lock):
         self.Info_List = Info_List

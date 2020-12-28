@@ -12,25 +12,34 @@ import multiprocessing as mp
 from multiprocessing import Process, Queue
 import os
 import time
-from publisher import Publisher
-from subscriber import Subscriber
-from subscriber_radar import Subscriber_Radar
+from controller import Controller
+from subscriber_can import SubscriberCan
+from subscriber_gps import SubscriberGps
+from subscriber_radar import SubscriberRadar
+from traffic import Traffic
 from plot_online import Plot
 
 
-def publisher_agent(shared_list, Info_List, State_Other_List,receive_index,if_save,if_radar,lock):
-    publisher_ = Publisher(shared_list,Info_List, State_Other_List,receive_index,if_save,if_radar,lock)
+def controller_agent(shared_list, Info_List, State_Other_List,receive_index,if_save,if_radar,lock):
+    publisher_ = Controller(shared_list,Info_List, State_Other_List,receive_index,if_save,if_radar,lock)
     time.sleep(0.5)
     publisher_.run()
 
 
-def subscriber_agent(shared_list, Info_List, receive_index,lock):
-    subscriber_ = Subscriber(shared_list,Info_List,receive_index,lock)
+def subscriber_can_agent(shared_list, Info_List, receive_index,lock):
+    subscriber_ = SubscriberCan(shared_list,Info_List,receive_index,lock)
     subscriber_.run()
 
+def subscriber_gps_agent(shared_list, Info_List, receive_index, lock):
+    subscriber_ = SubscriberGps(shared_list, Info_List, receive_index, lock)
+    subscriber_.run()
+
+def traffic(shared_list, Info_List, receive_index, lock):
+    subscriber_ = Traffic(shared_list, Info_List, receive_index, lock)
+    subscriber_.run()
 
 def subscriber_radar_agent(shared_list,State_Other_List,lock):
-    subscriber_radar = Subscriber_Radar(shared_list,State_Other_List,lock)
+    subscriber_radar = SubscriberRadar(shared_list,State_Other_List,lock)
     subscriber_radar.run()
 
 
@@ -66,6 +75,9 @@ def main():
     procs.append(Process(target=subscriber_agent, args=(shared_list, Info_List, receive_index, lock)))
     if if_radar:
         procs.append(Process(target=subscriber_radar_agent, args=(shared_list, State_Other_List, lock)))
+    else:
+        procs.append(Process(target=subscriber_radar_agent, args=(shared_list, State_Other_List, lock)))
+
     procs.append(Process(target=publisher_agent, args=(shared_list,Info_List,State_Other_List,receive_index,if_save,if_radar,lock)))
 
     procs.append(Process(target=plot_agent, args=(Info_List,lock)))

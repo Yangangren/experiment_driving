@@ -14,7 +14,7 @@ def mkdir(path):
         os.makedirs(path)  # makedirs 创建文件时如果路径不存在会创建这个路径
 
 
-class Publisher():
+class Controller():
     def __init__(self,shared_list,Info_List,State_Other_List,receive_index,if_save,if_radar,lock):
         self.Decision = {}
         self.State_ego = {}
