@@ -77,7 +77,7 @@ def built_parser():
 def load_map():
     lane_width = 3.5
     a = np.loadtxt('./map/roadMap_2.txt')
-    road_info = a[:,1:4]
+    road_info = a[:, 1:4]
     for i in range(len(road_info[:,0])):
         if road_info[i,2] < 260:
             stop_point = i

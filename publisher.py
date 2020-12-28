@@ -15,7 +15,7 @@ def mkdir(path):
 
 
 class Publisher():
-    def __init__(self,shared_list,Info_List,State_Other_List,receive_index,if_save,if_radar,lock):
+    def __init__(self,shared_list, Info_List,State_Other_List,receive_index,if_save,if_radar,lock):
         self.Decision = {}
         self.State_ego = {}
         self.State_other = {}

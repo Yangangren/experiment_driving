@@ -3,6 +3,7 @@ import json
 import time
 import numpy as np
 
+
 class Subscriber_Radar():
     def __init__(self,shared_list,State_Other_List,lock):
         self.shared_list = shared_list
