@@ -4,7 +4,7 @@ import time
 import numpy as np
 
 
-class Subscriber_Radar():
+class SubscriberRadar():
     def __init__(self,shared_list,State_Other_List,lock):
         self.shared_list = shared_list
         self.State_Other_List = State_Other_List
