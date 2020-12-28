@@ -102,9 +102,12 @@ class Publisher():
 
                     front_steer, v = self.E2E.step(self.x_next, self.y_next, self.v_next, delta_heading_next)
 
+                    # flag [0, 0]: 滑行状态
                     control = {'Decision': {
-                        'Control': {'VehicleSpeedAim': 20/3.6, 'SteerAngleAim': np.float64(front_steer+1.7),
+                        'Control': {'Deceleration': 20, 'Torque': 350, 'Dec_flag': 0, 'Tor_flag': 1,
+                                    'SteerAngleAim': np.float64(front_steer+1.7),
                                     'VehicleGearAim': 1, 'IsValid': True}}}
+
                     json_cotrol = json.dumps(control)
                     self.socket_pub.send(json_cotrol.encode('utf-8'))
                     self.time_decision = time.time() - self.time_in
@@ -165,3 +168,7 @@ class Publisher():
                             file_handle.write("element_ori_real:" + str(element_ori_real) + '\n')
                             file_handle.write("element_ori:" + str(element_ori) + '\n')
 
+# torque maximum: 1023 Nm
+# factor: 1
+# decelaration maximun: -5m/s^2
+# factor: 0.05

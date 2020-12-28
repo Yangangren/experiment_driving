@@ -418,7 +418,6 @@ class Application():
         self.step+=1
         #print(time.time()-time_init)
 
-
         return self.u
 
 
@@ -467,7 +466,7 @@ class E2E():
         x_next,y_next,v_next,heading_next = self.appl._get_next_vehicle(t_interval)
         return x_next,y_next,v_next, heading_next
 
-    def input(self,info):
+    def input(self, info):
         self.ego_x = info['GaussX']
         self.ego_y = info['GaussY']
         self.ego_v = info['GpsSpeed']
@@ -506,11 +505,12 @@ def main():
      while True:
          time1=time.time()
          e2e.input(ego)
-         angle,acc=e2e.step(x=x_next,y=y_next,v=v_next, heading=0*heading)
+         angle,acc=e2e.step(x=x_next,y=y_next,v=v_next, heading=heading)
+         # angle,acc=e2e.step(x=x_next,y=y_next,v=v_next, heading=0*heading)
          x_next, y_next, v_next,_ = e2e.generate_flow(0.1)
          time2=time.time()
 
-         print(angle,acc,time2-time1)
+         print(angle, acc, time2-time1)
 
 
 if __name__ == "__main__":
