@@ -215,6 +215,7 @@ class Plot():
             else:
                 v_color, h_color = 'red', 'orange'
 
+
             plt.plot([0, lane_width], [-square_length / 2 - start_offset, -square_length / 2 - start_offset],
                      color=v_color, linewidth=light_line_width)
 
@@ -226,6 +227,8 @@ class Plot():
 
             plt.plot([square_length / 2, square_length / 2], [lane_width, 0],
                      color=h_color, linewidth=light_line_width)
+
+
 
             State_ego = self.Info_List[3].copy()
             ego_v = State_ego['VehicleSPeedAct']
