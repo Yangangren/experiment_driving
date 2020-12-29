@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import math
 from math import cos, sin, pi
+import time
 
 CROSSROAD_SIZE = 22
 LANE_WIDTH = 3.5
@@ -128,6 +129,7 @@ class Plot():
             plt.plot([x, x_forw], [y, y_forw], color=color, linewidth=0.5)
 
         while True:
+            start_time = time.time()
             plt.cla()
             plt.axis('off')
             ax.add_patch(plt.Rectangle((-square_length / 2 - extension, -square_length / 2 - extension - start_offset),
@@ -297,20 +299,21 @@ class Plot():
             # done info
             # plt.text(text_x, text_y_start - next(ge), 'done info: {}'.format(self.done_type))
             plt.text(text_x, text_y_start - next(ge), 'CAN')
-            plt.text(text_x, text_y_start - next(ge), 'speedAct: {:.2f}m/s'.format(ego_v))
-            plt.text(text_x, text_y_start - next(ge), r'steeringAct: ${:.2f}\degree$'.format(ego_steer))
+            plt.text(text_x, text_y_start - next(ge), 'speed_act: {:.2f}m/s'.format(ego_v))
+            plt.text(text_x, text_y_start - next(ge), r'steering_act: ${:.2f}\degree$'.format(ego_steer))
             plt.text(text_x, text_y_start - next(ge), 'throttle: {:.2f}'.format(ego_throttle))
-            plt.text(text_x, text_y_start - next(ge), 'brakeOn: {:.2f}'.format(ego_brk))
+            plt.text(text_x, text_y_start - next(ge), 'brake_on: {:.2f}'.format(ego_brk))
             plt.text(text_x, text_y_start - next(ge), 'gear: {:.2f}'.format(ego_gear))
             plt.text(text_x, text_y_start - next(ge), 'Decision')
-            plt.text(text_x, text_y_start - next(ge), r'steer_aim_Decision: ${:.2f}\degree$'.format(decision_steer))
-            plt.text(text_x, text_y_start - next(ge), 'front_wheel_rad_Decision: {:.2f}'.format(decision_fwrad))
-            plt.text(text_x, text_y_start - next(ge), 'torqueDecision: {:.2f}Nm'.format(decision_torque))
-            plt.text(text_x, text_y_start - next(ge), 'torqueFlag: {}'.format(decision_Tor_flag))
-            plt.text(text_x, text_y_start - next(ge), r'brake_accDecision: {:.2f}$m/s^2$'.format(decision_brkacc))
-            plt.text(text_x, text_y_start - next(ge), 'DecelerationFlag: {}'.format(decision_Dec_flag))
-            plt.text(text_x, text_y_start - next(ge), r'accDecision: {:.2f}$m/s^2$'.format(decision_ax))
+            plt.text(text_x, text_y_start - next(ge), r'steer_aim_decision: ${:.2f}\degree$'.format(decision_steer))
+            plt.text(text_x, text_y_start - next(ge), 'front_wheel_rad_decision: {:.2f}'.format(decision_fwrad))
+            plt.text(text_x, text_y_start - next(ge), 'torque_decision: {:.2f}Nm'.format(decision_torque))
+            plt.text(text_x, text_y_start - next(ge), 'torque_flag: {}'.format(decision_Tor_flag))
+            plt.text(text_x, text_y_start - next(ge), r'brake_acc_decision: {:.2f}$m/s^2$'.format(decision_brkacc))
+            plt.text(text_x, text_y_start - next(ge), 'deceleration_flag: {}'.format(decision_Dec_flag))
+            plt.text(text_x, text_y_start - next(ge), r'acc_decision: {:.2f}$m/s^2$'.format(decision_ax))
             plt.pause(0.01)
+            print(time.time()-start_time)
             # ax.cla()
 
             # # reward info
