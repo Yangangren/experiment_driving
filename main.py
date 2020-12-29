@@ -21,8 +21,10 @@ from plot_online import Plot
 import argparse
 
 
-def controller_agent(shared_list, Info_List, State_Other_List,receive_index,if_save,if_radar,lock):
-    publisher_ = Controller(shared_list,Info_List, State_Other_List,receive_index,if_save,if_radar,lock)
+def controller_agent(shared_list, Info_List, State_Other_List,receive_index,
+                     if_save,if_radar,lock, task, case):
+    publisher_ = Controller(shared_list,Info_List, State_Other_List,receive_index,
+                            if_save,if_radar,lock,  task, case)
     time.sleep(0.5)
     publisher_.run()
 
@@ -37,8 +39,8 @@ def subscriber_gps_agent(shared_list, Info_List, receive_index, lock):
     subscriber_.run()
 
 
-def traffic(shared_list, Info_List, receive_index, lock):
-    subscriber_ = Traffic(shared_list, Info_List, receive_index, lock)
+def traffic(shared_list, Info_List, receive_index, lock, task, case):
+    subscriber_ = Traffic(shared_list, Info_List, receive_index, lock, task, case)
     subscriber_.run()
 
 
