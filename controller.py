@@ -242,9 +242,9 @@ class Controller(object):
         self.case = case
         self.ref_path = ReferencePath(self.task)
         self.num_future_data = 0
-        TASK2MODEL = dict(left=LoadPolicy('./utils/models/left', 100000),
-                          straight=LoadPolicy('./utils/models/straight', 95000),
-                          right=LoadPolicy('./utils/models/right', 100000))
+        TASK2MODEL = dict(left=LoadPolicy('./utils/models/left', 80000),)
+                          # straight=LoadPolicy('./utils/models/straight', 95000),
+                          # right=LoadPolicy('./utils/models/right', 100000))
         self.model = TASK2MODEL[task]
         self.steer_factor = 20
         self.Info_List = Info_List
