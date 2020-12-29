@@ -15,11 +15,11 @@ from coordi_convert import convert_gps_coordi_to_intersection_coordi
 
 
 class SubscriberGps():
-    def __init__(self, shared_list, Info_List, receive_index_gps, lock):
+    def __init__(self, shared_list, Info_List, receive_index, lock):
         self.shared_list = shared_list
         self.Info_List = Info_List
-        self.receive_index_gps_shared = receive_index_gps
-        self.gps_receive_index = 0
+        self.receive_index_shared = receive_index
+        self.receive_index = 0
         self.time_start_gps = 0.
         self.lock = lock
         self.x_bias = 1.4
@@ -81,13 +81,14 @@ class SubscriberGps():
             except zmq.ZMQError:
                 pass
 
-            self.gps_receive_index += 1
+            self.receive_index += 1
 
             with self.lock:
                 self.shared_list[0] = State_gps.copy()
                 self.shared_list[2] = time_receive_gps
 
-            self.receive_index_gps_shared.value = self.gps_receive_index
+            # self.receive_index_shared.value = self.receive_index
+            self.receive_index_shared.value += 1
 
             # check the time interval of gps
             if time_receive_gps > 0.1:
@@ -95,4 +96,4 @@ class SubscriberGps():
 
 
 if __name__ == '__main__':
-    load_map()
+    pass

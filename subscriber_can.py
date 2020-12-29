@@ -13,11 +13,10 @@ import time
 
 
 class SubscriberCan():
-    def __init__(self, shared_list, Info_List, receive_index_can, lock):
+    def __init__(self, shared_list, Info_List, receive_index, lock):
         self.shared_list = shared_list
         self.Info_List = Info_List
-        self.receive_index_can_shared = receive_index_can
-        self.receive_index_can = 0
+        self.receive_index_shared = receive_index
         self.time_start_can = 0.
         self.lock = lock
         self.position_index = 0
@@ -58,13 +57,11 @@ class SubscriberCan():
             except zmq.ZMQError:
                 pass
 
-            self.receive_index_can += 1
-
             with self.lock:
                 self.shared_list[1] = State_can.copy()
                 self.shared_list[3] = time_receive_can
 
-            self.receive_index_can_shared.value = self.receive_index_can
+            self.receive_index_shared.value += 1
             # check the time interval of gps
             if time_receive_can > 0.1:
                 print("Subscriber of gps is more than 0.1s!", time_receive_can)
