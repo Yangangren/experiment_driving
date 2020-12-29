@@ -165,12 +165,12 @@ class Plot():
         # ----------------------ref_path--------------------
 
         # delta_, _, _ = tracking_info[:3]
-        plot_ref = ['left','straight','right', 'left_ref','straight_ref','right_ref']
-        for ref in plot_ref:
-            ref_path = self.ref_path_all[ref]
-            ax.plot(ref_path[0], ref_path[1])
+        # plot_ref = ['left','straight','right', 'left_ref','straight_ref','right_ref']
+        # for ref in plot_ref:
+        #     ref_path = self.ref_path_all[ref]
+        #     ax.plot(ref_path[0], ref_path[1])
 
-        # ax.plot(self.ref_path[0], self.ref_path[1], color='g') # todo:
+        ax.plot(self.ref_path[0], self.ref_path[1], color='g') # todo:
 
 
         def draw_rotate_rec(x, y, a, l, w, color, linestyle='-'):
@@ -190,9 +190,22 @@ class Plot():
             plt.plot([x, x_forw], [y, y_forw], color=color, linewidth=0.5)
 
 
-        while False:
-            # v_light = self.v_light #TODO: add traffic light
-            v_light = 0
+        while True:
+
+
+            State_others = self.Info_List[4].copy()
+            # plot cars
+            for i in range(len(State_others['x_other'])): # TODO:
+                veh_x = State_others['x_other'][i]
+                veh_y = State_others['y_other'][i]
+                veh_phi = State_others['phi_other'][i]
+                veh_l = STATE_OTHER_LENGTH
+                veh_w = STATE_OTHER_WIDTH
+                if is_in_plot_area(veh_x, veh_y):
+                    plot_phi_line(veh_x, veh_y, veh_phi, 'black')
+                    draw_rotate_rec(veh_x, veh_y, veh_phi, veh_l, veh_w, 'black')
+
+            v_light = State_others['v_light']
             if v_light == 0:
                 v_color, h_color = 'green', 'red'
             elif v_light == 1:
@@ -214,18 +227,6 @@ class Plot():
             plt.plot([square_length / 2, square_length / 2], [lane_width, 0],
                      color=h_color, linewidth=light_line_width)
 
-            State_others = self.Info_List[4].copy()
-            # plot cars
-            for i in range(len(State_others['x_others'])): # TODO:
-                veh_x = State_others['x_others'][i]
-                veh_y = State_others['y_others'][i]
-                veh_phi = State_others['phi_others'][i]
-                veh_l = STATE_OTHER_LENGTH
-                veh_w = STATE_OTHER_WIDTH
-                if is_in_plot_area(veh_x, veh_y):
-                    plot_phi_line(veh_x, veh_y, veh_phi, 'black')
-                    draw_rotate_rec(veh_x, veh_y, veh_phi, veh_l, veh_w, 'black')
-
             # # plot_interested vehs
             #
             # for mode, num in self.veh_mode_dict.items():
@@ -245,7 +246,7 @@ class Plot():
             #             draw_rotate_rec(veh_x, veh_y, veh_phi, veh_l, veh_w, color, linestyle=':')
 
 
-            State_ego = self.Info_List[3].copy() # TODO:
+            State_ego = self.Info_List[3].copy()
             ego_v = State_ego['VehicleSPeedAct']
             ego_steer = State_ego['SteerAngleAct']
             ego_gear = State_ego['AutoGear']
@@ -275,7 +276,7 @@ class Plot():
 
             indexs, points = find_closest_point(self.ref_path, np.array([ego_x], np.float32),
                                                               np.array([ego_y], np.float32))
-            path_x, path_y, path_phi = points[0], points[0], points[0]
+            path_x, path_y, path_phi = points[0], points[1], points[2]
             plt.plot(path_x, path_y, 'g.')
             delta_x, delta_y, delta_phi = ego_x - path_x, ego_y - path_y, ego_phi - path_phi
 
@@ -290,8 +291,8 @@ class Plot():
             plt.text(text_x, text_y_start - next(ge), 'yaw_rate: {:.2f}rad/s'.format(ego_yaw_rate))
             plt.text(text_x, text_y_start - next(ge), r'longitude: ${:.2f}\degree$'.format(ego_longitude))
             plt.text(text_x, text_y_start - next(ge), r'latitude: ${:.2f}\degree$'.format(ego_latitude))
-            plt.text(text_x, text_y_start - next(ge), 'long_acc: {:.2f}rad/s'.format(ego_long_acc))
-            plt.text(text_x, text_y_start - next(ge), 'lat_acc: {:.2f}rad/s'.format(ego_lat_acc))
+            plt.text(text_x, text_y_start - next(ge), r'long_acc: ${:.2f}m/s^2$'.format(ego_long_acc))
+            plt.text(text_x, text_y_start - next(ge), r'lat_acc: ${:.2f}m/s^2$'.format(ego_lat_acc))
 
 
 
@@ -322,9 +323,21 @@ class Plot():
             #     plt.text(text_x, text_y_start - next(ge), 'a_x: {:.2f}m/s^2'.format(a_x))
 
             decision = self.Info_List[2].copy()
-            decision_steer = decision['control']['SteerAngleAim']
-            decision_torque = None
-            decision_brkacc = None #TODO:
+            decision_steer = decision['SteerAngleAim']
+            decision_torque = decision['Torque']
+            decision_brkacc = decision['Deceleration']
+            decision_Dec_flag = decision['Dec_flag']
+            decision_Tor_flag = decision['Tor_flag']
+            decision_fwrad = decision['front_wheel_rad']
+            decision_ax = decision['a_x']
+
+            # decision: {'Deceleration': decel,  # [m/s^2]
+            #            'Torque': torque,  # [N*m]
+            #            'Dec_flag': dec_flag,
+            #            'Tor_flag': tor_flag,
+            #            'SteerAngleAim': steer_wheel_deg,  # [deg]
+            #            'front_wheel_rad': front_wheel_rad,  # [rad]
+            #            'a_x': a_x}
 
             text_x, text_y_start = 70, 60
             ge = iter(range(0, 1000, 4))
@@ -338,9 +351,13 @@ class Plot():
             plt.text(text_x, text_y_start - next(ge), 'brakeOn: {:.2f}'.format(ego_brk))
             plt.text(text_x, text_y_start - next(ge), 'gear: {:.2f}'.format(ego_gear))
             plt.text(text_x, text_y_start - next(ge), 'Decision')
-            plt.text(text_x, text_y_start - next(ge), r'steerDecision: ${:.2f}\degree$'.format(decision_steer))
+            plt.text(text_x, text_y_start - next(ge), r'steer_aim_Decision: ${:.2f}\degree$'.format(decision_steer))
+            plt.text(text_x, text_y_start - next(ge), 'front_wheel_rad_Decision: {:.2f}'.format(decision_fwrad))
             plt.text(text_x, text_y_start - next(ge), 'torqueDecision: {:.2f}Nm'.format(decision_torque))
+            plt.text(text_x, text_y_start - next(ge), 'torqueFlag: {}'.format(decision_Tor_flag))
             plt.text(text_x, text_y_start - next(ge), r'brake_accDecision: {:.2f}$m/s^2$'.format(decision_brkacc))
+            plt.text(text_x, text_y_start - next(ge), 'DecelerationFlag: {}'.format(decision_Dec_flag))
+            plt.text(text_x, text_y_start - next(ge), r'accDecision: {:.2f}$m/s^2$'.format(decision_ax))
 
             # # reward info
             # if self.reward_info is not None:
