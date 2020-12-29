@@ -80,76 +80,18 @@ class Plot():
         light_line_width = 3
         dotted_line_style = '--'
         solid_line_style = '-'
-        plt.figure(0)
-        plt.ion()
+        # plt.figure(0)
+        # plt.ion()
         # plt.cla()
         plt.title("Crossroad")
         ax = plt.axes(xlim=(-square_length / 2 - extension, square_length / 2 + extension),
                       ylim=(-square_length / 2 - extension, square_length / 2 + extension))
         plt.axis("equal")
         plt.axis('off')
-        # ax2 = plt.axes()
 
         # ax.add_patch(plt.Rectangle((-square_length / 2, -square_length / 2),
         #                            square_length, square_length, edgecolor='black', facecolor='none'))
-        ax.add_patch(plt.Rectangle((-square_length / 2 - extension, -square_length / 2 - extension - start_offset),
-                                   square_length + 2 * extension, square_length + 2 * extension + start_offset,
-                                   edgecolor='black',
-                                   facecolor='none'))
 
-        # ----------arrow--------------
-        plt.arrow(lane_width / 2, -square_length / 2 - 10, 0, 5, color='b')
-        plt.arrow(lane_width / 2, -square_length / 2 - 10 + 5, -0.5, 0, color='b', head_width=1)
-        plt.arrow(lane_width / 2, -square_length / 2 - 10, 0, 5, color='b', head_width=1)
-        plt.arrow(lane_width / 2, -square_length / 2 - 10, 0, 5, color='b')
-        plt.arrow(lane_width / 2, -square_length / 2 - 10 + 5, 0.5, 0, color='b', head_width=1)
-
-        # ----------horizon--------------
-        plt.plot([-square_length / 2 - extension, -square_length / 2], [0, 0], color='black')
-        plt.plot([square_length / 2 + extension, square_length / 2], [0, 0], color='black')
-
-        #
-        for i in range(1, LANE_NUMBER + 1):
-            linestyle = dotted_line_style if i < LANE_NUMBER else solid_line_style
-            plt.plot([-square_length / 2 - extension, -square_length / 2], [i * lane_width, i * lane_width],
-                     linestyle=linestyle, color='black')
-            plt.plot([square_length / 2 + extension, square_length / 2], [i * lane_width, i * lane_width],
-                     linestyle=linestyle, color='black')
-            plt.plot([-square_length / 2 - extension, -square_length / 2], [-i * lane_width, -i * lane_width],
-                     linestyle=linestyle, color='black')
-            plt.plot([square_length / 2 + extension, square_length / 2], [-i * lane_width, -i * lane_width],
-                     linestyle=linestyle, color='black')
-
-        # ----------vertical----------------
-        plt.plot([0, 0], [-square_length / 2 - extension - start_offset, -square_length / 2 - start_offset],
-                 color='black')
-        plt.plot([0, 0], [square_length / 2 + extension, square_length / 2], color='black')
-
-        #
-        for i in range(1, LANE_NUMBER + 1):
-            linestyle = dotted_line_style if i < LANE_NUMBER else solid_line_style
-            plt.plot([i * lane_width, i * lane_width],
-                     [-square_length / 2 - extension - start_offset, -square_length / 2 - start_offset],
-                     linestyle=linestyle, color='black')
-            plt.plot([i * lane_width, i * lane_width], [square_length / 2 + extension, square_length / 2],
-                     linestyle=linestyle, color='black')
-            plt.plot([-i * lane_width, -i * lane_width],
-                     [-square_length / 2 - extension - start_offset, -square_length / 2 - start_offset],
-                     linestyle=linestyle, color='black')
-            plt.plot([-i * lane_width, -i * lane_width], [square_length / 2 + extension, square_length / 2],
-                     linestyle=linestyle, color='black')
-
-        # ----------Oblique--------------
-        plt.plot([LANE_NUMBER * lane_width, square_length / 2],
-                 [-square_length / 2 - start_offset, -LANE_NUMBER * lane_width],
-                 color='black')
-        plt.plot([LANE_NUMBER * lane_width, square_length / 2], [square_length / 2, LANE_NUMBER * lane_width],
-                 color='black')
-        plt.plot([-LANE_NUMBER * lane_width, -square_length / 2],
-                 [-square_length / 2 - start_offset, -LANE_NUMBER * lane_width],
-                 color='black')
-        plt.plot([-LANE_NUMBER * lane_width, -square_length / 2], [square_length / 2, LANE_NUMBER * lane_width],
-                 color='black')
 
         def is_in_plot_area(x, y, tolerance=5):
             if -square_length / 2 - extension + tolerance < x < square_length / 2 + extension - tolerance and \
@@ -166,7 +108,7 @@ class Plot():
         #     ref_path = self.ref_path_all[ref]
         #     ax.plot(ref_path[0], ref_path[1])
 
-        ax.plot(self.ref_path[0], self.ref_path[1], color='g') # todo:
+
 
 
         def draw_rotate_rec(x, y, a, l, w, color, linestyle='-'):
@@ -186,6 +128,69 @@ class Plot():
             plt.plot([x, x_forw], [y, y_forw], color=color, linewidth=0.5)
 
         while True:
+            plt.cla()
+            plt.axis('off')
+            ax.add_patch(plt.Rectangle((-square_length / 2 - extension, -square_length / 2 - extension - start_offset),
+                                       square_length + 2 * extension, square_length + 2 * extension + start_offset,
+                                       edgecolor='black',
+                                       facecolor='none'))
+
+            # ----------arrow--------------
+            plt.arrow(lane_width / 2, -square_length / 2 - 10, 0, 5, color='b')
+            plt.arrow(lane_width / 2, -square_length / 2 - 10 + 5, -0.5, 0, color='b', head_width=1)
+            plt.arrow(lane_width / 2, -square_length / 2 - 10, 0, 5, color='b', head_width=1)
+            plt.arrow(lane_width / 2, -square_length / 2 - 10, 0, 5, color='b')
+            plt.arrow(lane_width / 2, -square_length / 2 - 10 + 5, 0.5, 0, color='b', head_width=1)
+
+            # ----------horizon--------------
+            plt.plot([-square_length / 2 - extension, -square_length / 2], [0, 0], color='black')
+            plt.plot([square_length / 2 + extension, square_length / 2], [0, 0], color='black')
+
+            #
+            for i in range(1, LANE_NUMBER + 1):
+                linestyle = dotted_line_style if i < LANE_NUMBER else solid_line_style
+                plt.plot([-square_length / 2 - extension, -square_length / 2], [i * lane_width, i * lane_width],
+                         linestyle=linestyle, color='black')
+                plt.plot([square_length / 2 + extension, square_length / 2], [i * lane_width, i * lane_width],
+                         linestyle=linestyle, color='black')
+                plt.plot([-square_length / 2 - extension, -square_length / 2], [-i * lane_width, -i * lane_width],
+                         linestyle=linestyle, color='black')
+                plt.plot([square_length / 2 + extension, square_length / 2], [-i * lane_width, -i * lane_width],
+                         linestyle=linestyle, color='black')
+
+            # ----------vertical----------------
+            plt.plot([0, 0], [-square_length / 2 - extension - start_offset, -square_length / 2 - start_offset],
+                     color='black')
+            plt.plot([0, 0], [square_length / 2 + extension, square_length / 2], color='black')
+
+            #
+            for i in range(1, LANE_NUMBER + 1):
+                linestyle = dotted_line_style if i < LANE_NUMBER else solid_line_style
+                plt.plot([i * lane_width, i * lane_width],
+                         [-square_length / 2 - extension - start_offset, -square_length / 2 - start_offset],
+                         linestyle=linestyle, color='black')
+                plt.plot([i * lane_width, i * lane_width], [square_length / 2 + extension, square_length / 2],
+                         linestyle=linestyle, color='black')
+                plt.plot([-i * lane_width, -i * lane_width],
+                         [-square_length / 2 - extension - start_offset, -square_length / 2 - start_offset],
+                         linestyle=linestyle, color='black')
+                plt.plot([-i * lane_width, -i * lane_width], [square_length / 2 + extension, square_length / 2],
+                         linestyle=linestyle, color='black')
+
+            # ----------Oblique--------------
+            plt.plot([LANE_NUMBER * lane_width, square_length / 2],
+                     [-square_length / 2 - start_offset, -LANE_NUMBER * lane_width],
+                     color='black')
+            plt.plot([LANE_NUMBER * lane_width, square_length / 2], [square_length / 2, LANE_NUMBER * lane_width],
+                     color='black')
+            plt.plot([-LANE_NUMBER * lane_width, -square_length / 2],
+                     [-square_length / 2 - start_offset, -LANE_NUMBER * lane_width],
+                     color='black')
+            plt.plot([-LANE_NUMBER * lane_width, -square_length / 2], [square_length / 2, LANE_NUMBER * lane_width],
+                     color='black')
+
+            ax.plot(self.ref_path[0], self.ref_path[1], color='g')  # todo:
+
             State_others = self.Info_List[4].copy()
             # plot cars
             for i in range(len(State_others['x_other'])): # TODO:
