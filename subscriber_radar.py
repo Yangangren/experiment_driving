@@ -2,6 +2,7 @@ import zmq
 import json
 import time
 import numpy as np
+from utils.coordi_convert import vec_convert_gps_coordi_to_intersection_coordi
 
 
 class SubscriberRadar():
@@ -29,13 +30,19 @@ class SubscriberRadar():
                 # print("RadarJson",RadarJson)
                 if 'Data'in RadarJson["Radar"]["Radar"]:
                     # print("RadarJson",RadarJson)
-                    State_other["x_other"] = list(RadarJson["Radar"]["Radar"]["Data"]["DistLong"].values())
-                    State_other["y_other"] = list(RadarJson["Radar"]["Radar"]["Data"]["DistLat"].values())
+                    x_other_in_gps = np.array(list(RadarJson["Radar"]["Radar"]["Data"]["DistLong"].values()))
+                    y_other_in_gps = np.array(list(RadarJson["Radar"]["Radar"]["Data"]["DistLat"].values()))
                     v_Lon = np.array(list(RadarJson["Radar"]["Radar"]["Data"]["VelocityLon"].values()))
                     v_Lat = np.array(list(RadarJson["Radar"]["Radar"]["Data"]["VelocityLat"].values()))
-                    State_other["v_other"] = np.sqrt(v_Lon**2+v_Lat**2).tolist()
-                    State_other["heading_next"] = list(RadarJson["Radar"]["Radar"]["Data"]["orientation"].values())
-                    # print("-----------heading_next------",State_other["heading_next"])
+                    State_other["v_other"] = np.sqrt(v_Lon ** 2 + v_Lat ** 2).tolist()
+                    phi_other_in_gps = np.array(list(RadarJson["Radar"]["Radar"]["Data"]["orientation"].values()))
+
+                    x_other, y_other, phi_other = \
+                        vec_convert_gps_coordi_to_intersection_coordi(x_other_in_gps, y_other_in_gps, phi_other_in_gps)
+                    State_other["x_other"] = x_other.tolist()
+                    State_other["y_other"] = y_other.tolist()
+                    State_other["phi_other"] = phi_other.tolist()
+                    # todo add v light
                     time_receive_radar = time.time() - self.time_start
                     self.time_start = time.time()
             except zmq.ZMQError:

@@ -57,7 +57,6 @@ TRAFFICSETTINGS = dict(left=[OrderedDict(ego=dict(v_x=2., v_y=0., r=0., x=3.5/2,
                        right=[OrderedDict(), ]
                        )
 
-
 class Traffic(object):
     def __init__(self, shared_list, State_Other_List, lock):
         self.shared_list = shared_list
