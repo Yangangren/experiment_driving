@@ -66,21 +66,26 @@ def main():
     if_save = True
     if_radar = True               # True: with digital twin system
 
-    shared_list = mp.Manager().list([0]*4)
+    shared_list = mp.Manager().list([0]*5)
     Info_List = mp.Manager().list([0.0]*8)
     State_Other_List =mp.Manager().list([0]*1)
-    receive_index = mp.Value('d',0.0)
+    receive_index_gps = mp.Value('d', 0.0)
+    receive_index_can = mp.Value('d', 0.0)
     lock = mp.Lock()
-    procs=[]
-    procs.append(Process(target=subscriber_agent, args=(shared_list, Info_List, receive_index, lock)))
+    procs = []
+
+    procs.append(Process(target=subscriber_gps_agent, args=(shared_list, Info_List, receive_index_gps, lock)))
+    procs.append(Process(target=subscriber_can_agent, args=(shared_list, Info_List, receive_index_can, lock)))
+
     if if_radar:
         procs.append(Process(target=subscriber_radar_agent, args=(shared_list, State_Other_List, lock)))
     else:
         procs.append(Process(target=subscriber_radar_agent, args=(shared_list, State_Other_List, lock)))
 
-    procs.append(Process(target=publisher_agent, args=(shared_list,Info_List,State_Other_List,receive_index,if_save,if_radar,lock)))
+    procs.append(Process(target=controller_agent, args=(shared_list, Info_List, State_Other_List, receive_index_gps,
+                                                        receive_index_can, if_save, if_radar, lock)))
 
-    procs.append(Process(target=plot_agent, args=(Info_List,lock)))
+    procs.append(Process(target=plot_agent, args=(Info_List, lock)))
     for p in procs:
         p.start()
     for p in procs:

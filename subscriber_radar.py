@@ -41,9 +41,9 @@ class SubscriberRadar():
             except zmq.ZMQError:
                 pass
             with self.lock:
-
-                self.shared_list[3] = time_receive_radar
+                self.shared_list[4] = time_receive_radar
                 self.State_Other_List[0]=State_other.copy()
+
             if time_receive_radar > 0.1:
-                print("Subscriber_Radar!!!!!!!!!!!",time_receive_radar)
+                print("Subscriber of radar is more than 0.1s!", time_receive_radar)
 
