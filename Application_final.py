@@ -15,7 +15,6 @@ import os
 def built_parser():
     parser = argparse.ArgumentParser()
 
-
     '''Task'''
     parser.add_argument('--element_dim', dest='list', type=int, default=[])
     parser.add_argument('--atom_dim', dest='list', type=int, default=[])
@@ -24,7 +23,6 @@ def built_parser():
     parser.add_argument('--action_high', dest='list', type=float, default=[],action="append")
     parser.add_argument('--action_low', dest='list', type=float, default=[],action="append")
     parser.add_argument("--NN_type", default="mlp", help='mlp or CNN')
-
 
     '''general hyper-parameters'''
     parser.add_argument('--critic_lr' , type=float, default=0.00008,help='critic learning rate')
@@ -61,7 +59,6 @@ def built_parser():
     parser.add_argument("--num_actors", type=int, default=10)
 
     '''method list'''
-
     parser.add_argument("--distributional_Q", default=True)
     parser.add_argument("--stochastic_actor", default=True)
     parser.add_argument("--double_Q", default=False)
@@ -74,13 +71,13 @@ def built_parser():
     parser.add_argument('--veh_num', default="auto")
     parser.add_argument('--if_PI', default=True)
 
-
     return parser.parse_args()
+
 
 def load_map():
     lane_width = 3.5
     a = np.loadtxt('./map/roadMap_2.txt')
-    road_info = a[:,1:4]
+    road_info = a[:, 1:4]
     for i in range(len(road_info[:,0])):
         if road_info[i,2] < 260:
             stop_point = i
@@ -113,6 +110,7 @@ def load_map():
     lane_center_list[1][:,1] = lane_center_list[0][:,1] - 1.*lane_width*np.cos(road_angle_rad)
 
     return lane_list, lane_center_list, road_angle
+
 
 class Application():
     def __init__(self, args):
@@ -301,10 +299,11 @@ class Application():
                               )
 
         self.state_ego = np.array(list(self.state_ego_dict.values()),dtype=np.float32)/self.max_state_ego
+
     def _get_other_info(self,v_ego,x,y,v,heading):
         self.x_other = x
         self.y_other = y
-        self.v_other =v
+        self.v_other = v
         heading_other = heading
         self.veh_num = 0
         veh_index =[]
@@ -419,8 +418,8 @@ class Application():
         self.step+=1
         #print(time.time()-time_init)
 
-
         return self.u
+
 
 class E2E():
     def __init__(self):
@@ -433,17 +432,19 @@ class E2E():
         args.action_high = [1., 1.]
         args.action_low = [-1., -2.]
         args.seed = np.random.randint(0, 30)
-        self.appl = Application(args) #
+        self.appl = Application(args)
 
-    def step(self,x,y,v,heading):
+    def step(self, x, y, v, heading):
         # y=[3447704.599198, 3447698.612461]
         self.appl._get_road_related_info(self.ego_x, self.ego_y, self.heading)
         self.appl._get_other_info(self.ego_v,x,y,v,heading)
         self.appl._get_ego_state(v=self.ego_v, v_lat=self.v_lat, yaw_rate=self.yaw_rate, wheel_steer=self.wheel_steer_angle, acc=self.acc)
         output = self.appl.control_step()
-
+        # TODO：动作是方向盘转角增量和加速度，范围为[-pi/180, pi/180], [-4, 2]
         action = output * self.appl.action_multiplier
+        # todo:方向盘的转角增量
         self.delta_wheel_steer = action[0] * self.appl.steer_factor
+
         self.wheel_steer_out = self.wheel_steer_angle*math.pi/180+self.delta_wheel_steer #np.random.choice([10,20,5])*math.pi/180
         self.wheel_steer_out = max(self.wheel_steer_out, self.appl.wheel_steer_bound[0])
         self.wheel_steer_out = min(self.wheel_steer_out, self.appl.wheel_steer_bound[1])
@@ -456,7 +457,6 @@ class E2E():
         # else:
         #     delta_V = min(-0.5/3.6, -self.acc / self.appl.frequency)
         delta_V = np.clip(self.acc, -1/3.6, 1/3.6)
-         
         return self.wheel_steer_out*180/math.pi, np.clip(self.ego_v+delta_V, 0, self.appl.speed_limit_max)
 
     def get_info(self):
@@ -466,7 +466,7 @@ class E2E():
         x_next,y_next,v_next,heading_next = self.appl._get_next_vehicle(t_interval)
         return x_next,y_next,v_next, heading_next
 
-    def input(self,info):
+    def input(self, info):
         self.ego_x = info['GaussX']
         self.ego_y = info['GaussY']
         self.ego_v = info['GpsSpeed']
@@ -481,17 +481,17 @@ class E2E():
     def simu(self):
         self.appl.simu()
 
-def main():
 
+def main():
      ego = dict(GaussX=21277096.450883,
                 GaussY=3447698.635432,
                 GpsSpeed=2,
                 Heading=269,
                 NorthVelocity=0,
                 EastVelocity=0,
-                YawRate = 0,
-                LongitudinalAcc = 0,
-                SteerAngleAct = 0,
+                YawRate=0,
+                LongitudinalAcc=0,
+                SteerAngleAct=0,
                 )
 
      e2e=E2E()
@@ -505,14 +505,12 @@ def main():
      while True:
          time1=time.time()
          e2e.input(ego)
-         angle,acc=e2e.step(x=x_next,y=y_next,v=v_next, heading=0*heading)
+         angle,acc=e2e.step(x=x_next,y=y_next,v=v_next, heading=heading)
+         # angle,acc=e2e.step(x=x_next,y=y_next,v=v_next, heading=0*heading)
          x_next, y_next, v_next,_ = e2e.generate_flow(0.1)
          time2=time.time()
 
-         print(angle,acc,time2-time1)
-
-
-
+         print(angle, acc, time2-time1)
 
 
 if __name__ == "__main__":

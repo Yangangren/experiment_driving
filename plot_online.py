@@ -60,6 +60,7 @@ def find_closest_point(path, xs, ys, ratio=6):
     points = path[0][indexes], path[1][indexes], path[2][indexes]
     return indexes, points
 
+
 class Plot():
     def __init__(self,Info_List, lock, task):
         self.Info_List = Info_List
