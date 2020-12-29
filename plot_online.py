@@ -66,9 +66,9 @@ class Plot():
         left_construct_traj = np.load('./traj/left_construct.npy')
         straight_construct_traj = np.load('./traj/straight_construct.npy')
         right_construct_traj = np.load('./traj/right_construct.npy')
-        left_gps = np.load('./traj/left_ref_cut.npy')
-        straight_gps = np.load('./traj/straight_ref_cut.npy')
-        right_gps = np.load('./traj/right_ref_cut.npy')
+        left_gps = np.load('./map/left_ref_cut.npy')
+        straight_gps = np.load('./map/straight_ref_cut.npy')
+        right_gps = np.load('./map/right_ref_cut.npy')
         self.ref_path_all = {'left':left_construct_traj, 'straight': straight_construct_traj, 'right':right_construct_traj,
                     'left_ref':left_gps, 'straight_ref':straight_gps, 'right_ref':right_gps}
         self.ref_path = self.ref_path_all[task]
@@ -356,23 +356,7 @@ class Plot():
 
 
 
-def test_gps_path():
-    left = np.load('./traj/left_ref.npy')
-    straight = np.load('./traj/straight_ref.npy')
-    right = np.load('./traj/right_ref.npy')
-    plt.figure()
-    for i in range(len(right[0])):
-        if right[1][i] >= - 54:
-            start = i
-            break
-    for i in range(len(right[0])):
-        if right[0][i] >= 51:
-            stop = i
-            break
-    left_real = right[:, start:stop]
-    plt.plot(left_real[0], left_real[1])
-    plt.show()
-    np.save('./traj/right_ref_cut.npy', left_real)
+
 
 def test_static_plot():
     plot = Plot(None,None,'left')
