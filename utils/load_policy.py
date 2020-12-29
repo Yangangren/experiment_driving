@@ -8,12 +8,14 @@
 # =====================================
 import argparse
 import json
-
+import os
 import tensorflow as tf
 import numpy as np
 
 from utils.policy import Policy4Toyota
 from utils.preprocessor import Preprocessor
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 
 class LoadPolicy(object):

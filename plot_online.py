@@ -1,11 +1,5 @@
 import matplotlib.pyplot as plt
-import pandas as pd
-from Application_final import load_map
-import re
 import numpy as np
-import seaborn as sns
-import os
-import matplotlib.patches as mpathes
 import math
 from math import cos, sin, pi
 
@@ -68,9 +62,9 @@ class Plot():
         self.task = task
         self.step_old = -1
         step = []
-        left_construct_traj = np.load('./traj/left_construct.npy')
-        straight_construct_traj = np.load('./traj/straight_construct.npy')
-        right_construct_traj = np.load('./traj/right_construct.npy')
+        left_construct_traj = np.load('./map/left_construct.npy')
+        straight_construct_traj = np.load('./map/straight_construct.npy')
+        right_construct_traj = np.load('./map/right_construct.npy')
         left_gps = np.load('./map/left_ref_cut.npy')
         straight_gps = np.load('./map/straight_ref_cut.npy')
         right_gps = np.load('./map/right_ref_cut.npy')
@@ -86,13 +80,15 @@ class Plot():
         light_line_width = 3
         dotted_line_style = '--'
         solid_line_style = '-'
-
-        plt.cla()
+        plt.figure(0)
+        plt.ion()
+        # plt.cla()
         plt.title("Crossroad")
         ax = plt.axes(xlim=(-square_length / 2 - extension, square_length / 2 + extension),
                       ylim=(-square_length / 2 - extension, square_length / 2 + extension))
         plt.axis("equal")
         plt.axis('off')
+        # ax2 = plt.axes()
 
         # ax.add_patch(plt.Rectangle((-square_length / 2, -square_length / 2),
         #                            square_length, square_length, edgecolor='black', facecolor='none'))
@@ -189,10 +185,7 @@ class Plot():
                              y + line_length * sin(phi * pi / 180.)
             plt.plot([x, x_forw], [y, y_forw], color=color, linewidth=0.5)
 
-
         while True:
-
-
             State_others = self.Info_List[4].copy()
             # plot cars
             for i in range(len(State_others['x_other'])): # TODO:
@@ -227,25 +220,6 @@ class Plot():
             plt.plot([square_length / 2, square_length / 2], [lane_width, 0],
                      color=h_color, linewidth=light_line_width)
 
-            # # plot_interested vehs
-            #
-            # for mode, num in self.veh_mode_dict.items():
-            #     for i in range(num):
-            #         veh = self.interested_vehs[mode][i]
-            #         veh_x = veh['x']
-            #         veh_y = veh['y']
-            #         veh_phi = veh['phi']
-            #         veh_l = veh['l']
-            #         veh_w = veh['w']
-            #         task2color = {'left': 'b', 'straight': 'c', 'right': 'm'}
-            #
-            #         if is_in_plot_area(veh_x, veh_y):
-            #             plot_phi_line(veh_x, veh_y, veh_phi, 'black')
-            #             task = MODE2TASK[mode]
-            #             color = task2color[task]
-            #             draw_rotate_rec(veh_x, veh_y, veh_phi, veh_l, veh_w, color, linestyle=':')
-
-
             State_ego = self.Info_List[3].copy()
             ego_v = State_ego['VehicleSPeedAct']
             ego_steer = State_ego['SteerAngleAct']
@@ -265,18 +239,12 @@ class Plot():
             ego_phi = State_ego['Heading']
             ego_l = EGO_LENGTH
             ego_w = EGO_WIDTH
-            # ego_alpha_f = State_ego['alpha_f']
-            # ego_alpha_r = State_ego['alpha_r']
-            # alpha_f_bound = State_ego['alpha_f_bound']
-            # alpha_r_bound = State_ego['alpha_r_bound']
-            # r_bound = State_ego['r_bound']
-
             plot_phi_line(ego_x, ego_y, ego_phi, 'red')
             draw_rotate_rec(ego_x, ego_y, ego_phi, ego_l, ego_w, 'red')
 
             indexs, points = find_closest_point(self.ref_path, np.array([ego_x], np.float32),
                                                               np.array([ego_y], np.float32))
-            path_x, path_y, path_phi = points[0], points[1], points[2]
+            path_x, path_y, path_phi = points[0][0], points[1][0], points[2][0]
             plt.plot(path_x, path_y, 'g.')
             delta_x, delta_y, delta_phi = ego_x - path_x, ego_y - path_y, ego_phi - path_phi
 
@@ -294,9 +262,6 @@ class Plot():
             plt.text(text_x, text_y_start - next(ge), r'long_acc: ${:.2f}m/s^2$'.format(ego_long_acc))
             plt.text(text_x, text_y_start - next(ge), r'lat_acc: ${:.2f}m/s^2$'.format(ego_lat_acc))
 
-
-
-
             plt.text(text_x, text_y_start - next(ge), 'path_x: {:.2f}m'.format(path_x))
             plt.text(text_x, text_y_start - next(ge), 'path_y: {:.2f}m'.format(path_y))
             plt.text(text_x, text_y_start - next(ge), 'delta_x: {:.2f}m'.format(delta_x))
@@ -304,24 +269,6 @@ class Plot():
             plt.text(text_x, text_y_start - next(ge), r'ego_phi: ${:.2f}\degree$'.format(ego_phi))
             plt.text(text_x, text_y_start - next(ge), r'path_phi: ${:.2f}\degree$'.format(path_phi))
             plt.text(text_x, text_y_start - next(ge), r'delta_phi: ${:.2f}\degree$'.format(delta_phi))
-
-
-            # plt.text(text_x, text_y_start - next(ge), 'exp_v: {:.2f}m/s'.format(5.00))
-            #
-            # plt.text(text_x, text_y_start - next(ge), 'yaw_rate bound: [{:.2f}, {:.2f}]'.format(-r_bound, r_bound))
-            #
-            # plt.text(text_x, text_y_start - next(ge), r'$\alpha_f$: {:.2f} rad'.format(ego_alpha_f))
-            # plt.text(text_x, text_y_start - next(ge), r'$\alpha_f$ bound: [{:.2f}, {:.2f}] '.format(-alpha_f_bound,
-            #                                                                                         alpha_f_bound))
-            # plt.text(text_x, text_y_start - next(ge), r'$\alpha_r$: {:.2f} rad'.format(ego_alpha_r))
-            # plt.text(text_x, text_y_start - next(ge), r'$\alpha_r$ bound: [{:.2f}, {:.2f}] '.format(-alpha_r_bound,
-            #                                                                                         alpha_r_bound))
-            # if self.action is not None:
-            #     steer, a_x = self.action[0], self.action[1]
-            #     plt.text(text_x, text_y_start - next(ge),
-            #              r'steer: {:.2f}rad (${:.2f}\degree$)'.format(steer, steer * 180 / np.pi))
-            #     plt.text(text_x, text_y_start - next(ge), 'a_x: {:.2f}m/s^2'.format(a_x))
-
             decision = self.Info_List[2].copy()
             decision_steer = decision['SteerAngleAim']
             decision_torque = decision['Torque']
@@ -358,6 +305,8 @@ class Plot():
             plt.text(text_x, text_y_start - next(ge), r'brake_accDecision: {:.2f}$m/s^2$'.format(decision_brkacc))
             plt.text(text_x, text_y_start - next(ge), 'DecelerationFlag: {}'.format(decision_Dec_flag))
             plt.text(text_x, text_y_start - next(ge), r'accDecision: {:.2f}$m/s^2$'.format(decision_ax))
+            plt.pause(0.01)
+            # ax.cla()
 
             # # reward info
             # if self.reward_info is not None:
