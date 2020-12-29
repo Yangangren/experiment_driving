@@ -13,6 +13,10 @@ CROSSROAD_SIZE = 22
 LANE_WIDTH = 3.5
 START_OFFSET = 3
 LANE_NUMBER = 1
+EGO_LENGTH = 4.8
+EGO_WIDTH = 2.0
+STATE_OTHER_LENGTH = EGO_LENGTH
+STATE_OTHER_WIDTH = EGO_WIDTH
 
 def rotate_coordination(orig_x, orig_y, orig_d, coordi_rotate_d):
     """
@@ -38,7 +42,7 @@ def rotate_coordination(orig_x, orig_y, orig_d, coordi_rotate_d):
         transformed_d = transformed_d
     return transformed_x, transformed_y, transformed_d
 
-def find_closest_point(path, xs, ys, ratio=6): #TODO: temp ratio yasuobili
+def find_closest_point(path, xs, ys, ratio=6):
     path_len = len(path[0])
     reduced_idx = np.arange(0, path_len, ratio)
     reduced_len = len(reduced_idx)
@@ -211,12 +215,12 @@ class Plot():
 
             State_others = self.Info_List[4].copy()
             # plot cars
-            for veh in State_others: # TODO:
-                veh_x = veh['x']
-                veh_y = veh['y']
-                veh_phi = veh['phi']
-                veh_l = veh['l']
-                veh_w = veh['w']
+            for i in range(len(State_others['x_others'])): # TODO:
+                veh_x = State_others['x_others'][i]
+                veh_y = State_others['y_others'][i]
+                veh_phi = State_others['phi_others'][i]
+                veh_l = STATE_OTHER_LENGTH
+                veh_w = STATE_OTHER_WIDTH
                 if is_in_plot_area(veh_x, veh_y):
                     plot_phi_line(veh_x, veh_y, veh_phi, 'black')
                     draw_rotate_rec(veh_x, veh_y, veh_phi, veh_l, veh_w, 'black')
@@ -239,20 +243,31 @@ class Plot():
             #             color = task2color[task]
             #             draw_rotate_rec(veh_x, veh_y, veh_phi, veh_l, veh_w, color, linestyle=':')
 
+
             State_ego = self.Info_List[3].copy() # TODO:
-            ego_v_x = State_ego['v_x']
-            ego_v_y = State_ego['v_y']
-            ego_r = State_ego['r']
-            ego_x = State_ego['x']
-            ego_y = State_ego['y']
-            ego_phi = State_ego['phi']
-            ego_l = State_ego['l']
-            ego_w = State_ego['w']
-            ego_alpha_f = State_ego['alpha_f']
-            ego_alpha_r = State_ego['alpha_r']
-            alpha_f_bound = State_ego['alpha_f_bound']
-            alpha_r_bound = State_ego['alpha_r_bound']
-            r_bound = State_ego['r_bound']
+            ego_v = State_ego['VehicleSPeedAct']
+            ego_steer = State_ego['SteerAngleAct']
+            ego_gear = State_ego['AutoGear']
+            ego_gps_v = State_ego['GpsSpeed']
+            ego_north_v = State_ego['NorthVelocity']
+            ego_east_v = State_ego['EastVelocity']
+            ego_yaw_rate = State_ego['YawRate']
+            ego_long_acc = State_ego['LongitudinalAcc']
+            ego_lat_acc = State_ego['LateralAcc']
+            ego_throttle = State_ego['Throttle']
+            ego_brk = State_ego['BrkOn']
+            ego_x = State_ego['GaussX']
+            ego_y = State_ego['GaussY']
+            ego_longitude = State_ego['Longitude']
+            ego_latitude = State_ego['Latitude']
+            ego_phi = State_ego['Heading']
+            ego_l = EGO_LENGTH
+            ego_w = EGO_WIDTH
+            # ego_alpha_f = State_ego['alpha_f']
+            # ego_alpha_r = State_ego['alpha_r']
+            # alpha_f_bound = State_ego['alpha_f_bound']
+            # alpha_r_bound = State_ego['alpha_r_bound']
+            # r_bound = State_ego['r_bound']
 
             plot_phi_line(ego_x, ego_y, ego_phi, 'red')
             draw_rotate_rec(ego_x, ego_y, ego_phi, ego_l, ego_w, 'red')
@@ -266,45 +281,70 @@ class Plot():
             # plot ego dynamics
             text_x, text_y_start = -110, 60
             ge = iter(range(0, 1000, 4))
-            plt.text(text_x, text_y_start - next(ge), 'ego_x: {:.2f}m'.format(ego_x))
-            plt.text(text_x, text_y_start - next(ge), 'ego_y: {:.2f}m'.format(ego_y))
+            plt.text(text_x, text_y_start - next(ge), 'ego_GaussX: {:.2f}m'.format(ego_x))
+            plt.text(text_x, text_y_start - next(ge), 'ego_GaussY: {:.2f}m'.format(ego_y))
+            plt.text(text_x, text_y_start - next(ge), 'gps_v: {:.2f}m/s'.format(ego_gps_v))
+            plt.text(text_x, text_y_start - next(ge), 'north_v: {:.2f}m/s'.format(ego_north_v))
+            plt.text(text_x, text_y_start - next(ge), 'east_v: {:.2f}m/s'.format(ego_east_v))
+            plt.text(text_x, text_y_start - next(ge), 'yaw_rate: {:.2f}rad/s'.format(ego_yaw_rate))
+            plt.text(text_x, text_y_start - next(ge), r'longitude: ${:.2f}\degree$'.format(ego_longitude))
+            plt.text(text_x, text_y_start - next(ge), r'latitude: ${:.2f}\degree$'.format(ego_latitude))
+            plt.text(text_x, text_y_start - next(ge), 'long_acc: {:.2f}rad/s'.format(ego_long_acc))
+            plt.text(text_x, text_y_start - next(ge), 'lat_acc: {:.2f}rad/s'.format(ego_lat_acc))
+
+
+
+
             plt.text(text_x, text_y_start - next(ge), 'path_x: {:.2f}m'.format(path_x))
             plt.text(text_x, text_y_start - next(ge), 'path_y: {:.2f}m'.format(path_y))
-            plt.text(text_x, text_y_start - next(ge), 'delta_: {:.2f}m'.format(delta_))
             plt.text(text_x, text_y_start - next(ge), 'delta_x: {:.2f}m'.format(delta_x))
             plt.text(text_x, text_y_start - next(ge), 'delta_y: {:.2f}m'.format(delta_y))
             plt.text(text_x, text_y_start - next(ge), r'ego_phi: ${:.2f}\degree$'.format(ego_phi))
             plt.text(text_x, text_y_start - next(ge), r'path_phi: ${:.2f}\degree$'.format(path_phi))
             plt.text(text_x, text_y_start - next(ge), r'delta_phi: ${:.2f}\degree$'.format(delta_phi))
 
-            plt.text(text_x, text_y_start - next(ge), 'v_x: {:.2f}m/s'.format(ego_v_x))
-            plt.text(text_x, text_y_start - next(ge), 'exp_v: {:.2f}m/s'.format(self.exp_v))
-            plt.text(text_x, text_y_start - next(ge), 'v_y: {:.2f}m/s'.format(ego_v_y))
-            plt.text(text_x, text_y_start - next(ge), 'yaw_rate: {:.2f}rad/s'.format(ego_r))
-            plt.text(text_x, text_y_start - next(ge), 'yaw_rate bound: [{:.2f}, {:.2f}]'.format(-r_bound, r_bound))
 
-            plt.text(text_x, text_y_start - next(ge), r'$\alpha_f$: {:.2f} rad'.format(ego_alpha_f))
-            plt.text(text_x, text_y_start - next(ge), r'$\alpha_f$ bound: [{:.2f}, {:.2f}] '.format(-alpha_f_bound,
-                                                                                                    alpha_f_bound))
-            plt.text(text_x, text_y_start - next(ge), r'$\alpha_r$: {:.2f} rad'.format(ego_alpha_r))
-            plt.text(text_x, text_y_start - next(ge), r'$\alpha_r$ bound: [{:.2f}, {:.2f}] '.format(-alpha_r_bound,
-                                                                                                    alpha_r_bound))
-            if self.action is not None:
-                steer, a_x = self.action[0], self.action[1]
-                plt.text(text_x, text_y_start - next(ge),
-                         r'steer: {:.2f}rad (${:.2f}\degree$)'.format(steer, steer * 180 / np.pi))
-                plt.text(text_x, text_y_start - next(ge), 'a_x: {:.2f}m/s^2'.format(a_x))
+            # plt.text(text_x, text_y_start - next(ge), 'exp_v: {:.2f}m/s'.format(5.00))
+            #
+            # plt.text(text_x, text_y_start - next(ge), 'yaw_rate bound: [{:.2f}, {:.2f}]'.format(-r_bound, r_bound))
+            #
+            # plt.text(text_x, text_y_start - next(ge), r'$\alpha_f$: {:.2f} rad'.format(ego_alpha_f))
+            # plt.text(text_x, text_y_start - next(ge), r'$\alpha_f$ bound: [{:.2f}, {:.2f}] '.format(-alpha_f_bound,
+            #                                                                                         alpha_f_bound))
+            # plt.text(text_x, text_y_start - next(ge), r'$\alpha_r$: {:.2f} rad'.format(ego_alpha_r))
+            # plt.text(text_x, text_y_start - next(ge), r'$\alpha_r$ bound: [{:.2f}, {:.2f}] '.format(-alpha_r_bound,
+            #                                                                                         alpha_r_bound))
+            # if self.action is not None:
+            #     steer, a_x = self.action[0], self.action[1]
+            #     plt.text(text_x, text_y_start - next(ge),
+            #              r'steer: {:.2f}rad (${:.2f}\degree$)'.format(steer, steer * 180 / np.pi))
+            #     plt.text(text_x, text_y_start - next(ge), 'a_x: {:.2f}m/s^2'.format(a_x))
+
+            decision = self.Info_List[2].copy()
+            decision_steer = decision['control']['SteerAngleAim']
+            decision_torque = None
+            decision_brkacc = None #TODO:
 
             text_x, text_y_start = 70, 60
             ge = iter(range(0, 1000, 4))
 
             # done info
-            plt.text(text_x, text_y_start - next(ge), 'done info: {}'.format(self.done_type))
+            # plt.text(text_x, text_y_start - next(ge), 'done info: {}'.format(self.done_type))
+            plt.text(text_x, text_y_start - next(ge), 'CAN')
+            plt.text(text_x, text_y_start - next(ge), 'speedAct: {:.2f}m/s'.format(ego_v))
+            plt.text(text_x, text_y_start - next(ge), r'steeringAct: ${:.2f}\degree$'.format(ego_steer))
+            plt.text(text_x, text_y_start - next(ge), 'throttle: {:.2f}'.format(ego_throttle))
+            plt.text(text_x, text_y_start - next(ge), 'brakeOn: {:.2f}'.format(ego_brk))
+            plt.text(text_x, text_y_start - next(ge), 'gear: {:.2f}'.format(ego_gear))
+            plt.text(text_x, text_y_start - next(ge), 'Decision')
+            plt.text(text_x, text_y_start - next(ge), r'steerDecision: ${:.2f}\degree$'.format(decision_steer))
+            plt.text(text_x, text_y_start - next(ge), 'torqueDecision: {:.2f}Nm'.format(decision_torque))
+            plt.text(text_x, text_y_start - next(ge), r'brake_accDecision: {:.2f}$m/s^2$'.format(decision_brkacc))
 
-            # reward info
-            if self.reward_info is not None:
-                for key, val in self.reward_info.items():
-                    plt.text(text_x, text_y_start - next(ge), '{}: {:.4f}'.format(key, val))
+            # # reward info
+            # if self.reward_info is not None:
+            #     for key, val in self.reward_info.items():
+            #         plt.text(text_x, text_y_start - next(ge), '{}: {:.4f}'.format(key, val))
         # plt.figure(0)
         # plt.ion()
         # lane_list, lane_center_list, road_angle = load_map()
