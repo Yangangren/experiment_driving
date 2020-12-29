@@ -11,7 +11,7 @@ import zmq
 import json
 import time
 import math
-from coordi_convert import convert_gps_coordi_to_intersection_coordi
+from utils.coordi_convert import convert_gps_coordi_to_intersection_coordi
 
 
 class SubscriberGps():
@@ -40,17 +40,17 @@ class SubscriberGps():
     def run(self):
         State_gps = {}
 
-        State_gps['GaussX'] = 0  # intersection coordinate [m]
-        State_gps['GaussY'] = 0  # intersection coordinate [m]
+        State_gps['GaussX'] = 0   # intersection coordinate [m]
+        State_gps['GaussY'] = 0   # intersection coordinate [m]
         State_gps['Heading'] = 0  # intersection coordinate [deg]
 
-        State_gps['GpsSpeed'] = 0  # [m/s]
-        State_gps['NorthVelocity'] = 0
-        State_gps['EastVelocity'] = 0
+        State_gps['GpsSpeed'] = 0      # [m/s]
+        State_gps['NorthVelocity'] = 0 # [m/s]
+        State_gps['EastVelocity'] = 0  # [m/s]
 
-        State_gps['YawRate'] = 0  # [rad/s]
-        State_gps['LongitudinalAcc'] = 0
-        State_gps['LateralAcc'] = 0
+        State_gps['YawRate'] = 0           # [rad/s]
+        State_gps['LongitudinalAcc'] = 0   # [m/s^2]
+        State_gps['LateralAcc'] = 0        # [m/s^2]
         State_gps['Longitude'] = 0
         State_gps['Latitude'] = 0
 
