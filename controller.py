@@ -242,7 +242,7 @@ class Controller(object):
         self.case = case
         self.ref_path = ReferencePath(self.task)
         self.num_future_data = 0
-        TASK2MODEL = dict(left=LoadPolicy('./utils/models/left', 80000),
+        TASK2MODEL = dict(left=LoadPolicy('./utils/models/left', 65000),
                           straight=LoadPolicy('./utils/models/straight', 75000),
                           right=LoadPolicy('./utils/models/right', 80000))
         self.model = TASK2MODEL[task]
@@ -280,7 +280,7 @@ class Controller(object):
         return np.array(ego_feature, dtype=np.float32)
 
     def _construct_veh_vector(self, ego_x, ego_y, state_others): #TODO: temp mht
-        mode_list = list(TRAFFICSETTINGS[self.task][self.case].keys())[1:]
+        mode_list = list(TRAFFICSETTINGS[self.task][self.case]['others'].keys())
         all_vehicles = []
         # all_vehicles
         # dict(x=x, y=y, v=v, phi=a, l=length,
@@ -480,10 +480,10 @@ class Controller(object):
                 if shared_index > self.read_index_old:
                     self.read_index_old = shared_index
                     self.Time = []
-                    if time.time()-time_start > 0.1:
-                        print("time!!!!!", time.time()-time_start)
-                    else:
-                        print("time:", time.time()-time_start)
+                    # if time.time()-time_start > 0.1:
+                    #     print("time!!!!!", time.time()-time_start)
+                    # else:
+                    #     print("time:", time.time()-time_start)
                     time_start = time.time()
                     with self.lock:
                         state_gps = self.shared_list[0].copy()
@@ -566,12 +566,11 @@ def test_control():
                      YawRate=0.,
                      )
     x_other, y_other, v_other, phi_other = [], [], [], []
-    for key, val in TRAFFICSETTINGS[task][case].items():
-        if key not in ['ego', 'v_light']:
-            x_other.append(val['x'])
-            y_other.append(val['y'])
-            v_other.append(val['v'])
-            phi_other.append(val['phi'])
+    for key, val in TRAFFICSETTINGS[task][case]['others'].items():
+        x_other.append(val['x'])
+        y_other.append(val['y'])
+        v_other.append(val['v'])
+        phi_other.append(val['phi'])
     state_other = dict(x_other=x_other,
                        y_other=y_other,
                        v_other=v_other,
