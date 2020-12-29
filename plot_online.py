@@ -402,6 +402,8 @@ def test_static_plot():
     plot = Plot(None,None,'left')
     plot.run()
     plt.show()
+
+
 if __name__ == '__main__':
     test_static_plot()
 
