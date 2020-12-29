@@ -46,11 +46,11 @@ def rotate_coordination(orig_x, orig_y, orig_d, coordi_rotate_d):
 TRAFFICSETTINGS = dict(left=[OrderedDict(ego=dict(v_x=2., v_y=0., r=0., x=3.5/2, y=-5, phi=90.,),
                                          ud=dict(x=-3.5/2, y=11, phi=-90, l=5., w=2., v=3., acc_type='uniform', route=('3o', '1i')),
                                          ul=dict(x=-3.5/2, y=18, phi=-90, l=5., w=2., v=3., acc_type='stop', route=('3o', '4i')),
-                                         v_light=11111,
+                                         v_light=0,
                                          ),
                              OrderedDict(ego=dict(v_x=2., v_y=0., r=0., x=3.5/2, y=-5, phi=90.,),
                                          dl=dict(x=3.5/2, y=0, phi=90, l=5., w=2., v=3., route=('1o', '4i')),
-                                         v_light=11111,
+                                         v_light=0,
                                          ),
                              ],
                        straight=[OrderedDict(), ],
@@ -59,14 +59,12 @@ TRAFFICSETTINGS = dict(left=[OrderedDict(ego=dict(v_x=2., v_y=0., r=0., x=3.5/2,
 
 
 class Traffic(object):
-    def __init__(self, shared_list, State_Other_List, lock):
+    def __init__(self, shared_list, State_Other_List, lock, task='left', case=0):
         self.shared_list = shared_list
         self.state_other_List = State_Other_List
         self.time_start = 0
         self.lock = lock
-        self.task = 'left'
-        self.mode_index = 0                                        # 'straight' or 'right' or 'left'
-        self.mode = TRAFFICSETTINGS[self.task][self.mode_index]
+        self.mode = TRAFFICSETTINGS[task][case]
         self.base_frequency = 10
 
     def prediction(self, mode):
