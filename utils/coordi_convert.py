@@ -10,7 +10,7 @@
 import math
 import numpy as np
 
-ROTATE_ANGLE = 83.
+ROTATE_ANGLE = 88.5
 
 
 def shift_coordination(orig_x, orig_y, coordi_shift_x, coordi_shift_y):

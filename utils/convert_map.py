@@ -9,6 +9,8 @@
 
 import numpy as np
 from utils.coordi_convert import vec_convert_gps_coordi_to_intersection_coordi
+from utils.truncate_gps_ref import truncate_gps_ref
+
 import matplotlib.pyplot as plt
 
 
@@ -28,6 +30,7 @@ def convert_map():
     np.save('../map/left_ref.npy', np.array([left_x, left_y, left_phi]), allow_pickle=True)
     np.save('../map/straight_ref.npy', np.array([stra_x, stra_y, stra_phi]), allow_pickle=True)
     np.save('../map/right_ref.npy', np.array([right_x, right_y, right_phi]), allow_pickle=True)
+    truncate_gps_ref()
 
 def chect_converted_map():
     left_ref = np.load('../map/left_ref.npy')
@@ -45,7 +48,7 @@ def chect_converted_map():
 
 
 if __name__ == '__main__':
-    chect_converted_map()
+    convert_map()
 
 
 

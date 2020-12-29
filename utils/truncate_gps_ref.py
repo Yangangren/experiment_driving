@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def test_gps_path():
+def truncate_gps_ref():
     left = np.load('../map/left_ref.npy')
     straight = np.load('../map/straight_ref.npy')
     right = np.load('../map/right_ref.npy')
@@ -16,9 +16,7 @@ def test_gps_path():
             break
     left_real = left[:, start:stop]
     plt.plot(left_real[0], left_real[1])
-    plt.show()
     np.save('../map/left_ref_cut.npy', left_real)
-    plt.figure()
     for i in range(len(straight[0])):
         if straight[1][i] >= - 54:
             start = i
@@ -30,8 +28,6 @@ def test_gps_path():
     straight_real = straight[:, start:stop]
     plt.plot(straight_real[0], straight_real[1])
     np.save('../map/straight_ref_cut.npy', straight_real)
-    plt.show()
-    plt.figure()
     for i in range(len(right[0])):
         if right[1][i] >= - 54:
             start = i
@@ -46,4 +42,4 @@ def test_gps_path():
     np.save('../map/right_ref_cut.npy', right_real)
 
 if __name__ == '__main__':
-    test_gps_path()
+    truncate_gps_ref()
