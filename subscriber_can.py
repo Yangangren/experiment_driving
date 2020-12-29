@@ -30,12 +30,12 @@ class SubscriberCan():
     def run(self):
         State_can = {}
 
-        State_can['VehicleSPeedAct'] = 0  # todo
-        State_can['SteerAngleAct'] = 0  # todo
-        State_can['AutoGear'] = 0  # todo
-        State_can['VehicleMode'] = 0  # todo
-        State_can['Throttle'] = 0  # todo
-        State_can['BrkOn'] = 0  # todo
+        State_can['VehicleSPeedAct'] = 0  # [m/s]
+        State_can['SteerAngleAct'] = 0    # [m/s]
+        State_can['AutoGear'] = 0
+        State_can['VehicleMode'] = 0
+        State_can['Throttle'] = 0
+        State_can['BrkOn'] = 0
         time_receive_can = 0
 
         while True:

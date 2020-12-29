@@ -70,23 +70,23 @@ def main():
 
     shared_list = mp.Manager().list([0]*5)
     # [state_gps, state_can, time_gps, time_can, time_radar]
-    # state_gps: State_gps['GaussX'] = 0  # intersection coordinate [m]
-    #            State_gps['GaussY'] = 0  # intersection coordinate [m]
-    #            State_gps['Heading'] = 0  # intersection coordinate [deg]
-    #            State_gps['GpsSpeed'] = 0  # [m/s]
-    #            State_gps['NorthVelocity'] = 0
-    #            State_gps['EastVelocity'] = 0
-    #            State_gps['YawRate'] = 0  # [rad/s]
-    #            State_gps['LongitudinalAcc'] = 0
-    #            State_gps['LateralAcc'] = 0
+    # state_gps: State_gps['GaussX'] = 0            # intersection coordinate [m]
+    #            State_gps['GaussY'] = 0            # intersection coordinate [m]
+    #            State_gps['Heading'] = 0           # intersection coordinate [deg]
+    #            State_gps['GpsSpeed'] = 0          # [m/s]
+    #            State_gps['NorthVelocity'] = 0     # [m/s]
+    #            State_gps['EastVelocity'] = 0      # [m/s]
+    #            State_gps['YawRate'] = 0           # [rad/s]
+    #            State_gps['LongitudinalAcc'] = 0   # [m/s^2]
+    #            State_gps['LateralAcc'] = 0        # [m/s^2]
     #            State_gps['Longitude'] = 0
     #            State_gps['Latitude'] = 0
 
-    # state_can: State_can['VehicleSPeedAct'] = 0  # todo
-    #            State_can['SteerAngleAct'] = 0  # todo
-    #            State_can['AutoGear'] = 0  # todo
-    #            State_can['VehicleMode'] = 0  # todo
-    #            State_can['Throttle'] = 0  # todo
+    # state_can: State_can['VehicleSPeedAct'] = 0   # [m/s]
+    #            State_can['SteerAngleAct'] = 0     # [m/s]
+    #            State_can['AutoGear'] = 0
+    #            State_can['VehicleMode'] = 0
+    #            State_can['Throttle'] = 0
     #            State_can['BrkOn'] = 0
 
     Info_List = mp.Manager().list([0.0]*5)  # [step, time, decision, state_ego(state_can+state_gps), state_other]
