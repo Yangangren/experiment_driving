@@ -515,9 +515,13 @@ class Controller(object):
                     self.time_decision = time.time() - self.time_in
                     self.Time.append(time.time() - self.time_initial)
 
-                    decision = {'Deceleration': steer_wheel_deg, 'Torque': torque, 'Dec_flag': dec_flag,
-                                'Tor_flag': tor_flag, 'SteerAngleAim': steer_wheel_deg,
-                                'front_wheel_rad': front_wheel_rad, 'a_x': a_x}
+                    decision = {'Deceleration': decel,  # [m/s^2]
+                                'Torque': torque,  # [N*m]
+                                'Dec_flag': dec_flag,
+                                'Tor_flag': tor_flag,
+                                'SteerAngleAim': steer_wheel_deg,  # [deg]
+                                'front_wheel_rad': front_wheel_rad,  # [rad]
+                                'a_x': a_x}  # [m/s^2]
 
                     with self.lock:
                         self.Info_List[0] = self.step

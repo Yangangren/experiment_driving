@@ -69,15 +69,48 @@ def main():
     if_radar = True # True: with digital twin system
 
     shared_list = mp.Manager().list([0]*5)
-    Info_List = mp.Manager().list([0.0]*8)
-    State_Other_List =mp.Manager().list([0]*1)
+    # [state_gps, state_can, time_gps, time_can, time_radar]
+    # state_gps: State_gps['GaussX'] = 0  # intersection coordinate [m]
+    #            State_gps['GaussY'] = 0  # intersection coordinate [m]
+    #            State_gps['Heading'] = 0  # intersection coordinate [deg]
+    #            State_gps['GpsSpeed'] = 0  # [m/s]
+    #            State_gps['NorthVelocity'] = 0
+    #            State_gps['EastVelocity'] = 0
+    #            State_gps['YawRate'] = 0  # [rad/s]
+    #            State_gps['LongitudinalAcc'] = 0
+    #            State_gps['LateralAcc'] = 0
+    #            State_gps['Longitude'] = 0
+    #            State_gps['Latitude'] = 0
+
+    # state_can: State_can['VehicleSPeedAct'] = 0  # todo
+    #            State_can['SteerAngleAct'] = 0  # todo
+    #            State_can['AutoGear'] = 0  # todo
+    #            State_can['VehicleMode'] = 0  # todo
+    #            State_can['Throttle'] = 0  # todo
+    #            State_can['BrkOn'] = 0
+
+    Info_List = mp.Manager().list([0.0]*5)  # [step, time, decision, state_ego(state_can+state_gps), state_other]
+    # decision: {'Deceleration': decel,  # [m/s^2]
+    #            'Torque': torque,  # [N*m]
+    #            'Dec_flag': dec_flag,
+    #            'Tor_flag': tor_flag,
+    #            'SteerAngleAim': steer_wheel_deg,  # [deg]
+    #            'front_wheel_rad': front_wheel_rad,  # [rad]
+    #            'a_x': a_x}
+
+    # state_other: dict(x_other=[],  # intersection coordination
+    #                   y_other=[],  # intersection coordination
+    #                   v_other=[],
+    #                   phi_other=[],  # intersection coordination
+    #                   v_light=0)
+
+    State_Other_List =mp.Manager().list([0]*1)  # [state_other]
     receive_index = mp.Value('d', 0.0)
     lock = mp.Lock()
 
     procs = []
     procs.append(Process(target=subscriber_gps_agent, args=(shared_list, Info_List, receive_index, lock)))
     procs.append(Process(target=subscriber_can_agent, args=(shared_list, Info_List, receive_index, lock)))
-
 
     if if_radar:
         procs.append(Process(target=subscriber_radar_agent, args=(shared_list, State_Other_List, lock)))
