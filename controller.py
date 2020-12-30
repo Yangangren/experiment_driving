@@ -547,9 +547,9 @@ class Controller(object):
                             file_handle.write("State_other ")
                             for k3, v3 in state_other.items():
                                 file_handle.write(k3 + ":" + str(v3) + ", ")
-                                if k3 == 'phi_other':
+                                if k3 == 'v_light':
                                     file_handle.write('\n')
-                            file_handle.write("Time:" + str(self.Time) +
+                            file_handle.write("Time time:" + str(self.Time) +
                                               "time_decision:"+str(self.time_decision) +
                                               "time_receive_gps："+str(time_receive_gps) +
                                               "time_receive_can："+str(time_receive_can) +
