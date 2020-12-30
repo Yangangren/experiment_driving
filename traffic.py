@@ -95,7 +95,7 @@ class Traffic(object):
                             delta_phi_rad = 0.
                             acc = 0.
 
-                    next_veh_vs = veh_vs + acc / self.base_frequency
+                    next_veh_vs = max(0, veh_vs + acc / self.base_frequency)
                     next_veh_xs = veh_xs + (veh_vs / self.base_frequency + 0.5 * acc / (self.base_frequency ** 2)) * np.cos(veh_phis_rad)
                     next_veh_ys = veh_ys + (veh_vs / self.base_frequency + 0.5 * acc / (self.base_frequency ** 2)) * np.sin(veh_phis_rad)
                     next_veh_phis_rad = veh_phis_rad + delta_phi_rad
@@ -123,9 +123,9 @@ class Traffic(object):
             time_receive_radar = time.time() - self.time_start
             self.time_start = time.time()
 
-            with self.lock:
-                self.shared_list[4] = time_receive_radar
-                self.state_other_list[0] = state_other.copy()
+            # with self.lock:
+            #     self.shared_list[4] = time_receive_radar
+            #     self.state_other_list[0] = state_other.copy()
 
             if time_receive_radar > 0.1:
                 print("Subscriber of radar is more than 0.1s!", time_receive_radar)
@@ -250,5 +250,5 @@ class Traffic(object):
 
 
 if __name__ == '__main__':
-    traffic = Traffic(shared_list=[0, 0, 0, 0, 0], State_Other_List=[2, 3], lock=1)
+    traffic = Traffic(shared_list=[0, 0, 0, 0, 0], State_Other_List=[2, 3], lock=True)
     traffic.run()
