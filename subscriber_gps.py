@@ -27,7 +27,7 @@ class SubscriberGps():
         # communication
         context = zmq.Context()
         self.socket_gps = context.socket(zmq.SUB)
-        self.socket_gps.connect("tcp://10.10.121.136:4444")                # 上车
+        self.socket_gps.connect("tcp://127.0.0.1:6666")                # 上车
         self.socket_gps.setsockopt(zmq.SUBSCRIBE, "".encode('utf-8'))  # 接收所有消息
 
     def rotate_and_move(self, x_rear_axle, y_rear_axle, heading):

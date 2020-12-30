@@ -45,13 +45,15 @@ def rotate_coordination(orig_x, orig_y, orig_d, coordi_rotate_d):
 
 
 TRAFFICSETTINGS = dict(left=[dict(ego=dict(v_x=2., v_y=0., r=0., x=3.5/2, y=-5, phi=90.,),
-                                  others=OrderedDict(dl=dict(x=3.5/2, y=-10, phi=90, l=5., w=2., v=0., route=('3o', '1i')),
+                                  others=OrderedDict(dl=dict(x=3.5/2, y=-10, phi=90, l=5., w=2., v=0., route=('1o', '4i')),
                                                      ud=dict(x=-3.5/2, y=11, phi=-90, l=5., w=2., v=3., route=('3o', '1i')),
                                                      ul=dict(x=-3.5/2, y=40, phi=-90, l=5., w=2., v=3., route=('3o', '4i')),),
                                   v_light=0,
                                   ),
                              dict(ego=dict(v_x=2., v_y=0., r=0., x=3.5/2, y=-5, phi=90.,),
-                                  others=OrderedDict(dl=dict(x=3.5/2, y=0, phi=90, l=5., w=2., v=3., route=('1o', '4i')),),
+                                  others=OrderedDict(dl=dict(x=3.5/2, y=-15, phi=90, l=5., w=2., v=0., route=('1o', '4i')),
+                                                     ud=dict(x=-3.5/2, y=11, phi=-90, l=5., w=2., v=3., route=('3o', '1i')),
+                                                     ul=dict(x=-3.5/2, y=40, phi=-90, l=5., w=2., v=3., route=('3o', '4i')),),
                                   v_light=0,
                                   ),
                              ],
@@ -125,7 +127,12 @@ class Traffic(object):
                 # veh_ul
                 ul_next_x, ul_next_y, ul_next_v, ul_next_phi = self.prediction('ul', veh_ul, 0.)
             elif self.case == 1:
-                pass
+                # veh_dl
+                dl_next_x, dl_next_y, dl_next_v, dl_next_phi = self.prediction('dl', veh_dl, 2.)
+                # veh_ud
+                ud_next_x, ud_next_y, ud_next_v, ud_next_phi = self.prediction('ud', veh_ud, -0.6)
+                # veh_ul
+                ul_next_x, ul_next_y, ul_next_v, ul_next_phi = self.prediction('ul', veh_ul, 0.)
             else:
                 assert self.case == 2
                 pass
@@ -141,15 +148,15 @@ class Traffic(object):
     def run(self):
         time_receive_radar = 0
         while True:
-            time.sleep(0.07)
+            time.sleep(0.1)
             state_other = self.step()
-            self.render()
+            # self.render()
             time_receive_radar = time.time() - self.time_start
             self.time_start = time.time()
 
-            # with self.lock:
-            #     self.shared_list[4] = time_receive_radar
-            #     self.state_other_list[0] = state_other.copy()
+            with self.lock:
+                self.shared_list[4] = time_receive_radar
+                self.state_other_list[0] = state_other.copy()
 
             # if time_receive_radar > 0.1:
             #     print("Subscriber of radar is more than 0.1s!", time_receive_radar)
@@ -273,5 +280,5 @@ class Traffic(object):
 
 
 if __name__ == '__main__':
-    traffic = Traffic(shared_list=[0, 0, 0, 0, 0], State_Other_List=[2, 3], lock=1)
+    traffic = Traffic(shared_list=[0, 0, 0, 0, 0], State_Other_List=[2, 3], lock=1, task='left', case=1)
     traffic.run()
