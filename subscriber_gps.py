@@ -33,8 +33,6 @@ class SubscriberGps():
     def rotate_and_move(self, x_rear_axle, y_rear_axle, heading):
         # RTK传来的自车位置不是在车辆正中心（车辆后轴）,需要换算到车辆的正中心
         temp_X, temp_Y, heading = convert_gps_coordi_to_intersection_coordi(x_rear_axle, y_rear_axle, heading)
-        # print(x_rear_axle, y_rear_axle, temp_X, temp_Y)
-
         x_modified = temp_X + self.x_bias * math.cos(heading * math.pi / 180)
         y_modified = temp_Y + self.x_bias * math.sin(heading * math.pi / 180)
         return x_modified, y_modified, heading
@@ -61,21 +59,12 @@ class SubscriberGps():
         while True:
             try:
                 data_gps = self.socket_gps.recv(zmq.NOBLOCK).decode('utf-8')
-                # print(data_gps)
-                # if data_gps != b'null\n':
                 GpsJson = json.loads(data_gps)
-                # print(GpsJson)
-                # gps的经纬度数据经高斯投影在大地坐标系下的x,y
-                # if GpsJson["Gps"]["Gps"]["IsValid"] is not None:
                 if GpsJson is not None:
                     x_rear_axle = GpsJson["Gps"]["Gps"]["GaussX"]
-                    # todo: check
                     y_rear_axle = 0.1+GpsJson["Gps"]["Gps"]["GaussY"]
-                    # print(x_rear_axle,y_rear_axle)
                     heading = 1. + GpsJson["Gps"]["Gps"]["Heading"]
-
                     State_gps['GaussX'], State_gps['GaussY'], State_gps['Heading'] = self.rotate_and_move(x_rear_axle, y_rear_axle, heading)
-                    print(State_gps['Heading'] )
                     State_gps['GpsSpeed'] = GpsJson["Gps"]["Gps"]["GpsSpeed"]
                     State_gps['NorthVelocity'] = GpsJson["Gps"]["Gps"]["NorthVelocity"]
                     State_gps['EastVelocity'] = GpsJson["Gps"]["Gps"]["EastVelocity"]

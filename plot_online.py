@@ -3,6 +3,7 @@ import numpy as np
 import math
 from math import cos, sin, pi
 import time
+from utils.misc import TimerStat
 
 CROSSROAD_SIZE = 22
 LANE_WIDTH = 3.5
@@ -62,6 +63,7 @@ class Plot():
         self.lock = lock
         self.task = task
         self.step_old = -1
+        self.acc_timer = TimerStat()
         step = []
         left_construct_traj = np.load('./map/left_construct.npy')
         straight_construct_traj = np.load('./map/straight_construct.npy')
@@ -246,7 +248,6 @@ class Plot():
             ego_brk = State_ego['BrkOn']
             ego_x = State_ego['GaussX']
             ego_y = State_ego['GaussY']
-            # print(ego_x, ego_y)
             ego_longitude = State_ego['Longitude']
             ego_latitude = State_ego['Latitude']
             ego_phi = State_ego['Heading']
@@ -257,8 +258,7 @@ class Plot():
             time1 = time.time()
             delta_time = time1-start_time
             acc_actual = (ego_v-v_old)/delta_time
-            print(ego_v, v_old, delta_time, acc_actual)
-            #print("acc:", (ego_v-v_old)/(time1-start_time))
+            self.acc_timer.push(acc_actual)
             start_time = time.time()
             v_old = ego_v
 
@@ -326,7 +326,7 @@ class Plot():
             plt.text(text_x, text_y_start - next(ge), r'brake_acc_decision: {:.2f}$m/s^2$'.format(decision_brkacc))
             plt.text(text_x, text_y_start - next(ge), 'deceleration_flag: {}'.format(decision_Dec_flag))
             plt.text(text_x, text_y_start - next(ge), r'acc_decision: {:.2f}$m/s^2$'.format(decision_ax))
-            plt.text(text_x, text_y_start - next(ge), r'acc_actual: {:.2f}$m/s^2$'.format(acc_actual))
+            plt.text(text_x, text_y_start - next(ge), r'acc_actual: {:.2f}$m/s^2$'.format(self.acc_timer.mean))
 
             plt.pause(0.01)
             # print(time.time()-start_time)

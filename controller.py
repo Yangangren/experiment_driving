@@ -463,6 +463,7 @@ class Controller(object):
             dec_flag = 0
         else:
             torque = 0.
+            # decel = np.clip(-a_x, 0., 4.)
             decel = np.clip(-a_x, 0., 3.)
             tor_flag = 0
             dec_flag = 1
