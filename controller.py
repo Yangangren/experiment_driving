@@ -455,13 +455,16 @@ class Controller(object):
         steer_wheel_rad = front_wheel_rad * self.steer_factor
         steer_wheel_deg = np.clip(steer_wheel_rad * 180. / pi, -360., 360)
         if a_x > 0:
-            torque = np.clip(a_x * 300., 0., 350.)
+            # torque = np.clip(a_x * 300., 0., 350.)
+            torque = np.clip((a_x-0.4)/0.4*50+150., 0., 250.)
+
             decel = 0.
             tor_flag = 1
             dec_flag = 0
         else:
             torque = 0.
-            decel = np.clip(-a_x, 0., 4.)
+            # decel = np.clip(-a_x, 0., 4.)
+            decel = np.clip(-a_x, 0., 3.)
             tor_flag = 0
             dec_flag = 1
 
@@ -510,6 +513,15 @@ class Controller(object):
                                     'SteerAngleAim': np.float64(steer_wheel_deg+1.7),
                                     'VehicleGearAim': 1,
                                     'IsValid': True}}}
+                    # control = {'Decision': {
+                    #     'Control': {  # 'VehicleSpeedAim': 20/3.6,
+                    #         'Deceleration': -3.0,
+                    #         'Torque': 0,
+                    #         'Dec_flag': 1,
+                    #         'Tor_flag': 0,
+                    #         'SteerAngleAim': np.float64(0. + 1.7),
+                    #         'VehicleGearAim': 3,
+                    #         'IsValid': True}}}
                     json_cotrol = json.dumps(control)
                     self.socket_pub.send(json_cotrol.encode('utf-8'))
                     self.time_decision = time.time() - self.time_in
