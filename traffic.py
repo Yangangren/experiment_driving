@@ -44,12 +44,12 @@ def rotate_coordination(orig_x, orig_y, orig_d, coordi_rotate_d):
 
 
 TRAFFICSETTINGS = dict(left=[OrderedDict(ego=dict(v_x=2., v_y=0., r=0., x=3.5/2, y=-5, phi=90.,),
-                                         ud=dict(x=-3.5/2, y=11, phi=-90, l=5., w=2., v=3., acc_type='uniform', route=('3o', '1i')),
-                                         ul=dict(x=-3.5/2, y=18, phi=-90, l=5., w=2., v=3., acc_type='stop', route=('3o', '4i')),
+                                         others=dict(ud=dict(x=-3.5/2, y=11, phi=-90, l=5., w=2., v=3., acc_type='uniform', route=('3o', '1i')),
+                                                     ul=dict(x=-3.5/2, y=18, phi=-90, l=5., w=2., v=3., acc_type='stop', route=('3o', '4i')),),
                                          v_light=0,
                                          ),
                              OrderedDict(ego=dict(v_x=2., v_y=0., r=0., x=3.5/2, y=-5, phi=90.,),
-                                         dl=dict(x=3.5/2, y=0, phi=90, l=5., w=2., v=3., route=('1o', '4i')),
+                                         others=dict(dl=dict(x=3.5/2, y=0, phi=90, l=5., w=2., v=3., route=('1o', '4i')),),
                                          v_light=0,
                                          ),
                              ],
@@ -61,56 +61,54 @@ TRAFFICSETTINGS = dict(left=[OrderedDict(ego=dict(v_x=2., v_y=0., r=0., x=3.5/2,
 class Traffic(object):
     def __init__(self, shared_list, State_Other_List, lock, task='left', case=0):
         self.shared_list = shared_list
-        self.state_other_List = State_Other_List
+        self.state_other_list = State_Other_List
         self.time_start = 0
         self.lock = lock
-        self.mode = TRAFFICSETTINGS[task][case]
+        self.mode = TRAFFICSETTINGS[task][case].copy()
         self.base_frequency = 10
 
     def prediction(self, mode):
         state_other = {'x_other': [], 'y_other': [], 'v_other': [], 'phi_other': [], 'v_light': []}
-        for vehicle, info in mode.items():
-            if vehicle == 'v_light':
-                state_other['v_light'].append(info)
-            else:
-                if vehicle != 'ego':
-                    veh_xs, veh_ys, veh_phis_rad, veh_vs = info['x'], info['y'], info['phi'] * np.pi / 180, info['v']
-                    veh_type = info['acc_type']
+        state_other['v_light'].append(mode['v_light'])
 
-                    middle_cond = np.logical_and(np.logical_and(veh_xs > -CROSSROAD_SIZE / 2, veh_xs < CROSSROAD_SIZE / 2),
-                                              np.logical_and(veh_ys > -CROSSROAD_SIZE / 2, veh_ys < CROSSROAD_SIZE / 2))
+        for vehicle, info in mode['others'].items():
+            veh_xs, veh_ys, veh_phis_rad, veh_vs = info['x'], info['y'], info['phi'] * np.pi / 180, info['v']
+            veh_type = info['acc_type']
 
-                    zeros = np.zeros_like(veh_xs)
+            middle_cond = np.logical_and(np.logical_and(veh_xs > -CROSSROAD_SIZE / 2, veh_xs < CROSSROAD_SIZE / 2),
+                                      np.logical_and(veh_ys > -CROSSROAD_SIZE / 2, veh_ys < CROSSROAD_SIZE / 2))
 
-                    if vehicle in ['dl', 'rd', 'ur', 'lu']:
-                        pass
-                    elif vehicle in ['dr', 'ru', 'ul', 'ld']:
-                        if veh_type == 'stop':
-                            acc = -0.3
-                            delta_dist = veh_vs / self.base_frequency + 0.5 * acc / (self.base_frequency ** 2)
-                            delta_phi_rad = np.where(middle_cond, -(delta_dist / (CROSSROAD_SIZE / 2 - 0.5 * LANE_WIDTH)), zeros)
+            zeros = np.zeros_like(veh_xs)
 
-                    elif vehicle in ['ud', 'du', 'rl', 'lr']:
-                        if veh_type == 'uniform':
-                            delta_phi_rad = 0.
-                            acc = 0.
+            if vehicle in ['dl', 'rd', 'ur', 'lu']:
+                pass
+            elif vehicle in ['dr', 'ru', 'ul', 'ld']:
+                if veh_type == 'stop':
+                    acc = -0.3
+                    delta_dist = veh_vs / self.base_frequency + 0.5 * acc / (self.base_frequency ** 2)
+                    delta_phi_rad = np.where(middle_cond, -(delta_dist / (CROSSROAD_SIZE / 2 - 0.5 * LANE_WIDTH)), zeros)
 
-                    next_veh_vs = max(0, veh_vs + acc / self.base_frequency)
-                    next_veh_xs = veh_xs + (veh_vs / self.base_frequency + 0.5 * acc / (self.base_frequency ** 2)) * np.cos(veh_phis_rad)
-                    next_veh_ys = veh_ys + (veh_vs / self.base_frequency + 0.5 * acc / (self.base_frequency ** 2)) * np.sin(veh_phis_rad)
-                    next_veh_phis_rad = veh_phis_rad + delta_phi_rad
+            elif vehicle in ['ud', 'du', 'rl', 'lr']:
+                if veh_type == 'uniform':
+                    delta_phi_rad = 0.
+                    acc = 0.
 
-                    next_veh_phis_rad = np.where(next_veh_phis_rad > np.pi, next_veh_phis_rad - 2 * np.pi,
-                                                 next_veh_phis_rad)
-                    next_veh_phis_rad = np.where(next_veh_phis_rad <= -np.pi, next_veh_phis_rad + 2 * np.pi,
-                                                 next_veh_phis_rad)
-                    next_veh_phis = next_veh_phis_rad * 180 / np.pi
+            next_veh_vs = veh_vs + acc / self.base_frequency
+            next_veh_xs = veh_xs + (veh_vs / self.base_frequency + 0.5 * acc / (self.base_frequency ** 2)) * np.cos(veh_phis_rad)
+            next_veh_ys = veh_ys + (veh_vs / self.base_frequency + 0.5 * acc / (self.base_frequency ** 2)) * np.sin(veh_phis_rad)
+            next_veh_phis_rad = veh_phis_rad + delta_phi_rad
 
-                    state_other['x_other'].append(next_veh_xs)
-                    state_other['y_other'].append(next_veh_ys)
-                    state_other['v_other'].append(next_veh_vs)
-                    state_other['phi_other'].append(next_veh_phis)
-                    mode[vehicle].update(x=next_veh_xs, y=next_veh_ys, phi=next_veh_phis, v=next_veh_vs)
+            next_veh_phis_rad = np.where(next_veh_phis_rad > np.pi, next_veh_phis_rad - 2 * np.pi,
+                                         next_veh_phis_rad)
+            next_veh_phis_rad = np.where(next_veh_phis_rad <= -np.pi, next_veh_phis_rad + 2 * np.pi,
+                                         next_veh_phis_rad)
+            next_veh_phis = next_veh_phis_rad * 180 / np.pi
+
+            state_other['x_other'].append(next_veh_xs)
+            state_other['y_other'].append(next_veh_ys)
+            state_other['v_other'].append(next_veh_vs)
+            state_other['phi_other'].append(next_veh_phis)
+            mode['others'][vehicle].update(x=next_veh_xs, y=next_veh_ys, phi=next_veh_phis, v=next_veh_vs)
 
         return state_other, mode
 
@@ -119,18 +117,18 @@ class Traffic(object):
         while True:
             time.sleep(0.07)
             state_other, self.mode = self.prediction(self.mode)
-            self.render()
+            # self.render()
             time_receive_radar = time.time() - self.time_start
             self.time_start = time.time()
 
-            # with self.lock:
-            #     self.shared_list[4] = time_receive_radar
-            #     self.state_other_list[0] = state_other.copy()
+            with self.lock:
+                self.shared_list[4] = time_receive_radar
+                self.state_other_list[0] = state_other.copy()
 
             if time_receive_radar > 0.1:
                 print("Subscriber of radar is more than 0.1s!", time_receive_radar)
 
-            print(state_other['x_other'], state_other['y_other'])
+            # print(state_other['x_other'], state_other['y_other'])
 
     def render(self):
         square_length = CROSSROAD_SIZE
@@ -232,7 +230,7 @@ class Traffic(object):
                              y + line_length * sin(phi * pi / 180.)
             plt.plot([x, x_forw], [y, y_forw], color=color, linewidth=0.5)
 
-        state_others = self.mode.copy()
+        state_others = self.mode['others'].copy()
         # plot cars
         for index, veh in state_others.items():
             if index != 'ego' and index != 'v_light':
@@ -250,5 +248,5 @@ class Traffic(object):
 
 
 if __name__ == '__main__':
-    traffic = Traffic(shared_list=[0, 0, 0, 0, 0], State_Other_List=[2, 3], lock=True)
+    traffic = Traffic(shared_list=[0, 0, 0, 0, 0], State_Other_List=[2, 3], lock=1)
     traffic.run()

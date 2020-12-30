@@ -24,7 +24,7 @@ class SubscriberCan():
 
         context = zmq.Context()
         self.socket_can = context.socket(zmq.SUB)
-        self.socket_can.connect("tcp://127.0.0.1:6974")  # 上车
+        self.socket_can.connect("tcp://10.10.121.136:7777")  # 上车
         self.socket_can.setsockopt(zmq.SUBSCRIBE, "".encode('utf-8'))  # 接收所有消息
 
     def run(self):
@@ -41,19 +41,20 @@ class SubscriberCan():
         while True:
             try:
                 data_can = self.socket_can.recv(zmq.NOBLOCK).decode('utf-8')
-                CanJson = json.loads(data_can)
-                if CanJson["CAN"]["VehicleStatues"]["IsValid"] == True:
-                    # todo: 车辆实际执行的动作大小，由于车辆的物理响应，实际执行动作和网络输出动作可能不同，也可能存在时延
-                    State_can['VehicleSPeedAct'] = CanJson["CAN"]["VehicleStatues"]["VehicleSpeedAct"]
-                    # todo: 车轮转角的零位存在偏差，单位（°），实际需要测试标定，方法是给车发送0的控制量，看看实际反馈是多少
-                    State_can['SteerAngleAct'] = -1.7 + CanJson["CAN"]["VehicleStatues"]["SteerAngleAct"]
+                if data_can != b'null\n':
+                    CanJson = json.loads(data_can)
+                    if CanJson["CAN"]["VehicleStatues"]["IsValid"] == True:
+                        # todo: 车辆实际执行的动作大小，由于车辆的物理响应，实际执行动作和网络输出动作可能不同，也可能存在时延
+                        State_can['VehicleSPeedAct'] = CanJson["CAN"]["VehicleStatues"]["VehicleSpeedAct"]
+                        # todo: 车轮转角的零位存在偏差，单位（°），实际需要测试标定，方法是给车发送0的控制量，看看实际反馈是多少
+                        State_can['SteerAngleAct'] = -1.7 + CanJson["CAN"]["VehicleStatues"]["SteerAngleAct"]
 
-                    State_can['AutoGear'] = CanJson["CAN"]["VehicleStatues"]["AutoGear"]
-                    State_can['VehicleMode'] = CanJson["CAN"]["VehicleStatues"]["VehicleMode"]
-                    State_can['Throttle'] = CanJson["CAN"]["VehicleStatues"]["Throttle"]
-                    State_can['BrkOn'] = CanJson["CAN"]["VehicleStatues"]["BrkOn"]
-                    time_receive_can = time.time() - self.time_start_can
-                    self.time_start_can = time.time()
+                        State_can['AutoGear'] = CanJson["CAN"]["VehicleStatues"]["AutoGear"]
+                        State_can['VehicleMode'] = CanJson["CAN"]["VehicleStatues"]["VehicleMode"]
+                        State_can['Throttle'] = CanJson["CAN"]["VehicleStatues"]["Throttle"]
+                        State_can['BrkOn'] = CanJson["CAN"]["VehicleStatues"]["BrkOn"]
+                        time_receive_can = time.time() - self.time_start_can
+                        self.time_start_can = time.time()
             except zmq.ZMQError:
                 pass
 
