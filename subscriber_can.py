@@ -24,7 +24,7 @@ class SubscriberCan():
 
         context = zmq.Context()
         self.socket_can = context.socket(zmq.SUB)
-        self.socket_can.connect("tcp://10.10.121.136:7777")  # 上车
+        self.socket_can.connect("tcp://127.0.0.1:7777")  # 上车
         self.socket_can.setsockopt(zmq.SUBSCRIBE, "".encode('utf-8'))  # 接收所有消息
 
     def run(self):

@@ -316,7 +316,7 @@ class Plot():
             plt.text(text_x, text_y_start - next(ge), 'deceleration_flag: {}'.format(decision_Dec_flag))
             plt.text(text_x, text_y_start - next(ge), r'acc_decision: {:.2f}$m/s^2$'.format(decision_ax))
             plt.pause(0.01)
-            print(time.time()-start_time)
+            # print(time.time()-start_time)
             # ax.cla()
 
             # # reward info
