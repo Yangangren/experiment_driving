@@ -22,6 +22,7 @@ import argparse
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
+
 def controller_agent(shared_list, Info_List, State_Other_List,receive_index,
                      if_save,if_radar,lock, task, case):
     publisher_ = Controller(shared_list,Info_List, State_Other_List,receive_index,
@@ -67,7 +68,7 @@ def built_parser():
 def main():
     args = built_parser()
     if_save = True
-    if_radar = False # True: with digital twin system
+    if_radar = True # True: with digital twin system
 
     shared_list = mp.Manager().list([0]*5)
     # [state_gps, state_can, time_gps, time_can, time_radar]
