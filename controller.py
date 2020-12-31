@@ -246,7 +246,7 @@ class Controller(object):
                           straight=LoadPolicy('./utils/models/straight', 75000),
                           right=LoadPolicy('./utils/models/right', 80000))
         self.model = TASK2MODEL[task]
-        self.steer_factor = 20
+        self.steer_factor = 10
         self.Info_List = Info_List
         self.State_Other_List = State_Other_List
         self.Info_List[0] = -1
@@ -451,13 +451,12 @@ class Controller(object):
     def _action_transformation_for_end2end(self, action):  # [-1, 1] # TODO: wait real car
         action = np.clip(action, -1.0, 1.0)
         front_wheel_norm_rad, a_x_norm = action[0], action[1]
-        front_wheel_rad, a_x = 0.4 * front_wheel_norm_rad, 3.*a_x_norm - 1
+        front_wheel_rad, a_x = 0.4 * front_wheel_norm_rad, 2.25*a_x_norm - 0.75
         steer_wheel_rad = front_wheel_rad * self.steer_factor
         steer_wheel_deg = np.clip(steer_wheel_rad * 180. / pi, -360., 360)
         if a_x > 0:
             # torque = np.clip(a_x * 300., 0., 350.)
             torque = np.clip((a_x-0.4)/0.4*50+150., 0., 250.)
-
             decel = 0.
             tor_flag = 1
             dec_flag = 0
