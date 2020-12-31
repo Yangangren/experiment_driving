@@ -53,14 +53,14 @@ def subscriber_radar_agent(shared_list,State_Other_List,lock):
 
 def plot_agent(Info_List,lock, task):
     plot_ = Plot(Info_List,lock, task)
-    time.sleep(2)
+    time.sleep(3)
     plot_.run()
 
 
 def built_parser():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--task', type=str, default='left')
+    parser.add_argument('--task', type=str, default='right')
     parser.add_argument('--case', type=int, default=0)
     return parser.parse_args()
 

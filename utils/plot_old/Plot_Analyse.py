@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-from Application_final import load_map
+# from Application_final import load_map
 import re
 import numpy as np
 import seaborn as sns
@@ -620,7 +620,7 @@ def Plot_R_X_Y(root):
     plt.show()
 
 if __name__ == '__main__':
-    root = 'D:/Troy.Z/THU/iDlab/1_小车测试/4_苏州实验/experiment20200819/'
+    root = '/home/mht/PycharmProjects/experiment_driving/'
     path = root + 'noise/s1m2-2.5/record.txt'
     # root = 'D:/Troy.Z/THU/iDlab/1_小车测试/4_苏州实验/experiment20200819/vedio/s1m2action1/'
     # path = root + 'record.txt'
