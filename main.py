@@ -52,7 +52,7 @@ def subscriber_radar_agent(shared_list,State_Other_List,lock):
 
 def plot_agent(Info_List,lock, task):
     plot_ = Plot(Info_List,lock, task)
-    time.sleep(2)
+    time.sleep(3)
     plot_.run()
 
 
