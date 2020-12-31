@@ -1,6 +1,7 @@
 import zmq
 import json
 import time
+import struct
 import os
 from datetime import datetime
 import numpy as np
@@ -259,6 +260,10 @@ class Controller(object):
         context = zmq.Context()
         self.socket_pub = context.socket(zmq.PUB)
         self.socket_pub.bind("tcp://*:6970")
+
+        context = zmq.Context()
+        self.socket_pub_radar = context.socket(zmq.PUB)
+        self.socket_pub_radar.bind("tcp://*:5555")
         self.time_initial = time.time()
         self.step = 0
         self.if_save = if_save
@@ -523,6 +528,10 @@ class Controller(object):
                     #         'IsValid': True}}}
                     json_cotrol = json.dumps(control)
                     self.socket_pub.send(json_cotrol.encode('utf-8'))
+                    x, y, phi = state_ego['GaussX']+21277000., state_ego['GaussY']+3447700., state_ego['Heading']*np.pi/180.
+                    msg4radar = struct.pack('6d', 0., 0., 0., x, y, phi)
+                    self.socket_pub_radar.send(msg4radar)
+
                     self.time_decision = time.time() - self.time_in
                     self.Time.append(time.time() - self.time_initial)
 
