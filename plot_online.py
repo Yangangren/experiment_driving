@@ -215,13 +215,13 @@ class Plot():
 
             v_light = State_others['v_light']
             if v_light == 0:
-                v_color, h_color = 'green', 'red'
+                v_color, h_color = 'black', 'black'     #  'green', 'red'
             elif v_light == 1:
-                v_color, h_color = 'orange', 'red'
+                v_color, h_color = 'black', 'black'
             elif v_light == 2:
-                v_color, h_color = 'red', 'green'
+                v_color, h_color = 'black', 'black'
             else:
-                v_color, h_color = 'red', 'orange'
+                v_color, h_color = 'black', 'black'
 
 
             plt.plot([0, lane_width], [-square_length / 2 - start_offset, -square_length / 2 - start_offset],
