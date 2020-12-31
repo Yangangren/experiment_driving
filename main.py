@@ -59,7 +59,7 @@ def plot_agent(Info_List,lock, task):
 def built_parser():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--task', type=str, default='left')
+    parser.add_argument('--task', type=str, default='right')
     parser.add_argument('--case', type=int, default=0)
     return parser.parse_args()
 

@@ -107,14 +107,10 @@ class Plot():
 
         # ----------------------ref_path--------------------
 
-        # delta_, _, _ = tracking_info[:3]
-        # plot_ref = ['left','straight','right', 'left_ref','straight_ref','right_ref']
-        # for ref in plot_ref:
-        #     ref_path = self.ref_path_all[ref]
-        #     ax.plot(ref_path[0], ref_path[1])
-
-
-
+        plot_ref = ['left_ref'] # ,'straight','straight_ref''right', ,'right_ref' # TODO:draw ref and gps traj
+        for ref in plot_ref:
+            ref_path = self.ref_path_all[ref]
+            ax.plot(ref_path[0], ref_path[1])
 
         def draw_rotate_rec(x, y, a, l, w, color, linestyle='-'):
             RU_x, RU_y, _ = rotate_coordination(l / 2, w / 2, 0, -a)
@@ -200,6 +196,7 @@ class Plot():
             State_others = self.Info_List[4].copy()
             # plot cars
             for i in range(len(State_others['x_other'])): # TODO:
+                # print(veh_y)
                 veh_x = State_others['x_other'][i]
                 veh_y = State_others['y_other'][i]
                 veh_phi = State_others['phi_other'][i]
@@ -211,13 +208,13 @@ class Plot():
 
             v_light = State_others['v_light']
             if v_light == 0:
-                v_color, h_color = 'green', 'red'
+                v_color, h_color = 'black', 'black'     #  'green', 'red'
             elif v_light == 1:
-                v_color, h_color = 'orange', 'red'
+                v_color, h_color = 'black', 'black'
             elif v_light == 2:
-                v_color, h_color = 'red', 'green'
+                v_color, h_color = 'black', 'black'
             else:
-                v_color, h_color = 'red', 'orange'
+                v_color, h_color = 'black', 'black'
 
 
             plt.plot([0, lane_width], [-square_length / 2 - start_offset, -square_length / 2 - start_offset],
