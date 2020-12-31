@@ -69,7 +69,8 @@ class Traffic(object):
     def __init__(self, shared_list, State_Other_List, lock, task='left', case=0):
         self.shared_list = shared_list
         self.state_other_list = State_Other_List
-        self.time_start = 0
+        self.abso_time_start = time.time()
+        self.abso_time_in_this_step = time.time()
         self.lock = lock
         self.task = task
         self.case = case
@@ -117,7 +118,7 @@ class Traffic(object):
         return next_x, next_y, next_v, next_phi
 
     def step(self, last_time):
-        self.run_time += 1/self.base_frequency
+        self.run_time = time.time() - self.time_start
         state_other = {'x_other': [], 'y_other': [], 'v_other': [], 'phi_other': [], 'v_light': []}
         state_other['v_light'].append(self.case_dict['v_light'])
         ego_x, ego_y = self.shared_list[0]['GaussX'], self.shared_list[0]['GaussY']
@@ -163,13 +164,11 @@ class Traffic(object):
 
     def run(self):
         while True:
-            time_for_prediction = time.time()
             time.sleep(0.05)
-            real_time = time.time() - time_for_prediction
-            state_other = self.step(real_time)
-            self.render()
-            time_receive_radar = time.time() - self.time_start
-            self.time_start = time.time()
+            delta_time_in_this_step = time.time() - self.abso_time_in_this_step
+            state_other = self.step(delta_time_in_this_step)
+            self.abso_time_in_this_step = time.time()
+            time_receive_radar = self.abso_time_in_this_step
 
             # print(real_time)
             with self.lock:
