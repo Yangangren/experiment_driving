@@ -101,13 +101,7 @@ class Plot():
             else:
                 return False
 
-        # ----------------------ref_path--------------------
 
-        # delta_, _, _ = tracking_info[:3]
-        # plot_ref = ['left','straight','right', 'left_ref','straight_ref','right_ref']
-        # for ref in plot_ref:
-        #     ref_path = self.ref_path_all[ref]
-        #     ax.plot(ref_path[0], ref_path[1])
 
 
 
@@ -191,7 +185,17 @@ class Plot():
             plt.plot([-LANE_NUMBER * lane_width, -square_length / 2], [square_length / 2, LANE_NUMBER * lane_width],
                      color='black')
 
+
+
+            # ----------------------ref_path--------------------
+
+            plot_ref = ['left','straight','right', 'left_ref','straight_ref','right_ref']  # 'left','straight','right', 'left_ref','straight_ref','right_ref'
+            for ref in plot_ref:
+                ref_path = self.ref_path_all[ref]
+                ax.plot(ref_path[0], ref_path[1])
+
             ax.plot(self.ref_path[0], self.ref_path[1], color='g')  # todo:
+
 
             State_others = self.Info_List[4].copy()
             # plot cars
@@ -376,13 +380,13 @@ class Plot():
 
 
 
-def test_static_plot():
+def static_plot():
     plot = Plot(None,None,'left')
     plot.run()
     plt.show()
 
 
 if __name__ == '__main__':
-    test_static_plot()
+    static_plot()
 
 
