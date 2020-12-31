@@ -105,12 +105,10 @@ class Plot():
             else:
                 return False
 
-        # ----------------------ref_path--------------------
 
-        plot_ref = ['left_ref'] # ,'straight','straight_ref''right', ,'right_ref' # TODO:draw ref and gps traj
-        for ref in plot_ref:
-            ref_path = self.ref_path_all[ref]
-            ax.plot(ref_path[0], ref_path[1])
+
+
+
 
         def draw_rotate_rec(x, y, a, l, w, color, linestyle='-'):
             RU_x, RU_y, _ = rotate_coordination(l / 2, w / 2, 0, -a)
@@ -191,12 +189,21 @@ class Plot():
             plt.plot([-LANE_NUMBER * lane_width, -square_length / 2], [square_length / 2, LANE_NUMBER * lane_width],
                      color='black')
 
+
+
+            # ----------------------ref_path--------------------
+
+            plot_ref = ['left','straight','right', 'left_ref','straight_ref','right_ref']  # 'left','straight','right', 'left_ref','straight_ref','right_ref'
+            for ref in plot_ref:
+                ref_path = self.ref_path_all[ref]
+                ax.plot(ref_path[0], ref_path[1])
+
             ax.plot(self.ref_path[0], self.ref_path[1], color='g')  # todo:
+
 
             State_others = self.Info_List[4].copy()
             # plot cars
             for i in range(len(State_others['x_other'])): # TODO:
-                # print(veh_y)
                 veh_x = State_others['x_other'][i]
                 veh_y = State_others['y_other'][i]
                 veh_phi = State_others['phi_other'][i]
@@ -386,13 +393,13 @@ class Plot():
 
 
 
-def test_static_plot():
+def static_plot():
     plot = Plot(None,None,'left')
     plot.run()
     plt.show()
 
 
 if __name__ == '__main__':
-    test_static_plot()
+    static_plot()
 
 
