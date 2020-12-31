@@ -69,30 +69,31 @@ class Traffic(object):
     def __init__(self, shared_list, State_Other_List, lock, task='left', case=0):
         self.shared_list = shared_list
         self.state_other_list = State_Other_List
-        self.time_start = 0
+        self.abso_time_start = None
+        self.abso_time_in_this_step = None
+        self.is_triggered = False
         self.lock = lock
         self.task = task
         self.case = case
         self.case_dict = TRAFFICSETTINGS[task][case].copy()
         self.others = self.case_dict['others'].copy()
-        self.ego_trigger = self.case_dict['ego'].copy()
         self.base_frequency = 10.
-        self.run_time = 0.
+        self.time_since_triggered = 0.
 
-    def prediction(self, mode, veh, acc, ride_time, max_v=5.):
+    def prediction(self, mode, veh, acc, delta_time, max_v=5.):
         x, y, v, phi = veh['x'], veh['y'], veh['v'], veh['phi']
         phi_rad = phi * np.pi / 180.
-        x_delta = v * ride_time * cos(phi_rad)
-        y_delta = v * ride_time * sin(phi_rad)
-        v_delta = acc * ride_time
+        x_delta = v * delta_time * cos(phi_rad)
+        y_delta = v * delta_time * sin(phi_rad)
+        v_delta = acc * delta_time
         middle_cond = (-CROSSROAD_SIZE / 2 < x < CROSSROAD_SIZE / 2) and (-CROSSROAD_SIZE / 2 < y < CROSSROAD_SIZE / 2)
         phi_rad_delta = 0.
         if middle_cond:
             if mode in ['dl', 'rd', 'ur', 'lu']:
-                phi_rad_delta = (v / (CROSSROAD_SIZE / 2 + 0.5 * LANE_WIDTH)) * ride_time
+                phi_rad_delta = (v / (CROSSROAD_SIZE / 2 + 0.5 * LANE_WIDTH)) * delta_time
                 phi_rad_delta += 0.001
             elif mode in ['dr', 'ru', 'ul', 'ld']:
-                phi_rad_delta = -(v / (CROSSROAD_SIZE / 2 - 0.5 * LANE_WIDTH)) * ride_time
+                phi_rad_delta = -(v / (CROSSROAD_SIZE / 2 - 0.5 * LANE_WIDTH)) * delta_time
 
         next_x, next_y, next_v, next_phi_rad = \
             x + x_delta, y + y_delta, v + v_delta, phi_rad + phi_rad_delta
@@ -116,32 +117,40 @@ class Traffic(object):
         next_v = np.clip(next_v, 0., max_v)
         return next_x, next_y, next_v, next_phi
 
-    def step(self, last_time):
-        self.run_time += 1/self.base_frequency
+    def is_triggered_func(self, ego_y):
+        if ego_y > -14 - 15:
+            self.is_triggered = True
+            self.abso_time_start = time.time()
+            self.abso_time_in_this_step = time.time()
+
+    def step(self, delta_time):
+        _, ego_y = self.shared_list[0]['GaussX'], self.shared_list[0]['GaussY']
+        if not self.is_triggered:
+            self.is_triggered_func(ego_y)
+        self.time_since_triggered = time.time() - self.abso_time_start if self.is_triggered else 0.
         state_other = {'x_other': [], 'y_other': [], 'v_other': [], 'phi_other': [], 'v_light': []}
         state_other['v_light'].append(self.case_dict['v_light'])
-        ego_x, ego_y = self.shared_list[0]['GaussX'], self.shared_list[0]['GaussY']
 
         if self.task == 'left':
             veh_dl, veh_ud, veh_ul = self.others['dl'], self.others['ud'], self.others['ul']
-            if ego_y > self.ego_trigger['y']:
+            if self.is_triggered:
                 if self.case == 0:
                     # veh_dl
-                    if self.run_time < 5.:
-                        dl_next_x, dl_next_y, dl_next_v, dl_next_phi = self.prediction('dl', veh_dl, 0., last_time)
+                    if self.time_since_triggered < 9.:
+                        dl_next_x, dl_next_y, dl_next_v, dl_next_phi = self.prediction('dl', veh_dl, 0., delta_time)
                     else:
-                        dl_next_x, dl_next_y, dl_next_v, dl_next_phi = self.prediction('dl', veh_dl, 2., last_time)
+                        dl_next_x, dl_next_y, dl_next_v, dl_next_phi = self.prediction('dl', veh_dl, 2., delta_time)
                     # veh_ud
-                    ud_next_x, ud_next_y, ud_next_v, ud_next_phi = self.prediction('ud', veh_ud, 2., last_time)
+                    ud_next_x, ud_next_y, ud_next_v, ud_next_phi = self.prediction('ud', veh_ud, 2., delta_time)
                     # veh_ul
-                    ul_next_x, ul_next_y, ul_next_v, ul_next_phi = self.prediction('ul', veh_ul, 0., last_time)
+                    ul_next_x, ul_next_y, ul_next_v, ul_next_phi = self.prediction('ul', veh_ul, 0., delta_time)
                 elif self.case == 1:
                     # veh_dl
-                    dl_next_x, dl_next_y, dl_next_v, dl_next_phi = self.prediction('dl', veh_dl, 2.5, last_time)
+                    dl_next_x, dl_next_y, dl_next_v, dl_next_phi = self.prediction('dl', veh_dl, 2.5, delta_time)
                     # veh_ud
-                    ud_next_x, ud_next_y, ud_next_v, ud_next_phi = self.prediction('ud', veh_ud, -0.5, last_time)
+                    ud_next_x, ud_next_y, ud_next_v, ud_next_phi = self.prediction('ud', veh_ud, -0.5, delta_time)
                     # veh_ul
-                    ul_next_x, ul_next_y, ul_next_v, ul_next_phi = self.prediction('ul', veh_ul, 0., last_time)
+                    ul_next_x, ul_next_y, ul_next_v, ul_next_phi = self.prediction('ul', veh_ul, 0., delta_time)
                 else:
                     assert self.case == 2
                     pass
@@ -163,13 +172,13 @@ class Traffic(object):
 
     def run(self):
         while True:
-            time_for_prediction = time.time()
             time.sleep(0.05)
-            real_time = time.time() - time_for_prediction
-            state_other = self.step(real_time)
-            self.render()
-            time_receive_radar = time.time() - self.time_start
-            self.time_start = time.time()
+            delta_time_in_this_step = time.time() - self.abso_time_in_this_step if self.is_triggered else 0.
+            print(delta_time_in_this_step)
+            state_other = self.step(delta_time_in_this_step)
+            # self.render()
+            self.abso_time_in_this_step = time.time()
+            time_receive_radar = self.abso_time_in_this_step
 
             # print(real_time)
             with self.lock:
@@ -295,12 +304,12 @@ class Traffic(object):
                 draw_rotate_rec(veh_x, veh_y, veh_phi, veh_l, veh_w, 'black')
 
         # plot ego vehicles
-        ego_veh = self.ego_trigger
-        veh_x = ego_veh['x']
-        veh_y = ego_veh['y']
-        veh_phi = ego_veh['phi']
-        plot_phi_line(veh_x, veh_y, veh_phi, 'red')
-        draw_rotate_rec(veh_x, veh_y, veh_phi, EGO_LENGTH, EGO_WIDTH, 'red')
+        # ego_veh = self.ego_trigger
+        # veh_x = ego_veh['x']
+        # veh_y = ego_veh['y']
+        # veh_phi = ego_veh['phi']
+        # plot_phi_line(veh_x, veh_y, veh_phi, 'red')
+        # draw_rotate_rec(veh_x, veh_y, veh_phi, EGO_LENGTH, EGO_WIDTH, 'red')
 
         # plt.show()
         plt.pause(0.1)
@@ -308,7 +317,7 @@ class Traffic(object):
 
 if __name__ == '__main__':
     global ego_list
-    ego_list = [dict(GaussX=3.5 / 2, GaussY=-26.5), 0, 0, 0, 0]
+    ego_list = [dict(GaussX=3.5 / 2, GaussY=-23), 0, 0, 0, 0]
     for _ in range(10):
         pass
     traffic = Traffic(shared_list=ego_list, State_Other_List=[2, 3], lock = mp.Lock(), task='left', case=0)
