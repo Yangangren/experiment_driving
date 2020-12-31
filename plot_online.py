@@ -3,6 +3,7 @@ import numpy as np
 import math
 from math import cos, sin, pi
 import time
+from utils.misc import TimerStat
 
 CROSSROAD_SIZE = 22
 LANE_WIDTH = 3.5
@@ -62,6 +63,7 @@ class Plot():
         self.lock = lock
         self.task = task
         self.step_old = -1
+        self.acc_timer = TimerStat()
         step = []
         left_construct_traj = np.load('./map/left_construct.npy')
         straight_construct_traj = np.load('./map/straight_construct.npy')
@@ -81,6 +83,8 @@ class Plot():
         light_line_width = 3
         dotted_line_style = '--'
         solid_line_style = '-'
+        start_time = 0
+        v_old = 0.
         # plt.figure(0)
         # plt.ion()
         # plt.cla()
@@ -123,7 +127,7 @@ class Plot():
             plt.plot([x, x_forw], [y, y_forw], color=color, linewidth=0.5)
 
         while True:
-            start_time = time.time()
+            # start_time = time.time()
             plt.cla()
             plt.axis('off')
             ax.add_patch(plt.Rectangle((-square_length / 2 - extension, -square_length / 2 - extension - start_offset),
@@ -255,6 +259,12 @@ class Plot():
             ego_w = EGO_WIDTH
             plot_phi_line(ego_x, ego_y, ego_phi, 'red')
             draw_rotate_rec(ego_x, ego_y, ego_phi, ego_l, ego_w, 'red')
+            time1 = time.time()
+            delta_time = time1-start_time
+            acc_actual = (ego_v-v_old)/delta_time
+            self.acc_timer.push(acc_actual)
+            start_time = time.time()
+            v_old = ego_v
 
             indexs, points = find_closest_point(self.ref_path, np.array([ego_x], np.float32),
                                                               np.array([ego_y], np.float32))
@@ -263,6 +273,7 @@ class Plot():
             delta_x, delta_y, delta_phi = ego_x - path_x, ego_y - path_y, ego_phi - path_phi
 
             # plot ego dynamics
+
             text_x, text_y_start = -110, 60
             ge = iter(range(0, 1000, 4))
             plt.text(text_x, text_y_start - next(ge), 'ego_GaussX: {:.2f}m'.format(ego_x))
@@ -319,6 +330,8 @@ class Plot():
             plt.text(text_x, text_y_start - next(ge), r'brake_acc_decision: {:.2f}$m/s^2$'.format(decision_brkacc))
             plt.text(text_x, text_y_start - next(ge), 'deceleration_flag: {}'.format(decision_Dec_flag))
             plt.text(text_x, text_y_start - next(ge), r'acc_decision: {:.2f}$m/s^2$'.format(decision_ax))
+            plt.text(text_x, text_y_start - next(ge), r'acc_actual: {:.2f}$m/s^2$'.format(self.acc_timer.mean))
+
             plt.pause(0.01)
             # print(time.time()-start_time)
             # ax.cla()

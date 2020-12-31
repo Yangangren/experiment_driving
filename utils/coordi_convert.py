@@ -11,6 +11,8 @@ import math
 import numpy as np
 
 ROTATE_ANGLE = 89.
+X_IN_GPS_OFFSET = -13.5
+Y_IN_GPS_OFFSET = -1.25
 
 
 def shift_coordination(orig_x, orig_y, coordi_shift_x, coordi_shift_y):
@@ -44,7 +46,11 @@ def shift_and_rotate_coordination(orig_x, orig_y, orig_d, coordi_shift_x, coordi
 
 def convert_gps_coordi_to_intersection_coordi(x, y, phi):
     phi_in_anticlockwise = -(phi-90.)
-    intersection_x_in_gps_coordi, intersection_y_in_gps_coordi = 21277043.5350594-14., 3447703.03112017-3.5/2
+    if phi_in_anticlockwise>180:
+        phi_in_anticlockwise -=360
+    elif phi_in_anticlockwise <=-180:
+        phi_in_anticlockwise += 360
+    intersection_x_in_gps_coordi, intersection_y_in_gps_coordi = 21277043.5350594+X_IN_GPS_OFFSET, 3447703.03112017+Y_IN_GPS_OFFSET
     trans_x, trans_y, trans_phi = shift_and_rotate_coordination(x, y, phi_in_anticlockwise,
                                   intersection_x_in_gps_coordi, intersection_y_in_gps_coordi, ROTATE_ANGLE)
     return trans_x, trans_y, trans_phi
@@ -75,7 +81,13 @@ def vec_shift_and_rotate_coordination(orig_x, orig_y, orig_d, coordi_shift_x, co
 
 def vec_convert_gps_coordi_to_intersection_coordi(x, y, phi):
     phi_in_anticlockwise = -(phi-90.)
-    intersection_x_in_gps_coordi, intersection_y_in_gps_coordi = 21277043.5350594-14., 3447703.03112017-3.5/2
+    for i,d in enumerate(phi_in_anticlockwise):
+        if d > 180:
+            phi_in_anticlockwise[i] -= 360
+        elif d <=-180:
+            phi_in_anticlockwise[i] += 360
+
+    intersection_x_in_gps_coordi, intersection_y_in_gps_coordi = 21277043.5350594+X_IN_GPS_OFFSET, 3447703.03112017+Y_IN_GPS_OFFSET
     trans_x, trans_y, trans_phi = vec_shift_and_rotate_coordination(x, y, phi_in_anticlockwise,
                                   intersection_x_in_gps_coordi, intersection_y_in_gps_coordi, ROTATE_ANGLE)
     return trans_x, trans_y, trans_phi

@@ -27,7 +27,7 @@ class SubscriberGps():
         # communication
         context = zmq.Context()
         self.socket_gps = context.socket(zmq.SUB)
-        self.socket_gps.connect("tcp://10.10.121.136:4444")                # 上车
+        self.socket_gps.connect("tcp://127.0.0.1:6666")                # 上车
         self.socket_gps.setsockopt(zmq.SUBSCRIBE, "".encode('utf-8'))  # 接收所有消息
 
     def rotate_and_move(self, x_rear_axle, y_rear_axle, heading):
@@ -59,26 +59,22 @@ class SubscriberGps():
         while True:
             try:
                 data_gps = self.socket_gps.recv(zmq.NOBLOCK).decode('utf-8')
-                if data_gps != b'null\n':
-                    GpsJson = json.loads(data_gps)
-                    # gps的经纬度数据经高斯投影在大地坐标系下的x,y
-                    if GpsJson["Gps"]["Gps"]["IsValid"] == True:
-                        x_rear_axle = GpsJson["Gps"]["Gps"]["GaussX"]
-                        # todo: check
-                        y_rear_axle = 0.1+GpsJson["Gps"]["Gps"]["GaussY"]
-                        heading = 1. + GpsJson["Gps"]["Gps"]["Heading"]
-
-                        State_gps['GaussX'], State_gps['GaussY'], State_gps['Heading'] = self.rotate_and_move(x_rear_axle, y_rear_axle, heading)
-                        State_gps['GpsSpeed'] = GpsJson["Gps"]["Gps"]["GpsSpeed"]
-                        State_gps['NorthVelocity'] = GpsJson["Gps"]["Gps"]["NorthVelocity"]
-                        State_gps['EastVelocity'] = GpsJson["Gps"]["Gps"]["EastVelocity"]
-                        State_gps['YawRate'] = -GpsJson["Gps"]["Gps"]["YawRate"]
-                        State_gps['LongitudinalAcc'] = GpsJson["Gps"]["Gps"]["LongitudinalAcc"]
-                        State_gps['LateralAcc'] = GpsJson["Gps"]["Gps"]["LateralAcc"]
-                        State_gps['Longitude'] = GpsJson["Gps"]["Gps"]["Longitude"]
-                        State_gps['Latitude'] = GpsJson["Gps"]["Gps"]["Latitude"]
-                        time_receive_gps = time.time() - self.time_start_gps
-                        self.time_start_gps = time.time()
+                GpsJson = json.loads(data_gps)
+                if GpsJson is not None:
+                    x_rear_axle = GpsJson["Gps"]["Gps"]["GaussX"]
+                    y_rear_axle = 0.1+GpsJson["Gps"]["Gps"]["GaussY"]
+                    heading = 1. + GpsJson["Gps"]["Gps"]["Heading"]
+                    State_gps['GaussX'], State_gps['GaussY'], State_gps['Heading'] = self.rotate_and_move(x_rear_axle, y_rear_axle, heading)
+                    State_gps['GpsSpeed'] = GpsJson["Gps"]["Gps"]["GpsSpeed"]
+                    State_gps['NorthVelocity'] = GpsJson["Gps"]["Gps"]["NorthVelocity"]
+                    State_gps['EastVelocity'] = GpsJson["Gps"]["Gps"]["EastVelocity"]
+                    State_gps['YawRate'] = -GpsJson["Gps"]["Gps"]["YawRate"]
+                    State_gps['LongitudinalAcc'] = GpsJson["Gps"]["Gps"]["LongitudinalAcc"]
+                    State_gps['LateralAcc'] = GpsJson["Gps"]["Gps"]["LateralAcc"]
+                    State_gps['Longitude'] = GpsJson["Gps"]["Gps"]["Longitude"]
+                    State_gps['Latitude'] = GpsJson["Gps"]["Gps"]["Latitude"]
+                    time_receive_gps = time.time() - self.time_start_gps
+                    self.time_start_gps = time.time()
             except zmq.ZMQError:
                 pass
             self.receive_index += 1
@@ -91,8 +87,8 @@ class SubscriberGps():
             self.receive_index_shared.value += 1
 
             # check the time interval of gps
-            if time_receive_gps > 0.1:
-                print("Subscriber of gps is more than 0.1s!", time_receive_gps)
+            # if time_receive_gps > 0.1:
+            #     print("Subscriber of gps is more than 0.1s!", time_receive_gps)
 
 
 if __name__ == '__main__':
