@@ -215,10 +215,6 @@ fabric.properties
 /record/
 /map/roadMap.txt
 /map/roadMap_2.txt
-/map/roadMap_wn.txt
-/map/roadMap_ws.txt
-/map/roadMap_ww.txt
-/map/stopLine.txt
 /map/straight_ref.npy
 /map/right_ref.npy
 /map/left_ref.npy
