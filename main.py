@@ -41,8 +41,8 @@ def subscriber_gps_agent(shared_list, Info_List, receive_index, lock):
     subscriber_.run()
 
 
-def traffic(shared_list, Info_List, lock, task, case):
-    subscriber_ = Traffic(shared_list, Info_List, lock, task, case)
+def traffic(shared_list, Info_List, lock, task, case, surr_flag):
+    subscriber_ = Traffic(shared_list, Info_List, lock, task, case, surr_flag)
     subscriber_.run()
 
 
@@ -62,7 +62,8 @@ def built_parser():
 
     parser.add_argument('--task', type=str, default='left')
     parser.add_argument('--case', type=int, default=0)
-    parser.add_argument('--is_rela', type=bool, default=True)
+    parser.add_argument('--is_rela', type=bool, default=False)
+    parser.add_argument('--surr_flag', type=bool, default=False)
 
     return parser.parse_args()
 
@@ -70,7 +71,7 @@ def built_parser():
 def main():
     args = built_parser()
     if_save = True
-    if_radar = False # True: with digital twin system
+    if_radar = False     # True: with digital twin system
 
     shared_list = mp.Manager().list([0]*5)
     # [state_gps, state_can, time_gps, time_can, time_radar]
@@ -119,7 +120,7 @@ def main():
     if if_radar:
         procs.append(Process(target=subscriber_radar_agent, args=(shared_list, State_Other_List, lock)))
     else:
-        procs.append(Process(target=traffic, args=(shared_list, State_Other_List, lock, args.task, args.case)))
+        procs.append(Process(target=traffic, args=(shared_list, State_Other_List, lock, args.task, args.case, args.surr_flag)))
     procs.append(Process(target=controller_agent, args=(shared_list,Info_List,State_Other_List,receive_index,
                                                         if_save,if_radar,lock, args.task, args.case, args.is_rela)))
     procs.append(Process(target=plot_agent, args=(Info_List,lock, args.task)))

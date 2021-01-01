@@ -79,7 +79,7 @@ TRAFFICSETTINGS = dict(left=[dict(ego=dict(v_x=2., v_y=0., r=0., x=3.5/2, y=-29,
 
 
 class Traffic(object):
-    def __init__(self, shared_list, State_Other_List, lock, task='left', case=0):
+    def __init__(self, shared_list, State_Other_List, lock, task='left', case=0, surr_flag=True):
         self.shared_list = shared_list
         self.state_other_list = State_Other_List
         self.abso_time_start = None
@@ -92,6 +92,7 @@ class Traffic(object):
         self.others = self.case_dict['others'].copy()
         self.base_frequency = 10.
         self.time_since_triggered = 0.
+        self.surr_flag = surr_flag
 
     def prediction(self, mode, veh, acc, delta_time, max_v=5.):
         x, y, v, phi = veh['x'], veh['y'], veh['v'], veh['phi']
@@ -143,112 +144,111 @@ class Traffic(object):
         self.time_since_triggered = time.time() - self.abso_time_start if self.is_triggered else 0.
         state_other = {'x_other': [], 'y_other': [], 'v_other': [], 'phi_other': [], 'v_light': []}
         state_other['v_light'].append(self.case_dict['v_light'])
-
-        if self.task == 'left':
-            veh_dl, veh_ud, veh_ul = self.others['dl'], self.others['ud'], self.others['ul']
-            if self.is_triggered:
-                if self.case == 0:
-                    # veh_dl
-                    if self.time_since_triggered < 8.:
-                        dl_next_x, dl_next_y, dl_next_v, dl_next_phi = self.prediction('dl', veh_dl, 0., delta_time)
-                    else:
-                        dl_next_x, dl_next_y, dl_next_v, dl_next_phi = self.prediction('dl', veh_dl, 2.0, delta_time)
-                    # print(dl_next_y)
-                    # veh_ud
-                    ud_next_x, ud_next_y, ud_next_v, ud_next_phi = self.prediction('ud', veh_ud, 2., delta_time)
-                    # veh_ul
-                    ul_next_x, ul_next_y, ul_next_v, ul_next_phi = self.prediction('ul', veh_ul, 0., delta_time)
-                elif self.case == 1:
-                    # veh_dl
-                    dl_next_x, dl_next_y, dl_next_v, dl_next_phi = self.prediction('dl', veh_dl, 2.5, delta_time)
-                    # veh_ud
-                    ud_next_x, ud_next_y, ud_next_v, ud_next_phi = self.prediction('ud', veh_ud, -0.5, delta_time)
-                    # veh_ul
-                    ul_next_x, ul_next_y, ul_next_v, ul_next_phi = self.prediction('ul', veh_ul, 0., delta_time)
-                else:
-                    assert self.case == 2
-                    pass
-
-            else:
+        if self.surr_flag:
+            if self.task == 'left':
                 veh_dl, veh_ud, veh_ul = self.others['dl'], self.others['ud'], self.others['ul']
-                dl_next_x, dl_next_y, dl_next_v, dl_next_phi = veh_dl['x'], veh_dl['y'], veh_dl['v'], veh_dl['phi']
-                ud_next_x, ud_next_y, ud_next_v, ud_next_phi = veh_ud['x'], veh_ud['y'], veh_ud['v'], veh_ud['phi']
-                ul_next_x, ul_next_y, ul_next_v, ul_next_phi = veh_ul['x'], veh_ul['y'], veh_ul['v'], veh_ul['phi']
+                if self.is_triggered:
+                    if self.case == 0:
+                        # veh_dl
+                        if self.time_since_triggered < 8.:
+                            dl_next_x, dl_next_y, dl_next_v, dl_next_phi = self.prediction('dl', veh_dl, 0., delta_time)
+                        else:
+                            dl_next_x, dl_next_y, dl_next_v, dl_next_phi = self.prediction('dl', veh_dl, 2.0, delta_time)
+                        # print(dl_next_y)
+                        # veh_ud
+                        ud_next_x, ud_next_y, ud_next_v, ud_next_phi = self.prediction('ud', veh_ud, 2., delta_time)
+                        # veh_ul
+                        ul_next_x, ul_next_y, ul_next_v, ul_next_phi = self.prediction('ul', veh_ul, 0., delta_time)
+                    elif self.case == 1:
+                        # veh_dl
+                        dl_next_x, dl_next_y, dl_next_v, dl_next_phi = self.prediction('dl', veh_dl, 2.5, delta_time)
+                        # veh_ud
+                        ud_next_x, ud_next_y, ud_next_v, ud_next_phi = self.prediction('ud', veh_ud, -0.5, delta_time)
+                        # veh_ul
+                        ul_next_x, ul_next_y, ul_next_v, ul_next_phi = self.prediction('ul', veh_ul, 0., delta_time)
+                    elif self.case == 2:
+                        pass
 
-            state_other['x_other'].extend([dl_next_x, ud_next_x, ul_next_x])
-            state_other['y_other'].extend([dl_next_y, ud_next_y, ul_next_y])
-            state_other['v_other'].extend([dl_next_v, ud_next_v, ul_next_v])
-            state_other['phi_other'].extend([dl_next_phi, ud_next_phi, ul_next_phi])
-            self.others['dl'].update(x=dl_next_x, y=dl_next_y, v=dl_next_v, phi=dl_next_phi)
-            self.others['ud'].update(x=ud_next_x, y=ud_next_y, v=ud_next_v, phi=ud_next_phi)
-            self.others['ul'].update(x=ul_next_x, y=ul_next_y, v=ul_next_v, phi=ul_next_phi)
-
-        elif self.task == 'straight':
-            veh_du, veh_ur, veh_ru = self.others['du'], self.others['ur'], self.others['ru']
-            if self.is_triggered:
-                if self.case == 0:
-                    # veh_ur
-                    if self.time_since_triggered < 6.5:
-                        ur_next_x, ur_next_y, ur_next_v, ur_next_phi = self.prediction('ur', veh_ur, 0., delta_time)
-                    else:
-                        ur_next_x, ur_next_y, ur_next_v, ur_next_phi = self.prediction('ur', veh_ur, 2.0, delta_time)
-                    # veh_du
-                    du_next_x, du_next_y, du_next_v, du_next_phi = self.prediction('ud', veh_du, 2., delta_time)
-                    # veh_ru
-                    ru_next_x, ru_next_y, ru_next_v, ru_next_phi = self.prediction('ul', veh_ru, 0., delta_time)
-                elif self.case == 1:
-                    # veh_ur
-                    ur_next_x, ur_next_y, ur_next_v, ur_next_phi = self.prediction('ur', veh_ur, 2.5, delta_time)
-                    # veh_du
-                    du_next_x, du_next_y, du_next_v, du_next_phi = self.prediction('du', veh_du, -0.5, delta_time)
-                    # veh_ru
-                    ru_next_x, ru_next_y, ru_next_v, ru_next_phi = self.prediction('ru', veh_ru, 0., delta_time)
                 else:
-                    assert self.case == 2
-                    pass
+                    veh_dl, veh_ud, veh_ul = self.others['dl'], self.others['ud'], self.others['ul']
+                    dl_next_x, dl_next_y, dl_next_v, dl_next_phi = veh_dl['x'], veh_dl['y'], veh_dl['v'], veh_dl['phi']
+                    ud_next_x, ud_next_y, ud_next_v, ud_next_phi = veh_ud['x'], veh_ud['y'], veh_ud['v'], veh_ud['phi']
+                    ul_next_x, ul_next_y, ul_next_v, ul_next_phi = veh_ul['x'], veh_ul['y'], veh_ul['v'], veh_ul['phi']
 
-            else:
+                state_other['x_other'].extend([dl_next_x, ud_next_x, ul_next_x])
+                state_other['y_other'].extend([dl_next_y, ud_next_y, ul_next_y])
+                state_other['v_other'].extend([dl_next_v, ud_next_v, ul_next_v])
+                state_other['phi_other'].extend([dl_next_phi, ud_next_phi, ul_next_phi])
+                self.others['dl'].update(x=dl_next_x, y=dl_next_y, v=dl_next_v, phi=dl_next_phi)
+                self.others['ud'].update(x=ud_next_x, y=ud_next_y, v=ud_next_v, phi=ud_next_phi)
+                self.others['ul'].update(x=ul_next_x, y=ul_next_y, v=ul_next_v, phi=ul_next_phi)
+
+            elif self.task == 'straight':
                 veh_du, veh_ur, veh_ru = self.others['du'], self.others['ur'], self.others['ru']
-                ur_next_x, ur_next_y, ur_next_v, ur_next_phi = veh_ur['x'], veh_ur['y'], veh_ur['v'], veh_ur['phi']
-                du_next_x, du_next_y, du_next_v, du_next_phi = veh_du['x'], veh_du['y'], veh_du['v'], veh_du['phi']
-                ru_next_x, ru_next_y, ru_next_v, ru_next_phi = veh_ru['x'], veh_ru['y'], veh_ru['v'], veh_ru['phi']
+                if self.is_triggered:
+                    if self.case == 0:
+                        # veh_ur
+                        if self.time_since_triggered < 6.5:
+                            ur_next_x, ur_next_y, ur_next_v, ur_next_phi = self.prediction('ur', veh_ur, 0., delta_time)
+                        else:
+                            ur_next_x, ur_next_y, ur_next_v, ur_next_phi = self.prediction('ur', veh_ur, 2.0, delta_time)
+                        # veh_du
+                        du_next_x, du_next_y, du_next_v, du_next_phi = self.prediction('ud', veh_du, 2., delta_time)
+                        # veh_ru
+                        ru_next_x, ru_next_y, ru_next_v, ru_next_phi = self.prediction('ul', veh_ru, 0., delta_time)
+                    elif self.case == 1:
+                        # veh_ur
+                        ur_next_x, ur_next_y, ur_next_v, ur_next_phi = self.prediction('ur', veh_ur, 2.5, delta_time)
+                        # veh_du
+                        du_next_x, du_next_y, du_next_v, du_next_phi = self.prediction('du', veh_du, -0.5, delta_time)
+                        # veh_ru
+                        ru_next_x, ru_next_y, ru_next_v, ru_next_phi = self.prediction('ru', veh_ru, 0., delta_time)
+                    else:
+                        assert self.case == 2
+                        pass
 
-            state_other['x_other'].extend([ur_next_x, du_next_x, ru_next_x])
-            state_other['y_other'].extend([ur_next_y, du_next_y, ru_next_y])
-            state_other['v_other'].extend([ur_next_v, du_next_v, ru_next_v])
-            state_other['phi_other'].extend([ur_next_phi, du_next_phi, ru_next_phi])
-            self.others['ur'].update(x=ur_next_x, y=ur_next_y, v=ur_next_v, phi=ur_next_phi)
-            self.others['du'].update(x=du_next_x, y=du_next_y, v=du_next_v, phi=du_next_phi)
-            self.others['ru'].update(x=ru_next_x, y=ru_next_y, v=ru_next_v, phi=ru_next_phi)
-        elif self.task == 'right':
-            veh_dr, veh_ur = self.others['dr'], self.others['ur']
-            if self.is_triggered:
-                if self.case == 0:
-                    # veh_ur
-                    ur_next_x, ur_next_y, ur_next_v, ur_next_phi = self.prediction('ur', veh_ur, 0, delta_time)
-                    # veh_dr
-                    dr_next_x, dr_next_y, dr_next_v, dr_next_phi = self.prediction('dr', veh_dr, 0.2, delta_time)
-
-                elif self.case == 1:
-                    # veh_ur
-                    ur_next_x, ur_next_y, ur_next_v, ur_next_phi = self.prediction('ur', veh_ur, 2.5, delta_time)
-                    # veh_dr
-                    dr_next_x, dr_next_y, dr_next_v, dr_next_phi = self.prediction('dr', veh_dr, -0.5, delta_time)
                 else:
-                    assert self.case == 2
-                    pass
+                    veh_du, veh_ur, veh_ru = self.others['du'], self.others['ur'], self.others['ru']
+                    ur_next_x, ur_next_y, ur_next_v, ur_next_phi = veh_ur['x'], veh_ur['y'], veh_ur['v'], veh_ur['phi']
+                    du_next_x, du_next_y, du_next_v, du_next_phi = veh_du['x'], veh_du['y'], veh_du['v'], veh_du['phi']
+                    ru_next_x, ru_next_y, ru_next_v, ru_next_phi = veh_ru['x'], veh_ru['y'], veh_ru['v'], veh_ru['phi']
 
-            else:
+                state_other['x_other'].extend([ur_next_x, du_next_x, ru_next_x])
+                state_other['y_other'].extend([ur_next_y, du_next_y, ru_next_y])
+                state_other['v_other'].extend([ur_next_v, du_next_v, ru_next_v])
+                state_other['phi_other'].extend([ur_next_phi, du_next_phi, ru_next_phi])
+                self.others['ur'].update(x=ur_next_x, y=ur_next_y, v=ur_next_v, phi=ur_next_phi)
+                self.others['du'].update(x=du_next_x, y=du_next_y, v=du_next_v, phi=du_next_phi)
+                self.others['ru'].update(x=ru_next_x, y=ru_next_y, v=ru_next_v, phi=ru_next_phi)
+            elif self.task == 'right':
                 veh_dr, veh_ur = self.others['dr'], self.others['ur']
-                ur_next_x, ur_next_y, ur_next_v, ur_next_phi = veh_ur['x'], veh_ur['y'], veh_ur['v'], veh_ur['phi']
-                dr_next_x, dr_next_y, dr_next_v, dr_next_phi = veh_dr['x'], veh_dr['y'], veh_dr['v'], veh_dr['phi']
+                if self.is_triggered:
+                    if self.case == 0:
+                        # veh_ur
+                        ur_next_x, ur_next_y, ur_next_v, ur_next_phi = self.prediction('ur', veh_ur, 0, delta_time)
+                        # veh_dr
+                        dr_next_x, dr_next_y, dr_next_v, dr_next_phi = self.prediction('dr', veh_dr, 0.2, delta_time)
 
-            state_other['x_other'].extend([ur_next_x, dr_next_x])
-            state_other['y_other'].extend([ur_next_y, dr_next_y])
-            state_other['v_other'].extend([ur_next_v, dr_next_v])
-            state_other['phi_other'].extend([ur_next_phi, dr_next_phi])
-            self.others['ur'].update(x=ur_next_x, y=ur_next_y, v=ur_next_v, phi=ur_next_phi)
-            self.others['dr'].update(x=dr_next_x, y=dr_next_y, v=dr_next_v, phi=dr_next_phi)
+                    elif self.case == 1:
+                        # veh_ur
+                        ur_next_x, ur_next_y, ur_next_v, ur_next_phi = self.prediction('ur', veh_ur, 2.5, delta_time)
+                        # veh_dr
+                        dr_next_x, dr_next_y, dr_next_v, dr_next_phi = self.prediction('dr', veh_dr, -0.5, delta_time)
+                    else:
+                        assert self.case == 2
+                        pass
+
+                else:
+                    veh_dr, veh_ur = self.others['dr'], self.others['ur']
+                    ur_next_x, ur_next_y, ur_next_v, ur_next_phi = veh_ur['x'], veh_ur['y'], veh_ur['v'], veh_ur['phi']
+                    dr_next_x, dr_next_y, dr_next_v, dr_next_phi = veh_dr['x'], veh_dr['y'], veh_dr['v'], veh_dr['phi']
+
+                state_other['x_other'].extend([ur_next_x, dr_next_x])
+                state_other['y_other'].extend([ur_next_y, dr_next_y])
+                state_other['v_other'].extend([ur_next_v, dr_next_v])
+                state_other['phi_other'].extend([ur_next_phi, dr_next_phi])
+                self.others['ur'].update(x=ur_next_x, y=ur_next_y, v=ur_next_v, phi=ur_next_phi)
+                self.others['dr'].update(x=dr_next_x, y=dr_next_y, v=dr_next_v, phi=dr_next_phi)
         return state_other
 
     def run(self):
