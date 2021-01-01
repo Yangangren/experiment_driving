@@ -43,6 +43,57 @@ def deal_with_phi_diff(phi_diff):
     return phi_diff
 
 
+
+class VehicleDynamics(object):
+    def __init__(self, ):
+        self.vehicle_params = dict(C_f=-128915.5,  # front wheel cornering stiffness [N/rad]
+                                   C_r=-85943.6,  # rear wheel cornering stiffness [N/rad]
+                                   a=1.06,  # distance from CG to front axle [m]
+                                   b=1.85,  # distance from CG to rear axle [m]
+                                   mass=1412.,  # mass [kg]
+                                   I_z=1536.7,  # Polar moment of inertia at CG [kg*m^2]
+                                   miu=1.0,  # tire-road friction coefficient
+                                   g=9.81,  # acceleration of gravity [m/s^2]
+                                   )
+        a, b, mass, g = self.vehicle_params['a'], self.vehicle_params['b'], \
+                        self.vehicle_params['mass'], self.vehicle_params['g']
+        F_zf, F_zr = b * mass * g / (a + b), a * mass * g / (a + b)
+        self.vehicle_params.update(dict(F_zf=F_zf,
+                                        F_zr=F_zr))
+
+    def f_xu(self, states, actions, tau):  # states and actions are tensors, [[], [], ...]
+        v_x, v_y, r, x, y, phi = states[:, 0], states[:, 1], states[:, 2], states[:, 3], states[:, 4], states[:, 5]
+        phi = phi * np.pi / 180.
+        steer, a_x = actions[:, 0], actions[:, 1]
+        C_f = tf.convert_to_tensor(self.vehicle_params['C_f'], dtype=tf.float32)
+        C_r = tf.convert_to_tensor(self.vehicle_params['C_r'], dtype=tf.float32)
+        a = tf.convert_to_tensor(self.vehicle_params['a'], dtype=tf.float32)
+        b = tf.convert_to_tensor(self.vehicle_params['b'], dtype=tf.float32)
+        mass = tf.convert_to_tensor(self.vehicle_params['mass'], dtype=tf.float32)
+        I_z = tf.convert_to_tensor(self.vehicle_params['I_z'], dtype=tf.float32)
+        miu = tf.convert_to_tensor(self.vehicle_params['miu'], dtype=tf.float32)
+        g = tf.convert_to_tensor(self.vehicle_params['g'], dtype=tf.float32)
+
+        F_zf, F_zr = b * mass * g / (a + b), a * mass * g / (a + b)
+        F_xf = tf.where(a_x < 0, mass * a_x / 2, tf.zeros_like(a_x))
+        F_xr = tf.where(a_x < 0, mass * a_x / 2, mass * a_x)
+
+        next_state = [v_x + tau * (a_x + v_y * r),
+                      (mass * v_y * v_x + tau * (
+                                  a * C_f - b * C_r) * r - tau * C_f * steer * v_x - tau * mass * tf.square(
+                          v_x) * r) / (mass * v_x - tau * (C_f + C_r)),
+                      (-I_z * r * v_x - tau * (a * C_f - b * C_r) * v_y + tau * a * C_f * steer * v_x) / (
+                                  tau * (tf.square(a) * C_f + tf.square(b) * C_r) - I_z * v_x),
+                      x + tau * (v_x * tf.cos(phi) - v_y * tf.sin(phi)),
+                      y + tau * (v_x * tf.sin(phi) + v_y * tf.cos(phi)),
+                      (phi + tau * r) * 180 / np.pi]
+
+        return tf.stack(next_state, 1)
+
+    def prediction(self, x_1, u_1, tau):
+        x_next = self.f_xu(x_1, u_1, tau)
+        return x_next.numpy()
+
 class ReferencePath(object):
     def __init__(self, task, mode=None, ref_index=None):
         self.mode = mode
@@ -283,6 +334,17 @@ class Controller(object):
         self.time_in = time.time()
 
         self.last_steer_output = 0
+        self.model_driven_by_can = VehicleDynamics()
+        self.model_state = np.array([[3., 0., 0., 1.75, -10., 90.]])
+
+    def model_step(self, state_can, delta_t):
+        steering_wheel = state_can['SteerAngleAct']
+        front_wheel = steering_wheel/self.steer_factor *np.pi/180.
+        acc = 0.
+        u = np.array([[front_wheel, acc]])
+        self.model_state = self.model_driven_by_can.prediction(self.model_state, u, delta_t)
+        v_x, v_y, r, x, y, phi = self.model_state[0:6]
+        return dict(model_vx=v_x, model_vy=v_y, model_r=r, model_x=x, model_y=y, model_phi=phi)
 
     def _construct_ego_vector(self, state_gps, state_can):
         ego_phi = state_gps['Heading']
@@ -480,15 +542,12 @@ class Controller(object):
 
     def _action_transformation_for_end2end(self, state_can, action, delta_t):  # [-1, 1] # TODO: wait real car
         steering_wheel = state_can['SteerAngleAct']  # todo deg?
-        print(delta_t)
         action = np.clip(action, -1.0, 1.0)
         if self.is_rela:
             steering_wheel_v_norm, a_x_norm = action[0], action[1]
-            steering_wheel_v = 3000. * steering_wheel_v_norm
-            steering_wheel = steering_wheel + 0.1 * steering_wheel_v
-
+            steering_wheel_v = 100. * steering_wheel_v_norm
+            steering_wheel = steering_wheel + delta_t * steering_wheel_v
             steering_wheel = self._set_inertia(steering_wheel)    # todo
-
             first_out = steering_wheel_v
         else:
             front_wheel_norm_rad, a_x_norm = action[0], action[1]
@@ -548,6 +607,8 @@ class Controller(object):
                     delta_t = time.time()-time_start
                     steer_wheel_deg, torque, decel, tor_flag, dec_flag, first_out, a_x = \
                         self._action_transformation_for_end2end(state_can, action, delta_t)
+                    state_model = self.model_step(state_can, delta_t)
+                    state_ego.update(state_model)
                     time_start = time.time()
                     control = {'Decision': {
                         'Control': {#'VehicleSpeedAim': 20/3.6,
@@ -606,7 +667,7 @@ class Controller(object):
                             file_handle.write("State_ego ")
                             for k2, v2 in state_ego.items():
                                 file_handle.write(k2 + ":" + str(v2) + ", ")
-                                if k2 == 'BrkOn':
+                                if k2 == 'model_phi':
                                     file_handle.write('\n')
                             file_handle.write("State_other ")
                             for k3, v3 in state_other.items():
@@ -615,9 +676,9 @@ class Controller(object):
                                     file_handle.write('\n')
                             file_handle.write("Time Time:" + str(self.Time) +
                                               "time_decision:"+str(self.time_decision) +
-                                              "time_receive_gps："+str(time_receive_gps) +
-                                              "time_receive_can："+str(time_receive_can) +
-                                              "time_receive_radar："+str(time_receive_radar)+'\n')
+                                              "time_receive_gps:"+str(time_receive_gps) +
+                                              "time_receive_can:"+str(time_receive_can) +
+                                              "time_receive_radar:"+str(time_receive_radar)+'\n')
 
 
 def test_control():
