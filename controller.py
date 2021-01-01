@@ -613,11 +613,11 @@ class Controller(object):
                                 file_handle.write(k3 + ":" + str(v3) + ", ")
                                 if k3 == 'v_light':
                                     file_handle.write('\n')
-                            file_handle.write("Time Time:" + str(self.Time) +
-                                              "time_decision:"+str(self.time_decision) +
-                                              "time_receive_gps："+str(time_receive_gps) +
-                                              "time_receive_can："+str(time_receive_can) +
-                                              "time_receive_radar："+str(time_receive_radar)+'\n')
+                            file_handle.write("Time Time:" + str(self.Time[0])  + ", " +
+                                              "time_decision:"+str(self.time_decision) + ", " +
+                                              "time_receive_gps:"+str(time_receive_gps) + ", " +
+                                              "time_receive_can:"+str(time_receive_can) + ", " +
+                                              "time_receive_radar:"+str(time_receive_radar)+'\n')
 
 
 def test_control():

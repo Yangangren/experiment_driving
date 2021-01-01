@@ -39,9 +39,7 @@ def load_data(record_dir):
     #            State_can['VehicleMode'] = 0
     #            State_can['Throttle'] = 0
     #            State_can['BrkOn'] = 0
-    # State_ego GaussX:0, GaussY:0, Heading:0, GpsSpeed:0, NorthVelocity:0, EastVelocity:0, YawRate:0, LongitudinalAcc:0, LateralAcc:0, Longitude:0, Latitude:0, VehicleSPeedAct:0, SteerAngleAct:0, AutoGear:0, VehicleMode:0, Throttle:0, BrkOn:0,
-    # State_other x_other:[-1.75, -1.75], y_other:[7.699999999999994, 14.881499999999999], v_other:[3.0, 2.670000000000002], phi_other:[-90.0, -90.0],
-    # v_light:[0], Time:[0.9574568271636963]time_decision:0.3796060085296631time_receive_gps：0time_receive_can：0time_receive_radar：0.0
+    # TODO: if API is modified, change here
     keys_decision = ['Deceleration',
                      'Torque',
                      'DecFlag',
@@ -87,28 +85,29 @@ def load_data(record_dir):
         data_all[key] = []
 
     for row in contents:
-        for keys_data in ['Decision', 'State_ego']:
+        for keys_data in [ 'Decision', 'State_ego','Time']: #
             if keys_data in row:
                 for i, d in enumerate(row.split(',')[:-1]):
+                    print(d.split(':'))
                     data_number = d.split(':')[1]
                     data_all[keys_dict[keys_data][i]].append(float(data_number))
 
-    key_State_other = "State_other"
-    key_Time = 'Time'
-    pat_State_other = re.compile(key_State_other + '(.*?)' + key_Time, re.S)
-    result_State_other = pat_State_other.findall(str_contents)
-    for i in result_State_other:
-        result_num = re.findall(r'-?\d+\.?\d*e?-?\d*?', i)
-        keys_others_len = len(keys_others)
-        try:
-            result_num_array = np.array(result_num[:-1],dtype='float32').reshape(keys_others_len - 1, -1)
-        except:
-            print(i)
-            print(result_num)
-        for j in range(keys_others_len - 1):
-            data_all[keys_dict[key_State_other][j]].append(result_num_array[j])
-        # v-light
-        data_all[keys_dict[key_State_other][j+1]].append(int(result_num[-1]))
+    # key_State_other = "State_other"
+    # key_Time = 'Time'
+    # pat_State_other = re.compile(key_State_other + '(.*?)' + key_Time, re.S)
+    # result_State_other = pat_State_other.findall(str_contents)
+    # for i in result_State_other:
+    #     result_num = re.findall(r'-?\d+\.?\d*e?-?\d*?', i)
+    #     keys_others_len = len(keys_others)
+    #     try:
+    #         result_num_array = np.array(result_num[:-1],dtype='float32').reshape(keys_others_len - 1, -1)
+    #     except:
+    #         print(i)
+    #         print(result_num)
+    #     for j in range(keys_others_len - 1):
+    #         data_all[keys_dict[key_State_other][j]].append(result_num_array[j])
+    #     # v-light
+    #     data_all[keys_dict[key_State_other][j+1]].append(int(result_num[-1]))
         # for keys_data in ['State_other']:
         #     if keys_data in row:
         #         for i, d in enumerate(row.split('|')):
@@ -119,7 +118,7 @@ def load_data(record_dir):
 
 
 def atest_load_txt():
-    data_dict = load_data('left_case0_20201230_125357')
+    data_dict = load_data('left_case0_20210101_151956')
     a = 1
 
 
