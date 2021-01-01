@@ -68,9 +68,11 @@ class SubscriberGps():
                     heading = 1. + GpsJson["Gps"]["Gps"]["Heading"]
                     State_gps['GaussX'], State_gps['GaussY'], State_gps['Heading'] =\
                         self.rotate_and_move(x_rear_axle, y_rear_axle, heading)
-                    State_gps['GpsSpeed'] = GpsJson["Gps"]["Gps"]["GpsSpeed"]
+
                     State_gps['NorthVelocity'] = GpsJson["Gps"]["Gps"]["NorthVelocity"]
                     State_gps['EastVelocity'] = GpsJson["Gps"]["Gps"]["EastVelocity"]
+                    State_gps['GpsSpeed'] = math.sqrt(State_gps['NorthVelocity'] ** 2 + State_gps['EastVelocity']**2)
+
                     State_gps['YawRate'] = -GpsJson["Gps"]["Gps"]["YawRate"]
                     State_gps['LongitudinalAcc'] = GpsJson["Gps"]["Gps"]["LongitudinalAcc"]
                     State_gps['LateralAcc'] = GpsJson["Gps"]["Gps"]["LateralAcc"]

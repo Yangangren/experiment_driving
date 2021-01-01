@@ -62,7 +62,7 @@ def built_parser():
 
     parser.add_argument('--task', type=str, default='left')
     parser.add_argument('--case', type=int, default=0)
-    parser.add_argument('--is_rela', type=bool, default=False)
+    parser.add_argument('--is_rela', type=bool, default=True)
     parser.add_argument('--surr_flag', type=bool, default=False)
 
     return parser.parse_args()

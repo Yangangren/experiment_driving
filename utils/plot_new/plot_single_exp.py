@@ -12,4 +12,10 @@ def single_plot(load_dir, keys=['Deceleration']):
     plt.show()
 
 if __name__ == '__main__':
-    single_plot('left_case0_20210101_152459')
+    single_plot('left_case0_20210101_170308', ['SteerAngleAct', 'SteerAngleAim','first_out'])
+    # keys_can = ['VehicleSPeedAct',
+    #             'SteerAngleAct',
+    #             'AutoGear',
+    #             'VehicleMode',
+    #             'Throttle',
+    #             'BrkOn']
