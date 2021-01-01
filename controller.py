@@ -244,7 +244,7 @@ class Controller(object):
         self.ref_path = ReferencePath(self.task)
         self.num_future_data = 0
         if is_rela:
-            TASK2MODEL = dict(left=LoadPolicy('./utils/models_rela/left', 50000),
+            TASK2MODEL = dict(left=LoadPolicy('./utils/models_rela/left', 65000),
                               straight=LoadPolicy('./utils/models_rela/straight', 75000),
                               right=LoadPolicy('./utils/models_rela/right', 80000))
         else:
@@ -253,7 +253,7 @@ class Controller(object):
                               right=LoadPolicy('./utils/models/right', 80000))
 
         self.model = TASK2MODEL[task]
-        self.steer_factor = 10
+        self.steer_factor = 20
         self.Info_List = Info_List
         self.State_Other_List = State_Other_List
         self.Info_List[0] = -1
@@ -307,6 +307,8 @@ class Controller(object):
         v_light = state_others['v_light']
         xs, ys, vs, phis = state_others['x_other'], state_others['y_other'],\
                            state_others['v_other'], state_others['phi_other']
+        if not xs:
+            mode_list = []
         for i, veh_mode in enumerate(mode_list):
             all_vehicles.append(dict(x=xs[i], y=ys[i], v=vs[i], phi=phis[i], l=5., w=2., route=MODE2ROUTE[veh_mode]))
         vehs_vector = []
@@ -469,7 +471,7 @@ class Controller(object):
         vector = self.convert_vehs_to_rela(vector)
         return vector
 
-    def _set_inertia(self, steer_from_policy, inertia_time=1., sampletime=0.1, k_G=1.): # todo: adjust the inertia time
+    def _set_inertia(self, steer_from_policy, inertia_time=3., sampletime=0.1, k_G=1.): # todo: adjust the inertia time
         steer_output = (1. - sampletime / inertia_time) * self.last_steer_output + \
                        k_G * sampletime / inertia_time * steer_from_policy
 
@@ -478,11 +480,15 @@ class Controller(object):
 
     def _action_transformation_for_end2end(self, state_can, action, delta_t):  # [-1, 1] # TODO: wait real car
         steering_wheel = state_can['SteerAngleAct']  # todo deg?
+        print(delta_t)
         action = np.clip(action, -1.0, 1.0)
         if self.is_rela:
             steering_wheel_v_norm, a_x_norm = action[0], action[1]
-            steering_wheel_v = 100. * steering_wheel_v_norm
-            steering_wheel = steering_wheel + delta_t * steering_wheel_v
+            steering_wheel_v = 3000. * steering_wheel_v_norm
+            steering_wheel = steering_wheel + 0.1 * steering_wheel_v
+
+            steering_wheel = self._set_inertia(steering_wheel)    # todo
+
             first_out = steering_wheel_v
         else:
             front_wheel_norm_rad, a_x_norm = action[0], action[1]
@@ -495,7 +501,7 @@ class Controller(object):
         a_x = 2.25*a_x_norm - 0.75
         if a_x > 0:
             # torque = np.clip(a_x * 300., 0., 350.)
-            torque = np.clip((a_x-0.4)/0.4*50+150., 0., 250.)
+            torque = np.clip((a_x-0.4)/0.4*50+150., 0., 100.)
             decel = 0.
             tor_flag = 1
             dec_flag = 0
@@ -538,7 +544,6 @@ class Controller(object):
 
                     self.time_in = time.time()
                     obs = self._get_obs(state_gps, state_can, state_other)
-                    print(obs)
                     action = self.model.run(obs)
                     delta_t = time.time()-time_start
                     steer_wheel_deg, torque, decel, tor_flag, dec_flag, first_out, a_x = \
@@ -566,8 +571,8 @@ class Controller(object):
                     self.socket_pub.send(json_cotrol.encode('utf-8'))
 
                     x, y, phi = state_ego['GaussX']+21277000., state_ego['GaussY']+3447700., \
-                                state_ego['Heading_ori']
-                    # print(state_ego['Heading'])
+                                -state_ego['Heading'] + 90
+                    # print(state_ego['Heading_ori'])
                     msg4radar = struct.pack('6d', 0., 0., 0., x, y, phi)
                     self.socket_pub_radar.send(msg4radar)
 
