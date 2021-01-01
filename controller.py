@@ -237,15 +237,21 @@ class ReferencePath(object):
 
 class Controller(object):
     def __init__(self, shared_list, Info_List, State_Other_List, receive_index,
-                 if_save, if_radar, lock, task, case):
+                 if_save, if_radar, lock, task, case, is_rela):
         self.time_out = 0
         self.task = task
         self.case = case
         self.ref_path = ReferencePath(self.task)
         self.num_future_data = 0
-        TASK2MODEL = dict(left=LoadPolicy('./utils/models/left', 65000),
-                          straight=LoadPolicy('./utils/models/straight', 75000),
-                          right=LoadPolicy('./utils/models/right', 80000))
+        if is_rela:
+            TASK2MODEL = dict(left=LoadPolicy('./utils/models_rela/left', 50000),
+                              straight=LoadPolicy('./utils/models_rela/straight', 75000),
+                              right=LoadPolicy('./utils/models_rela/right', 80000))
+        else:
+            TASK2MODEL = dict(left=LoadPolicy('./utils/models/left', 50000),
+                              straight=LoadPolicy('./utils/models/straight', 75000),
+                              right=LoadPolicy('./utils/models/right', 80000))
+
         self.model = TASK2MODEL[task]
         self.steer_factor = 10
         self.Info_List = Info_List
@@ -254,6 +260,7 @@ class Controller(object):
         self.shared_list = shared_list
         self.read_index_old = 0
         self.receive_index_shared = receive_index
+        self.is_rela = is_rela
         # self.read_index_old = Info_List[0]
 
         self.lock = lock
@@ -275,13 +282,20 @@ class Controller(object):
         self.time_decision = 0
         self.time_in = time.time()
 
-    def _construct_ego_vector(self, state_gps):
+        self.last_steer_output = 0
+
+    def _construct_ego_vector(self, state_gps, state_can):
         ego_phi = state_gps['Heading']
         ego_x, ego_y = state_gps['GaussX'], state_gps['GaussY']
         ego_v_x, ego_v_y = state_gps['GpsSpeed'], 0.
         ego_r = state_gps['YawRate']  # todo check units in subscriber
-        self.ego_info_dim = 6
-        ego_feature = [ego_v_x, ego_v_y, ego_r, ego_x, ego_y, ego_phi]
+        ego_steering_wheel = state_can['SteerAngleAct']  # todo deg?
+        if self.is_rela:
+            self.ego_info_dim = 7
+            ego_feature = [ego_v_x, ego_v_y, ego_r, ego_x, ego_y, ego_phi, ego_steering_wheel]
+        else:
+            self.ego_info_dim = 6
+            ego_feature = [ego_v_x, ego_v_y, ego_r, ego_x, ego_y, ego_phi]
         return np.array(ego_feature, dtype=np.float32)
 
     def _construct_veh_vector(self, ego_x, ego_y, state_others): #TODO: temp mht
@@ -429,19 +443,21 @@ class Controller(object):
                                                          self.num_future_data + 1)], \
                                                obs_abso[self.ego_info_dim + self.per_tracking_info_dim * (
                                                            self.num_future_data + 1):]
-        ego_vx, ego_vy, ego_r, ego_x, ego_y, ego_phi = ego_infos
+        if self.is_rela:
+            _, _, _, ego_x, ego_y, _, _ = ego_infos
+        else:
+            _, _, _, ego_x, ego_y, _ = ego_infos
         ego = np.array([ego_x, ego_y, 0, 0]*int(len(veh_infos)/self.per_veh_info_dim), dtype=np.float32)
         vehs_rela = veh_infos - ego
         out = np.concatenate((ego_infos, tracking_infos, vehs_rela), axis=0)
         return out
 
-    def _get_obs(self, state_gps, state_others):
+    def _get_obs(self, state_gps, state_can, state_others):
         ego_x, ego_y = state_gps['GaussX'], state_gps['GaussY']
         ego_phi = state_gps['Heading']
         ego_v_x, ego_v_y = state_gps['GpsSpeed'], 0.
-
         vehs_vector = self._construct_veh_vector(ego_x, ego_y, state_others)
-        ego_vector = self._construct_ego_vector(state_gps)
+        ego_vector = self._construct_ego_vector(state_gps, state_can)
         tracking_error = self.ref_path.tracking_error_vector(np.array([ego_x], dtype=np.float32),
                                                              np.array([ego_y], dtype=np.float32),
                                                              np.array([ego_phi], dtype=np.float32),
@@ -453,12 +469,30 @@ class Controller(object):
         vector = self.convert_vehs_to_rela(vector)
         return vector
 
-    def _action_transformation_for_end2end(self, action):  # [-1, 1] # TODO: wait real car
+    def _set_inertia(self, steer_from_policy, inertia_time=1., sampletime=0.1, k_G=1.): # todo: adjust the inertia time
+        steer_output = (1. - sampletime / inertia_time) * self.last_steer_output + \
+                       k_G * sampletime / inertia_time * steer_from_policy
+
+        self.last_steer_output = steer_output
+        return steer_output
+
+    def _action_transformation_for_end2end(self, state_can, action, delta_t):  # [-1, 1] # TODO: wait real car
+        steering_wheel = state_can['SteerAngleAct']  # todo deg?
         action = np.clip(action, -1.0, 1.0)
-        front_wheel_norm_rad, a_x_norm = action[0], action[1]
-        front_wheel_rad, a_x = 0.4 * front_wheel_norm_rad, 2.25*a_x_norm - 0.75
-        steer_wheel_rad = front_wheel_rad * self.steer_factor
-        steer_wheel_deg = np.clip(steer_wheel_rad * 180. / pi, -360., 360)
+        if self.is_rela:
+            steering_wheel_v_norm, a_x_norm = action[0], action[1]
+            steering_wheel_v = 100. * steering_wheel_v_norm
+            steering_wheel = steering_wheel + delta_t * steering_wheel_v
+            first_out = steering_wheel_v
+        else:
+            front_wheel_norm_rad, a_x_norm = action[0], action[1]
+            front_wheel_deg = 0.4 / pi * 180 * front_wheel_norm_rad
+            steering_wheel = front_wheel_deg * self.steer_factor
+            steering_wheel = self._set_inertia(steering_wheel)
+            first_out = front_wheel_deg
+
+        steering_wheel = np.clip(steering_wheel, -360., 360)
+        a_x = 2.25*a_x_norm - 0.75
         if a_x > 0:
             # torque = np.clip(a_x * 300., 0., 350.)
             torque = np.clip((a_x-0.4)/0.4*50+150., 0., 250.)
@@ -474,7 +508,7 @@ class Controller(object):
 
         # out: steer_wheel_deg, torque, deceleration, tor_flag, dec_flag:
         # [-360,360]deg, [0., 350,]N (1), [0, 5]m/s^2 (0.05)
-        return steer_wheel_deg, torque, decel, tor_flag, dec_flag, front_wheel_rad, a_x
+        return steering_wheel, torque, decel, tor_flag, dec_flag, first_out, a_x
 
     def run(self):
         time_start = time.time()
@@ -491,7 +525,6 @@ class Controller(object):
                     #     print("time!!!!!", time.time()-time_start)
                     # else:
                     #     print("time:", time.time()-time_start)
-                    time_start = time.time()
                     with self.lock:
                         state_gps = self.shared_list[0].copy()
                         state_can = self.shared_list[1].copy()
@@ -504,10 +537,13 @@ class Controller(object):
                     state_ego.update(state_can)
 
                     self.time_in = time.time()
-                    obs = self._get_obs(state_gps, state_other)
+                    obs = self._get_obs(state_gps, state_can, state_other)
+                    print(obs)
                     action = self.model.run(obs)
-                    steer_wheel_deg, torque, decel, tor_flag, dec_flag, front_wheel_rad, a_x= \
-                        self._action_transformation_for_end2end(action)
+                    delta_t = time.time()-time_start
+                    steer_wheel_deg, torque, decel, tor_flag, dec_flag, first_out, a_x = \
+                        self._action_transformation_for_end2end(state_can, action, delta_t)
+                    time_start = time.time()
                     control = {'Decision': {
                         'Control': {#'VehicleSpeedAim': 20/3.6,
                                     'Deceleration': decel,
@@ -528,7 +564,10 @@ class Controller(object):
                     #         'IsValid': True}}}
                     json_cotrol = json.dumps(control)
                     self.socket_pub.send(json_cotrol.encode('utf-8'))
-                    x, y, phi = state_ego['GaussX']+21277000., state_ego['GaussY']+3447700., state_ego['Heading']*np.pi/180.
+
+                    x, y, phi = state_ego['GaussX']+21277000., state_ego['GaussY']+3447700., \
+                                state_ego['Heading_ori']
+                    # print(state_ego['Heading'])
                     msg4radar = struct.pack('6d', 0., 0., 0., x, y, phi)
                     self.socket_pub_radar.send(msg4radar)
 
@@ -540,7 +579,7 @@ class Controller(object):
                                 'Dec_flag': dec_flag,
                                 'Tor_flag': tor_flag,
                                 'SteerAngleAim': steer_wheel_deg,  # [deg]
-                                'front_wheel_rad': front_wheel_rad,  # [rad]
+                                'first_out': first_out,
                                 'a_x': a_x}  # [m/s^2]
 
                     with self.lock:
