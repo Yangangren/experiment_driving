@@ -153,7 +153,7 @@ class Traffic(object):
                         dl_next_x, dl_next_y, dl_next_v, dl_next_phi = self.prediction('dl', veh_dl, 0., delta_time)
                     else:
                         dl_next_x, dl_next_y, dl_next_v, dl_next_phi = self.prediction('dl', veh_dl, 2.0, delta_time)
-                    print(dl_next_y)
+                    # print(dl_next_y)
                     # veh_ud
                     ud_next_x, ud_next_y, ud_next_v, ud_next_phi = self.prediction('ud', veh_ud, 2., delta_time)
                     # veh_ul

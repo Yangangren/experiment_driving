@@ -57,7 +57,7 @@ def test():
     context = zmq.Context()
     # radar
     socket_radar = context.socket(zmq.SUB)
-    socket_radar.connect("tcp://10.10.21.85:5555")  # "tcp://127.0.0.1:2323"
+    socket_radar.connect("tcp://192.168.8.115:5555")  # "tcp://127.0.0.1:2323"
     socket_radar.setsockopt(zmq.SUBSCRIBE, ''.encode('utf-8'))
 
     msg = socket_radar.recv(zmq.NOBLOCK)

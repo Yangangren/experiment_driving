@@ -43,6 +43,7 @@ class SubscriberGps():
         State_gps['GaussX'] = 0   # intersection coordinate [m]
         State_gps['GaussY'] = 0   # intersection coordinate [m]
         State_gps['Heading'] = 0  # intersection coordinate [deg]
+        State_gps['Heading_ori'] = 0  # GPS coordinate [deg]
 
         State_gps['GpsSpeed'] = 0      # [m/s]
         State_gps['NorthVelocity'] = 0 # [m/s]
@@ -63,8 +64,10 @@ class SubscriberGps():
                 if GpsJson is not None:
                     x_rear_axle = GpsJson["Gps"]["Gps"]["GaussX"]
                     y_rear_axle = 0.1+GpsJson["Gps"]["Gps"]["GaussY"]
+                    State_gps['Heading_ori'] = GpsJson["Gps"]["Gps"]["Heading"]
                     heading = 1. + GpsJson["Gps"]["Gps"]["Heading"]
-                    State_gps['GaussX'], State_gps['GaussY'], State_gps['Heading'] = self.rotate_and_move(x_rear_axle, y_rear_axle, heading)
+                    State_gps['GaussX'], State_gps['GaussY'], State_gps['Heading'] =\
+                        self.rotate_and_move(x_rear_axle, y_rear_axle, heading)
                     State_gps['GpsSpeed'] = GpsJson["Gps"]["Gps"]["GpsSpeed"]
                     State_gps['NorthVelocity'] = GpsJson["Gps"]["Gps"]["NorthVelocity"]
                     State_gps['EastVelocity'] = GpsJson["Gps"]["Gps"]["EastVelocity"]
