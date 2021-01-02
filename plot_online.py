@@ -297,7 +297,7 @@ class Plot():
             decision_brkacc = decision['Deceleration']
             decision_Dec_flag = decision['Dec_flag']
             decision_Tor_flag = decision['Tor_flag']
-            first_out = decision['first_out']
+            front_wheel_deg = decision['front_wheel_deg']
             second_out = decision['a_x']
 
             # decision: {'Deceleration': decel,  # [m/s^2]
@@ -327,7 +327,7 @@ class Plot():
             plt.text(text_x, text_y_start - next(ge), r'brake_acc_decision: {:.2f}$m/s^2$'.format(decision_brkacc))
             plt.text(text_x, text_y_start - next(ge), 'deceleration_flag: {}'.format(decision_Dec_flag))
             plt.text(text_x, text_y_start - next(ge), '  ')
-            plt.text(text_x, text_y_start - next(ge), 'first_out: {:.2f}'.format(first_out))
+            plt.text(text_x, text_y_start - next(ge), 'front_wheel_deg: {:.2f}'.format(front_wheel_deg))
             plt.text(text_x, text_y_start - next(ge), r'second_out: {:.2f}$m/s^2$'.format(second_out))
             plt.text(text_x, text_y_start - next(ge), r'acc_actual: {:.2f}$m/s^2$'.format(self.acc_timer.mean))
 
