@@ -2,10 +2,11 @@ import zmq
 import struct
 import time
 import numpy as np
+from collections import OrderedDict
 
 
-class SubscriberRadar():
-    def __init__(self,shared_list,State_Other_List,lock):
+class SubscriberRadar(object):
+    def __init__(self, shared_list, State_Other_List, lock):
         self.shared_list = shared_list
         self.State_Other_List = State_Other_List
         self.time_start = 0
@@ -30,24 +31,24 @@ class SubscriberRadar():
         return x_other, y_other, v_other, phi_other
 
     def run(self):
-        State_other = {}
+        state_other = OrderedDict()
         time_receive_radar = 0
         while True:
             try:
                 msg = self.socket_radar.recv(zmq.NOBLOCK)
                 x_other, y_other, v_other, phi_other = self.parse_msg(msg)
-                State_other["x_other"] = x_other
-                State_other["y_other"] = y_other
-                State_other["v_other"] = v_other
-                State_other["phi_other"] = phi_other
-                State_other["v_light"] = 2  # todo add v light
+                state_other["x_other"] = x_other
+                state_other["y_other"] = y_other
+                state_other["v_other"] = v_other
+                state_other["phi_other"] = phi_other
+                state_other["v_light"] = 2  # todo add v light
                 time_receive_radar = time.time() - self.time_start
                 self.time_start = time.time()
             except zmq.ZMQError:
                 pass
             with self.lock:
                 self.shared_list[4] = time_receive_radar
-                self.State_Other_List[0] = State_other.copy()
+                self.State_Other_List[0] = state_other.copy()
 
             if time_receive_radar > 0.1:
                 print("Subscriber of radar is more than 0.1s!", time_receive_radar)
