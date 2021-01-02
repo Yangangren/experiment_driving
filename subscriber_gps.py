@@ -43,7 +43,6 @@ class SubscriberGps():
         state_gps['GaussX'] = 0   # intersection coordinate [m]
         state_gps['GaussY'] = 0   # intersection coordinate [m]
         state_gps['Heading'] = 0  # intersection coordinate [deg]
-        state_gps['Heading_ori'] = 0  # GPS coordinate [deg]
 
         state_gps['GpsSpeed'] = 0      # [m/s]
         state_gps['NorthVelocity'] = 0 # [m/s]
@@ -64,19 +63,18 @@ class SubscriberGps():
                 if GpsJson is not None:
                     x_rear_axle = GpsJson["Gps"]["Gps"]["GaussX"]
                     y_rear_axle = 0.1+GpsJson["Gps"]["Gps"]["GaussY"]
-                    state_gps['Heading_ori'] = GpsJson["Gps"]["Gps"]["Heading"]
                     heading = 1. + GpsJson["Gps"]["Gps"]["Heading"]
                     state_gps['GaussX'], state_gps['GaussY'], state_gps['Heading'] =\
                         self.rotate_and_move(x_rear_axle, y_rear_axle, heading)
-                    State_gps['NorthVelocity'] = GpsJson["Gps"]["Gps"]["NorthVelocity"]
-                    State_gps['EastVelocity'] = GpsJson["Gps"]["Gps"]["EastVelocity"]
-                    State_gps['GpsSpeed'] = math.sqrt(State_gps['NorthVelocity'] ** 2 + State_gps['EastVelocity']**2)
+                    state_gps['NorthVelocity'] = GpsJson["Gps"]["Gps"]["NorthVelocity"]
+                    state_gps['EastVelocity'] = GpsJson["Gps"]["Gps"]["EastVelocity"]
+                    state_gps['GpsSpeed'] = math.sqrt(state_gps['NorthVelocity'] ** 2 + state_gps['EastVelocity']**2)
 
-                    State_gps['YawRate'] = -GpsJson["Gps"]["Gps"]["YawRate"]
-                    State_gps['LongitudinalAcc'] = GpsJson["Gps"]["Gps"]["LongitudinalAcc"]
-                    State_gps['LateralAcc'] = GpsJson["Gps"]["Gps"]["LateralAcc"]
-                    State_gps['Longitude'] = GpsJson["Gps"]["Gps"]["Longitude"]
-                    State_gps['Latitude'] = GpsJson["Gps"]["Gps"]["Latitude"]
+                    state_gps['YawRate'] = -GpsJson["Gps"]["Gps"]["YawRate"]
+                    state_gps['LongitudinalAcc'] = GpsJson["Gps"]["Gps"]["LongitudinalAcc"]
+                    state_gps['LateralAcc'] = GpsJson["Gps"]["Gps"]["LateralAcc"]
+                    state_gps['Longitude'] = GpsJson["Gps"]["Gps"]["Longitude"]
+                    state_gps['Latitude'] = GpsJson["Gps"]["Gps"]["Latitude"]
                     time_receive_gps = time.time() - self.time_start_gps
                     self.time_start_gps = time.time()
             except zmq.ZMQError:
