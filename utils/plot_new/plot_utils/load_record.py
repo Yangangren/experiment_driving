@@ -21,7 +21,7 @@ def load_data(record_dir):
     path = proj_root_dir + '/record/' + record_dir + '/record.txt'
     contents, str_contents = get_contents(path)
     data_all_dict = {}
-    keys_for_data = {'Decision':[], 'State_ego':[], 'Time':[]} # 'Obs_dict':[],
+    keys_for_data = {'Decision':[], 'State_ego':[], 'Obs_dict':[], 'Time':[]} # 'Obs_dict':[],
     for row in contents[0:len(keys_for_data.keys()) + 2]:
         for keys_class in keys_for_data.keys(): #
             if keys_class in row:

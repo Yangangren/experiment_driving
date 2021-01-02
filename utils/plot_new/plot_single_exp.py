@@ -24,10 +24,11 @@ def single_plot(data_all, keys=['Deceleration'], **kwargs):
     else:
         plt.xlabel('time /s')
         labels = keys
-        axes = plt.gca()
-        ylim = axes.get_ylim()
-        plt.plot([data_all['Time'][min_index], data_all['Time'][min_index]], ylim, c='red', linestyle='--')
-        plt.plot([data_all['Time'][max_index], data_all['Time'][max_index]], ylim, c='red', linestyle='--')
+        if kwargs['highlight'] == True:
+            axes = plt.gca()
+            ylim = axes.get_ylim()
+            plt.plot([data_all['Time'][min_index], data_all['Time'][min_index]], ylim, c='red', linestyle='--')
+            plt.plot([data_all['Time'][max_index], data_all['Time'][max_index]], ylim, c='red', linestyle='--')
     plt.legend(labels=labels, loc='best')
     plt.grid()
 
@@ -48,22 +49,17 @@ def single_plot(data_all, keys=['Deceleration'], **kwargs):
         plt.show()
 
 if __name__ == '__main__':
-    exp_index = 'left_case0_20210101_170308'
+    exp_index = 'left_case0_20210102_124300'
     data_all, keys_for_data = load_data(exp_index)
     print(keys_for_data)
-    single_plot(data_all, ['SteerAngleAct', 'SteerAngleAim'], title='Steering Act', path = exp_index, y_lim=[-100,100], highlight=True)
-    single_plot(data_all, ['first_out'],  title='first out',  path = exp_index, highlight=True)
+    single_plot(data_all, ['SteerAngleAct', 'SteerAngleAim'], title='Steering Act', path = exp_index, y_lim=[-100,100], highlight=False)
+    single_plot(data_all, ['first_out'],  title='first out',  path = exp_index, highlight=False)
     single_plot(data_all, [('GaussX','GaussY')], title='Trajectory', path=exp_index, x_lim=[-11,11], highlight=False)
-    single_plot(data_all, ['GaussX', 'GaussY'], title='Position', path=exp_index,  highlight=True)
+    single_plot(data_all, ['GaussX', 'GaussY'], title='Position', path=exp_index,  highlight=False)
+    single_plot(data_all, ['ego_vs', 'ego_vy'], title='Obs ego velocity', path=exp_index, highlight=False)
     single_plot(data_all, ['Heading'], title='Heading', path=exp_index, highlight=True)
     single_plot(data_all, ['NorthVelocity','EastVelocity'], title='Velocity', path=exp_index, highlight=True)
     single_plot(data_all, ['VehicleMode'] , title='Mode', path=exp_index, highlight=True)
     single_plot(data_all, ['GpsSpeed', 'VehicleSPeedAct'], title='Speed', path=exp_index, highlight=True)
     single_plot(data_all, ['Throttle'], title='Throttle', path=exp_index, highlight=True)
-    # single_plot(data_all, ['YawRate'])
-    # keys_can = ['VehicleSPeedAct',
-    #             'SteerAngleAct',
-    #             'AutoGear',
-    #             'VehicleMode',
-    #             'Throttle',
-    #             'BrkOn']
+    # # single_plot(data_all, ['YawRate'])
