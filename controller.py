@@ -348,7 +348,7 @@ class Controller(object):
         self.model_state[0][0] = speed
         v_x, v_y, r, x, y, phi = self.model_state[0][0], self.model_state[0][1], self.model_state[0][2], \
                                  self.model_state[0][3], self.model_state[0][4], self.model_state[0][5]
-        return dict(model_vx=v_x, model_vy=v_y, model_r=r, model_x=x, model_y=y, model_phi=phi)
+        return OrderedDict(model_vx=v_x, model_vy=v_y, model_r=r, model_x=x, model_y=y, model_phi=phi)
 
     def _construct_ego_vector(self, state_gps, state_can):
         ego_phi = state_gps['Heading']
@@ -564,7 +564,7 @@ class Controller(object):
         a_x = 2.25*a_x_norm - 0.75
         if a_x > 0:
             # torque = np.clip(a_x * 300., 0., 350.)
-            torque = np.clip((a_x-0.4)/0.4*50+150., 0., 100.)
+            torque = np.clip((a_x-0.4)/0.4*50+150., 0., 100.)  #todo
             decel = 0.
             tor_flag = 1
             dec_flag = 0
