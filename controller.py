@@ -1,17 +1,18 @@
-import zmq
 import json
-import time
-import struct
 import os
+import struct
+import time
+from collections import OrderedDict
 from datetime import datetime
-import numpy as np
-from traffic import TRAFFICSETTINGS
-from collections import OrderedDict
-import tensorflow as tf
 from math import pi
+
 import bezier
-from utils.load_policy import LoadPolicy, LoadPolicy2
-from collections import OrderedDict
+import numpy as np
+import tensorflow as tf
+import zmq
+
+from traffic import TRAFFICSETTINGS
+from utils.load_policy import LoadPolicy
 
 VEHICLE_MODE_DICT = dict(left=OrderedDict(dl=1, du=1, ud=2, ul=1), # dl=2, du=2, ud=2, ul=2
                          straight=OrderedDict(dl=1, du=1, ud=1, ru=2, ur=2), #vdl=1, du=2, ud=2, ru=2, ur=2
@@ -290,22 +291,15 @@ class ReferencePath(object):
 
 class Controller(object):
     def __init__(self, shared_list, Info_List, State_Other_List, receive_index,
-                 if_save, if_radar, lock, task, case, is_rela):
+                 if_save, if_radar, lock, task, case):
         self.time_out = 0
         self.task = task
         self.case = case
         self.ref_path = ReferencePath(self.task)
         self.num_future_data = 0
-        if is_rela:
-            TASK2MODEL = dict(left=LoadPolicy('./utils/models_rela/left', 95000),
-                              straight=LoadPolicy('./utils/models_rela/straight', 100000),
-                              right=LoadPolicy('./utils/models_rela/right', 100000))
-        else:
-            TASK2MODEL = dict(left=LoadPolicy('./utils/models/left', 50000),
-                              # LoadPolicy2('./utils/models/path_tracking', 6000)
-                              # LoadPolicy('./utils/models/left', 50000)
-                              straight=LoadPolicy('./utils/models/straight', 75000),
-                              right=LoadPolicy('./utils/models/right', 80000),)
+        TASK2MODEL = dict(left=LoadPolicy('./utils/models/left', 50000),
+                          straight=LoadPolicy('./utils/models/straight', 75000),
+                          right=LoadPolicy('./utils/models/right', 80000),)
         self.model = TASK2MODEL[task]
         self.steer_factor = 15
         self.Info_List = Info_List
@@ -314,7 +308,6 @@ class Controller(object):
         self.shared_list = shared_list
         self.read_index_old = 0
         self.receive_index_shared = receive_index
-        self.is_rela = is_rela
         # self.read_index_old = Info_List[0]
 
         self.lock = lock
@@ -359,12 +352,8 @@ class Controller(object):
         ego_v_x, ego_v_y = state_gps['GpsSpeed'], 0.
         ego_r = state_gps['YawRate']                      # rad/s
         ego_steering_wheel = state_can['SteerAngleAct']   # deg
-        if self.is_rela:
-            self.ego_info_dim = 7
-            ego_feature = [ego_v_x, ego_v_y, ego_r, ego_x, ego_y, ego_phi, ego_steering_wheel]
-        else:
-            self.ego_info_dim = 6
-            ego_feature = [ego_v_x, ego_v_y, ego_r, ego_x, ego_y, ego_phi]
+        self.ego_info_dim = 6
+        ego_feature = [ego_v_x, ego_v_y, ego_r, ego_x, ego_y, ego_phi]
         return np.array(ego_feature, dtype=np.float32)
 
     def _construct_veh_vector(self, ego_x, ego_y, state_others): #TODO: temp mht
@@ -514,10 +503,7 @@ class Controller(object):
                                                          self.num_future_data + 1)], \
                                                obs_abso[self.ego_info_dim + self.per_tracking_info_dim * (
                                                            self.num_future_data + 1):]
-        if self.is_rela:
-            _, _, _, ego_x, ego_y, _, _ = ego_infos
-        else:
-            _, _, _, ego_x, ego_y, _ = ego_infos
+        _, _, _, ego_x, ego_y, _ = ego_infos
         ego = np.array([ego_x, ego_y, 0, 0]*int(len(veh_infos)/self.per_veh_info_dim), dtype=np.float32)
         vehs_rela = veh_infos - ego
         out = np.concatenate((ego_infos, tracking_infos, vehs_rela), axis=0)
@@ -535,14 +521,6 @@ class Controller(object):
                                                              np.array([ego_v_x], dtype=np.float32),
                                                              self.num_future_data).numpy()[0]
         self.per_tracking_info_dim = 3
-        # -----------tracking-----------------
-        # ego_v_x, ego_v_y, ego_r, ego_x, ego_y, ego_phi = ego_vector[0], ego_vector[1], ego_vector[2], \
-        #                                                  ego_vector[3], ego_vector[4], ego_vector[5]
-        # delta_y, delta_phi, delta_v = tracking_error[0], tracking_error[1], tracking_error[2]
-        # vector = np.array([delta_v, ego_v_y, ego_r, delta_y, delta_phi*np.pi/180, ego_x])
-        # obs_dict = OrderedDict(delta_v=delta_v, ego_v_y=ego_v_y, ego_r=ego_r, delta_y=delta_y,
-        #                        delta_phi_rad=delta_phi*np.pi/180, ego_x=ego_x)
-        # -----------tracking-----------------
         vector = np.concatenate((ego_vector, tracking_error, vehs_vector), axis=0)
         vector = self.convert_vehs_to_rela(vector)
         vehs_vector_rela = vector[self.ego_info_dim + self.per_tracking_info_dim * (self.num_future_data + 1):]
@@ -565,21 +543,12 @@ class Controller(object):
         self.last_steer_output = steer_output
         return steer_output
 
-    def _action_transformation_for_end2end(self, state_can, action, delta_t):  # [-1, 1] # TODO: wait real car
-        steering_wheel = state_can['SteerAngleAct']  # todo deg?
+    def _action_transformation_for_end2end(self, action):  # [-1, 1] # TODO: wait real car
         action = np.clip(action, -1.0, 1.0)
-        if self.is_rela:
-            steering_wheel_v_norm, a_x_norm = action[0], action[1]
-            steering_wheel_v = 150. * steering_wheel_v_norm
-            steering_wheel = steering_wheel + delta_t * steering_wheel_v
-            # steering_wheel = self._set_inertia(steering_wheel)    # todo
-            first_out = steering_wheel_v
-        else:
-            front_wheel_norm_rad, a_x_norm = action[0], action[1]
-            front_wheel_deg = 0.4 / pi * 180 * front_wheel_norm_rad
-            steering_wheel = front_wheel_deg * self.steer_factor
-            # steering_wheel = self._set_inertia(steering_wheel)
-            first_out = front_wheel_deg
+        front_wheel_norm_rad, a_x_norm = action[0], action[1]
+        front_wheel_deg = 0.4 / pi * 180 * front_wheel_norm_rad
+        steering_wheel = front_wheel_deg * self.steer_factor
+        # steering_wheel = self._set_inertia(steering_wheel)
 
         steering_wheel = np.clip(steering_wheel, -360., 360)
         a_x = 2.25*a_x_norm - 0.75
@@ -598,7 +567,7 @@ class Controller(object):
 
         # out: steer_wheel_deg, torque, deceleration, tor_flag, dec_flag:
         # [-360,360]deg, [0., 350,]N (1), [0, 5]m/s^2 (0.05)
-        return steering_wheel, torque, decel, tor_flag, dec_flag, first_out, a_x
+        return steering_wheel, torque, decel, tor_flag, dec_flag, front_wheel_deg, a_x
 
     def run(self):
         time_start = time.time()
@@ -627,8 +596,8 @@ class Controller(object):
                     obs, obs_dict, veh_vec = self._get_obs(state_gps, state_can, state_other)
                     action = self.model.run(obs)
                     delta_t = time.time()-time_start
-                    steer_wheel_deg, torque, decel, tor_flag, dec_flag, first_out, a_x = \
-                        self._action_transformation_for_end2end(state_can, action, delta_t)
+                    steer_wheel_deg, torque, decel, tor_flag, dec_flag, front_wheel_deg, a_x = \
+                        self._action_transformation_for_end2end(action)
                     state_model = self.model_step(state_gps, state_can, delta_t)
                     state_ego.update(state_model)
                     time_start = time.time()
@@ -666,7 +635,7 @@ class Controller(object):
                                             'Dec_flag': dec_flag,
                                             'Tor_flag': tor_flag,
                                             'SteerAngleAim': steer_wheel_deg,  # [deg]
-                                            'first_out': first_out,
+                                            'front_wheel_deg': front_wheel_deg,
                                             'a_x': a_x})  # [m/s^2]
 
                     with self.lock:

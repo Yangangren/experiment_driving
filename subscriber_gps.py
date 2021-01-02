@@ -7,13 +7,15 @@
 # @FileName: subscriber_gps.py
 # =====================================
 
-import zmq
 import json
-import time
 import math
+import time
 import numpy as np
-from utils.coordi_convert import convert_gps_coordi_to_intersection_coordi
 from collections import OrderedDict
+
+import zmq
+
+from utils.coordi_convert import convert_gps_coordi_to_intersection_coordi
 
 
 class SubscriberGps():

@@ -8,25 +8,27 @@
 # =====================================
 
 from __future__ import print_function
+
+import argparse
 import multiprocessing as mp
-from multiprocessing import Process, Queue
 import os
 import time
+from multiprocessing import Process
+
 from controller import Controller
+from plot_online import Plot
 from subscriber_can import SubscriberCan
 from subscriber_gps import SubscriberGps
 from subscriber_radar import SubscriberRadar
 from traffic import Traffic
-from plot_online import Plot
-import argparse
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 
 def controller_agent(shared_list, Info_List, State_Other_List,receive_index,
-                     if_save,if_radar,lock, task, case, is_rela):
+                     if_save,if_radar,lock, task, case):
     publisher_ = Controller(shared_list,Info_List, State_Other_List,receive_index,
-                            if_save,if_radar,lock,  task, case, is_rela)
+                            if_save,if_radar,lock,  task, case)
     time.sleep(0.5)
     publisher_.run()
 
@@ -62,7 +64,6 @@ def built_parser():
 
     parser.add_argument('--task', type=str, default='left')
     parser.add_argument('--case', type=int, default=0)
-    parser.add_argument('--is_rela', type=bool, default=True)
     parser.add_argument('--surr_flag', type=bool, default=True)
 
     return parser.parse_args()
@@ -122,7 +123,7 @@ def main():
     else:
         procs.append(Process(target=traffic, args=(shared_list, State_Other_List, lock, args.task, args.case, args.surr_flag)))
     procs.append(Process(target=controller_agent, args=(shared_list,Info_List,State_Other_List,receive_index,
-                                                        if_save,if_radar,lock, args.task, args.case, args.is_rela)))
+                                                        if_save,if_radar,lock, args.task, args.case)))
     procs.append(Process(target=plot_agent, args=(Info_List,lock, args.task)))
 
     for p in procs:

@@ -1,8 +1,9 @@
-import zmq
 import struct
 import time
-import numpy as np
 from collections import OrderedDict
+
+import numpy as np
+import zmq
 
 
 class SubscriberRadar(object):
