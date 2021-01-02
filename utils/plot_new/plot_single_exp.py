@@ -49,7 +49,7 @@ def single_plot(data_all, keys=['Deceleration'], **kwargs):
         plt.show()
 
 if __name__ == '__main__':
-    exp_index = 'left_case0_20210102_163556'
+    exp_index = 'left_case0_20210102_164721'
     data_all, keys_for_data = load_data(exp_index)
     print(keys_for_data)
     single_plot(data_all, ['SteerAngleAct', 'SteerAngleAim'], title='Steering Act', path = exp_index,  highlight=True)
@@ -79,5 +79,7 @@ if __name__ == '__main__':
     single_plot(data_all, ['GpsSpeed', 'VehicleSPeedAct'], title='Speed', path=exp_index, highlight=True)
     single_plot(data_all, ['Throttle'], title='Throttle', path=exp_index, highlight=True)
     single_plot(data_all, ['YawRate'], title='Yaw rate', path=exp_index, highlight=True)
+
+    single_plot(data_all, ['AutoGear'], title='AutoGear', path=exp_index, highlight=True)
 
     # # single_plot(data_all, ['YawRate'])

@@ -35,7 +35,7 @@ MODE2TASK = {'dr': 'right', 'du': 'straight', 'dl': 'left',
              'ud': 'straight', 'ur': 'left', 'ul': 'right',
              'ld': 'right', 'lr': 'straight', 'lu': 'left'}
 
-EXPECTED_V = 2.
+EXPECTED_V = 4.
 
 
 def deal_with_phi_diff(phi_diff):
@@ -339,7 +339,6 @@ class Controller(object):
         self.last_steer_output = 0
         self.model_driven_by_can = VehicleDynamics()
         self.model_state = np.array([[3., 0., 0., 1.75, -30., 90.]], dtype=np.float32)
-        self.all_obs = []
 
     def model_step(self, state_gps, state_can, delta_t):
         speed = state_gps['GpsSpeed']
@@ -358,8 +357,8 @@ class Controller(object):
         ego_phi = state_gps['Heading']
         ego_x, ego_y = state_gps['GaussX'], state_gps['GaussY']
         ego_v_x, ego_v_y = state_gps['GpsSpeed'], 0.
-        ego_r = state_gps['YawRate'] * pi / 180      # todo: rad/s
-        ego_steering_wheel = state_can['SteerAngleAct']  # todo deg?
+        ego_r = state_gps['YawRate']                      # rad/s
+        ego_steering_wheel = state_can['SteerAngleAct']   # deg
         if self.is_rela:
             self.ego_info_dim = 7
             ego_feature = [ego_v_x, ego_v_y, ego_r, ego_x, ego_y, ego_phi, ego_steering_wheel]
@@ -593,7 +592,7 @@ class Controller(object):
         else:
             torque = 0.
             # decel = np.clip(-a_x, 0., 4.)
-            decel = -np.clip(-a_x, 0., 2.)
+            decel = -np.clip(-a_x, 0., 3.)
             tor_flag = 0
             dec_flag = 1
 
@@ -626,7 +625,6 @@ class Controller(object):
 
                     self.time_in = time.time()
                     obs, obs_dict, veh_vec = self._get_obs(state_gps, state_can, state_other)
-                    self.all_obs.append(obs)
                     action = self.model.run(obs)
                     delta_t = time.time()-time_start
                     steer_wheel_deg, torque, decel, tor_flag, dec_flag, first_out, a_x = \
@@ -649,7 +647,7 @@ class Controller(object):
                     #         'Torque': 0,
                     #         'Dec_flag': 1,
                     #         'Tor_flag': 0,
-                    #         'SteerAngleAim': np.float64(30 + 1.7),
+                    #         'SteerAngleAim': np.float64(0. + 1.7),
                     #         'VehicleGearAim': 1,
                     #         'IsValid': True}}}
                     json_cotrol = json.dumps(control)
@@ -683,7 +681,6 @@ class Controller(object):
                     self.step += 1
 
                     if self.if_save:
-                        np.save('./all_obs.npy', np.array(self.all_obs), allow_pickle=True)
                         if decision != {} and state_ego != {} and state_other != {}:
                             file_handle.write("Decision ")
                             for k1, v1 in decision.items():
@@ -735,11 +732,6 @@ def test_control():
     obs = controller._get_obs(state_gps, state_other)
     # print(obs)
 
-def load_all_obs():
-    all_obs = np.load('./all_obs.npy')
-    a = 1
-
 
 if __name__ == "__main__":
-    load_all_obs()
-
+    test_control()

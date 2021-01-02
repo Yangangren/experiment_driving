@@ -33,7 +33,7 @@ class SubscriberCan():
         state_can['VehicleSPeedAct'] = 0  # [m/s]
         state_can['SteerAngleAct'] = 0    # [m/s]
         state_can['AutoGear'] = 0
-        state_can['VehicleMode'] = 0
+        state_can['VehicleMode'] = 0      # 0: manual driving; 1: autonomous driving
         state_can['Throttle'] = 0
         state_can['BrkOn'] = 0
         time_receive_can = 0
