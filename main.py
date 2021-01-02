@@ -63,7 +63,7 @@ def built_parser():
     parser.add_argument('--task', type=str, default='left')
     parser.add_argument('--case', type=int, default=0)
     parser.add_argument('--is_rela', type=bool, default=True)
-    parser.add_argument('--surr_flag', type=bool, default=False)
+    parser.add_argument('--surr_flag', type=bool, default=True)
 
     return parser.parse_args()
 
@@ -94,7 +94,7 @@ def main():
     #            State_can['Throttle'] = 0
     #            State_can['BrkOn'] = 0
 
-    Info_List = mp.Manager().list([0.0]*5)  # [step, time, decision, state_ego(state_can+state_gps), state_other]
+    Info_List = mp.Manager().list([0.0]*6)  # [step, time, decision, state_ego(state_can+state_gps), state_other]
     # decision: {'Deceleration': decel,  # [m/s^2]
     #            'Torque': torque,  # [N*m]
     #            'Dec_flag': dec_flag,

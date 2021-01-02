@@ -204,6 +204,18 @@ class Plot():
                     plot_phi_line(veh_x, veh_y, veh_phi, 'black')
                     draw_rotate_rec(veh_x, veh_y, veh_phi, veh_l, veh_w, 'black')
 
+            interested_vehs = self.Info_List[5]
+
+            for i in range(int(len(interested_vehs)/4)): # TODO:
+                veh_x = interested_vehs[4 * i + 0]
+                veh_y = interested_vehs[4 * i + 1]
+                veh_phi = interested_vehs[4 * i + 3]
+                veh_l = STATE_OTHER_LENGTH
+                veh_w = STATE_OTHER_WIDTH
+                if is_in_plot_area(veh_x, veh_y):
+                    plot_phi_line(veh_x, veh_y, veh_phi, 'black')
+                    draw_rotate_rec(veh_x, veh_y, veh_phi, veh_l, veh_w,'b', linestyle='--')
+
             v_light = State_others['v_light']
             if v_light == 0:
                 v_color, h_color = 'black', 'black'     #  'green', 'red'
@@ -249,10 +261,10 @@ class Plot():
             ego_w = EGO_WIDTH
             plot_phi_line(ego_x, ego_y, ego_phi, 'red')
             draw_rotate_rec(ego_x, ego_y, ego_phi, ego_l, ego_w, 'red')
-            model_x = State_ego['model_x']
-            model_y = State_ego['model_y']
-            model_phi = State_ego['model_phi']
-            draw_rotate_rec(model_x, model_y, model_phi, ego_l, ego_w, 'blue')
+            # model_x = State_ego['model_x']
+            # model_y = State_ego['model_y']
+            # model_phi = State_ego['model_phi']
+            # draw_rotate_rec(model_x, model_y, model_phi, ego_l, ego_w, 'blue')
 
             time1 = time.time()
             delta_time = time1-start_time
