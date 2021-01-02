@@ -1,18 +1,66 @@
 import matplotlib.pyplot as plt
 from utils.plot_new.plot_utils.load_record import load_data
+import os
 
+def single_plot(data_all, keys=['Deceleration'], **kwargs):
+    if 'fig_num' in kwargs.keys():
+        plt.figure(kwargs['fig_num'])
+    else:
+        plt.figure()
+    if kwargs['highlight'] == True:
+        min_index = data_all['VehicleMode'].index(1.0)
+        max_index = min_index + data_all['VehicleMode'].count(1.0)
 
-def single_plot(load_dir, keys=['Deceleration']):
-    data_all = load_data(load_dir)
-    plt.figure()
+    labels = []
     for key in keys:
-        plt.plot(data_all['Time'], data_all[key]) # data_all['Time']
-    plt.legend(labels=keys,loc='best')
-    plt.xlabel('time /s')
-    plt.show()
+        if isinstance(key, tuple):
+            plt.plot(data_all[key[0]], data_all[key[1]])
+            labels.append(key[1])
+        else:
+            plt.plot(data_all['Time'], data_all[key])
+
+    if isinstance(keys[0], tuple):
+        plt.xlabel(keys[0][0])
+    else:
+        plt.xlabel('time /s')
+        labels = keys
+        axes = plt.gca()
+        ylim = axes.get_ylim()
+        plt.plot([data_all['Time'][min_index], data_all['Time'][min_index]], ylim, c='red', linestyle='--')
+        plt.plot([data_all['Time'][max_index], data_all['Time'][max_index]], ylim, c='red', linestyle='--')
+    plt.legend(labels=labels, loc='best')
+    plt.grid()
+
+    if 'x_lim' in kwargs.keys():
+        plt.xlim(kwargs['x_lim'])
+    if 'y_lim' in kwargs.keys():
+        plt.ylim(kwargs['y_lim'])
+    if 'title' in kwargs.keys():
+        plt.title(kwargs['title'])
+    if 'path' in kwargs.keys():
+        proj_root_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        fig_path = proj_root_dir + '/record/' + kwargs['path'] + '/figure/'
+        if not os.path.exists(fig_path):
+            os.mkdir(fig_path)
+        name = fig_path + kwargs['title'] +'.jpg'
+        plt.savefig(name)
+    else:
+        plt.show()
 
 if __name__ == '__main__':
-    single_plot('left_case0_20210101_170308', ['SteerAngleAct', 'SteerAngleAim','first_out'])
+    exp_index = 'left_case0_20210101_170308'
+    data_all, keys_for_data = load_data(exp_index)
+    print(keys_for_data)
+    single_plot(data_all, ['SteerAngleAct', 'SteerAngleAim'], title='Steering Act', path = exp_index, y_lim=[-100,100], highlight=True)
+    single_plot(data_all, ['first_out'],  title='first out',  path = exp_index, highlight=True)
+    single_plot(data_all, [('GaussX','GaussY')], title='Trajectory', path=exp_index, x_lim=[-11,11], highlight=False)
+    single_plot(data_all, ['GaussX', 'GaussY'], title='Position', path=exp_index,  highlight=True)
+    single_plot(data_all, ['Heading'], title='Heading', path=exp_index, highlight=True)
+    single_plot(data_all, ['NorthVelocity','EastVelocity'], title='Velocity', path=exp_index, highlight=True)
+    single_plot(data_all, ['VehicleMode'] , title='Mode', path=exp_index, highlight=True)
+    single_plot(data_all, ['GpsSpeed', 'VehicleSPeedAct'], title='Speed', path=exp_index, highlight=True)
+    single_plot(data_all, ['Throttle'], title='Throttle', path=exp_index, highlight=True)
+    # single_plot(data_all, ['YawRate'])
     # keys_can = ['VehicleSPeedAct',
     #             'SteerAngleAct',
     #             'AutoGear',
