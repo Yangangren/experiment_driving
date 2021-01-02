@@ -10,7 +10,7 @@ from collections import OrderedDict
 import tensorflow as tf
 from math import pi
 import bezier
-from utils.load_policy import LoadPolicy
+from utils.load_policy import LoadPolicy, LoadPolicy2
 from collections import OrderedDict
 
 VEHICLE_MODE_DICT = dict(left=OrderedDict(dl=1, du=1, ud=2, ul=1), # dl=2, du=2, ud=2, ul=2
@@ -94,6 +94,7 @@ class VehicleDynamics(object):
     def prediction(self, x_1, u_1, tau):
         x_next = self.f_xu(x_1, u_1, tau)
         return x_next.numpy()
+
 
 class ReferencePath(object):
     def __init__(self, task, mode=None, ref_index=None):
@@ -297,13 +298,14 @@ class Controller(object):
         self.num_future_data = 0
         if is_rela:
             TASK2MODEL = dict(left=LoadPolicy('./utils/models_rela/left', 95000),
+                              # LoadPolicy2('./utils/models/path_tracking', 6000),
+                              # LoadPolicy('./utils/models_rela/left', 95000)
                               straight=LoadPolicy('./utils/models_rela/straight', 100000),
                               right=LoadPolicy('./utils/models_rela/right', 100000))
         else:
             TASK2MODEL = dict(left=LoadPolicy('./utils/models/left', 50000),
                               straight=LoadPolicy('./utils/models/straight', 75000),
-                              right=LoadPolicy('./utils/models/right', 80000))
-
+                              right=LoadPolicy('./utils/models/right', 80000),)
         self.model = TASK2MODEL[task]
         self.steer_factor = 15
         self.Info_List = Info_List
@@ -533,10 +535,28 @@ class Controller(object):
                                                              np.array([ego_v_x], dtype=np.float32),
                                                              self.num_future_data).numpy()[0]
         self.per_tracking_info_dim = 3
-
+        # -----------tracking-----------------
+        # ego_v_x, ego_v_y, ego_r, ego_x, ego_y, ego_phi = ego_vector[0], ego_vector[1], ego_vector[2], \
+        #                                                  ego_vector[3], ego_vector[4], ego_vector[5]
+        # delta_y, delta_phi, delta_v = tracking_error[0], tracking_error[1], tracking_error[2]
+        # vector = np.array([delta_v, ego_v_y, ego_r, delta_y, delta_phi*np.pi/180, ego_x])
+        # obs_dict = OrderedDict(delta_v=delta_v, ego_v_y=ego_v_y, ego_r=ego_r, delta_y=delta_y,
+        #                        delta_phi_rad=delta_phi*np.pi/180, ego_x=ego_x)
+        # -----------tracking-----------------
         vector = np.concatenate((ego_vector, tracking_error, vehs_vector), axis=0)
         vector = self.convert_vehs_to_rela(vector)
-        return vector
+        vehs_vector_rela = vector[self.ego_info_dim + self.per_tracking_info_dim * (self.num_future_data + 1):]
+        obs_dict = OrderedDict(ego_vs=ego_vector[0], ego_vy=ego_vector[1], ego_r=ego_vector[2], ego_x=ego_vector[3],
+                               ego_y=ego_vector[4], ego_phi=ego_vector[5],
+                               tracking_delta_y=tracking_error[0], tracking_delta_phi=tracking_error[1],
+                               tracking_delta_v=tracking_error[2],
+                               )
+        for i in range(int(len(vehs_vector)/4.)):
+            obs_dict.update({'other{}_delta_x'.format(i): vehs_vector_rela[4*i],
+                             'other{}_delta_y'.format(i): vehs_vector_rela[4*i+1],
+                             'other{}_delta_v'.format(i): vehs_vector_rela[4*i+2],
+                             'other{}_delta_phi'.format(i): vehs_vector_rela[4*i+3]})
+        return vector, obs_dict
 
     def _set_inertia(self, steer_from_policy, inertia_time=1, sampletime=0.1, k_G=1.): # todo: adjust the inertia time
         steer_output = (1. - sampletime / inertia_time) * self.last_steer_output + \
@@ -604,7 +624,7 @@ class Controller(object):
                     state_ego.update(state_can)
 
                     self.time_in = time.time()
-                    obs = self._get_obs(state_gps, state_can, state_other)
+                    obs, obs_dict = self._get_obs(state_gps, state_can, state_other)
                     action = self.model.run(obs)
                     delta_t = time.time()-time_start
                     steer_wheel_deg, torque, decel, tor_flag, dec_flag, first_out, a_x = \
@@ -663,18 +683,23 @@ class Controller(object):
                             file_handle.write("Decision ")
                             for k1, v1 in decision.items():
                                 file_handle.write(k1 + ":" + str(v1) + ", ")
-                                if k1 == 'a_x':
-                                    file_handle.write('\n')
+                            file_handle.write('\n')
+
                             file_handle.write("State_ego ")
                             for k2, v2 in state_ego.items():
                                 file_handle.write(k2 + ":" + str(v2) + ", ")
-                                if k2 == 'model_phi':
-                                    file_handle.write('\n')
+                            file_handle.write('\n')
+
                             file_handle.write("State_other ")
                             for k3, v3 in state_other.items():
                                 file_handle.write(k3 + ":" + str(v3) + ", ")
-                                if k3 == 'v_light':
-                                    file_handle.write('\n')
+                            file_handle.write('\n')
+
+                            file_handle.write("Obs_dict ")
+                            for k4, v4 in obs_dict.items():
+                                file_handle.write(k4 + ":" + str(v4) + ", ")
+                            file_handle.write('\n')
+
                             file_handle.write("Time Time:" + str(run_time) +
                                               "time_decision:"+str(time_decision) +
                                               "time_receive_gps："+str(time_receive_gps) +
