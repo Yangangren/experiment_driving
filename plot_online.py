@@ -60,13 +60,12 @@ def find_closest_point(path, xs, ys, ratio=6):
 
 
 class Plot():
-    def __init__(self,Info_List, lock, task):
-        self.Info_List = Info_List
+    def __init__(self, shared_list, lock, task):
+        self.shared_list = shared_list
         self.lock = lock
         self.task = task
         self.step_old = -1
         self.acc_timer = TimerStat()
-        step = []
         left_construct_traj = np.load('./map/left_construct.npy')
         straight_construct_traj = np.load('./map/straight_construct.npy')
         right_construct_traj = np.load('./map/right_construct.npy')
@@ -194,19 +193,19 @@ class Plot():
 
             ax.plot(self.ref_path[0], self.ref_path[1], color='g')  # todo:
 
-            State_others = self.Info_List[4].copy()
+            state_other = self.shared_list[4].copy()
             # plot cars
-            for i in range(len(State_others['x_other'])): # TODO:
-                veh_x = State_others['x_other'][i]
-                veh_y = State_others['y_other'][i]
-                veh_phi = State_others['phi_other'][i]
+            for i in range(len(state_other['x_other'])): # TODO:
+                veh_x = state_other['x_other'][i]
+                veh_y = state_other['y_other'][i]
+                veh_phi = state_other['phi_other'][i]
                 veh_l = STATE_OTHER_LENGTH
                 veh_w = STATE_OTHER_WIDTH
                 if is_in_plot_area(veh_x, veh_y):
                     plot_phi_line(veh_x, veh_y, veh_phi, 'black')
                     draw_rotate_rec(veh_x, veh_y, veh_phi, veh_l, veh_w, 'black')
 
-            interested_vehs = self.Info_List[5]
+            interested_vehs = self.shared_list[10].copy()
 
             for i in range(int(len(interested_vehs)/4)): # TODO:
                 veh_x = interested_vehs[4 * i + 0]
@@ -218,7 +217,7 @@ class Plot():
                     plot_phi_line(veh_x, veh_y, veh_phi, 'black')
                     draw_rotate_rec(veh_x, veh_y, veh_phi, veh_l, veh_w,'b', linestyle='--')
 
-            v_light = State_others['v_light']
+            v_light = state_other['v_light']
             if v_light == 0:
                 v_color, h_color = 'black', 'black'     #  'green', 'red'
             elif v_light == 1:
@@ -227,7 +226,6 @@ class Plot():
                 v_color, h_color = 'black', 'black'
             else:
                 v_color, h_color = 'black', 'black'
-
 
             plt.plot([0, lane_width], [-square_length / 2 - start_offset, -square_length / 2 - start_offset],
                      color=v_color, linewidth=light_line_width)
@@ -241,31 +239,30 @@ class Plot():
             plt.plot([square_length / 2, square_length / 2], [lane_width, 0],
                      color=h_color, linewidth=light_line_width)
 
-
-            State_ego = self.Info_List[3].copy()
-            ego_v = State_ego['VehicleSPeedAct']
-            ego_steer = State_ego['SteerAngleAct']
-            ego_gear = State_ego['AutoGear']
-            ego_gps_v = State_ego['GpsSpeed']
-            ego_north_v = State_ego['NorthVelocity']
-            ego_east_v = State_ego['EastVelocity']
-            ego_yaw_rate = State_ego['YawRate']
-            ego_long_acc = State_ego['LongitudinalAcc']
-            ego_lat_acc = State_ego['LateralAcc']
-            ego_throttle = State_ego['Throttle']
-            ego_brk = State_ego['BrkOn']
-            ego_x = State_ego['GaussX']
-            ego_y = State_ego['GaussY']
-            ego_longitude = State_ego['Longitude']
-            ego_latitude = State_ego['Latitude']
-            ego_phi = State_ego['Heading']
+            state_ego = self.shared_list[9].copy()
+            ego_v = state_ego['VehicleSPeedAct']
+            ego_steer = state_ego['SteerAngleAct']
+            ego_gear = state_ego['AutoGear']
+            ego_gps_v = state_ego['GpsSpeed']
+            ego_north_v = state_ego['NorthVelocity']
+            ego_east_v = state_ego['EastVelocity']
+            ego_yaw_rate = state_ego['YawRate']
+            ego_long_acc = state_ego['LongitudinalAcc']
+            ego_lat_acc = state_ego['LateralAcc']
+            ego_throttle = state_ego['Throttle']
+            ego_brk = state_ego['BrkOn']
+            ego_x = state_ego['GaussX']
+            ego_y = state_ego['GaussY']
+            ego_longitude = state_ego['Longitude']
+            ego_latitude = state_ego['Latitude']
+            ego_phi = state_ego['Heading']
             ego_l = EGO_LENGTH
             ego_w = EGO_WIDTH
             plot_phi_line(ego_x, ego_y, ego_phi, 'red')
             draw_rotate_rec(ego_x, ego_y, ego_phi, ego_l, ego_w, 'red')
-            # model_x = State_ego['model_x']
-            # model_y = State_ego['model_y']
-            # model_phi = State_ego['model_phi']
+            # model_x = state_ego['model_x']
+            # model_y = state_ego['model_y']
+            # model_phi = state_ego['model_phi']
             # draw_rotate_rec(model_x, model_y, model_phi, ego_l, ego_w, 'blue')
 
             time1 = time.time()
@@ -281,8 +278,7 @@ class Plot():
             plt.plot(path_x, path_y, 'g.')
             delta_x, delta_y, delta_phi = ego_x - path_x, ego_y - path_y, ego_phi - path_phi
 
-            # plot ego dynamics
-
+            # plot txt
             text_x, text_y_start = -110, 60
             ge = iter(range(0, 1000, 4))
             plt.text(text_x, text_y_start - next(ge), 'ego_GaussX: {:.2f}m'.format(ego_x))
@@ -303,22 +299,15 @@ class Plot():
             plt.text(text_x, text_y_start - next(ge), r'ego_phi: ${:.2f}\degree$'.format(ego_phi))
             plt.text(text_x, text_y_start - next(ge), r'path_phi: ${:.2f}\degree$'.format(path_phi))
             plt.text(text_x, text_y_start - next(ge), r'delta_phi: ${:.2f}\degree$'.format(delta_phi))
-            decision = self.Info_List[2].copy()
+
+            decision = self.shared_list[8].copy()
             decision_steer = decision['SteerAngleAim']
             decision_torque = decision['Torque']
             decision_brkacc = decision['Deceleration']
             decision_Dec_flag = decision['Dec_flag']
             decision_Tor_flag = decision['Tor_flag']
             front_wheel_deg = decision['front_wheel_deg']
-            second_out = decision['a_x']
-
-            # decision: {'Deceleration': decel,  # [m/s^2]
-            #            'Torque': torque,  # [N*m]
-            #            'Dec_flag': dec_flag,
-            #            'Tor_flag': tor_flag,
-            #            'SteerAngleAim': steer_wheel_deg,  # [deg]
-            #            'front_wheel_rad': front_wheel_rad,  # [rad]
-            #            'a_x': a_x}
+            acc = decision['a_x']
 
             text_x, text_y_start = 70, 60
             ge = iter(range(0, 1000, 4))
@@ -339,8 +328,9 @@ class Plot():
             plt.text(text_x, text_y_start - next(ge), r'brake_acc_decision: {:.2f}$m/s^2$'.format(decision_brkacc))
             plt.text(text_x, text_y_start - next(ge), 'deceleration_flag: {}'.format(decision_Dec_flag))
             plt.text(text_x, text_y_start - next(ge), '  ')
+            plt.text(text_x, text_y_start - next(ge), 'Net out')
             plt.text(text_x, text_y_start - next(ge), 'front_wheel_deg: {:.2f}'.format(front_wheel_deg))
-            plt.text(text_x, text_y_start - next(ge), r'second_out: {:.2f}$m/s^2$'.format(second_out))
+            plt.text(text_x, text_y_start - next(ge), r'acc: {:.2f}$m/s^2$'.format(acc))
             plt.text(text_x, text_y_start - next(ge), r'acc_actual: {:.2f}$m/s^2$'.format(self.acc_timer.mean))
 
             plt.pause(0.01)
