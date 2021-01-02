@@ -12,6 +12,7 @@ import json
 import time
 import math
 from utils.coordi_convert import convert_gps_coordi_to_intersection_coordi
+from collections import OrderedDict
 
 
 class SubscriberGps():
@@ -38,22 +39,21 @@ class SubscriberGps():
         return x_modified, y_modified, heading
 
     def run(self):
-        State_gps = {}
+        state_gps = OrderedDict()
+        state_gps['GaussX'] = 0   # intersection coordinate [m]
+        state_gps['GaussY'] = 0   # intersection coordinate [m]
+        state_gps['Heading'] = 0  # intersection coordinate [deg]
+        state_gps['Heading_ori'] = 0  # GPS coordinate [deg]
 
-        State_gps['GaussX'] = 0   # intersection coordinate [m]
-        State_gps['GaussY'] = 0   # intersection coordinate [m]
-        State_gps['Heading'] = 0  # intersection coordinate [deg]
-        State_gps['Heading_ori'] = 0  # GPS coordinate [deg]
+        state_gps['GpsSpeed'] = 0      # [m/s]
+        state_gps['NorthVelocity'] = 0 # [m/s]
+        state_gps['EastVelocity'] = 0  # [m/s]
 
-        State_gps['GpsSpeed'] = 0      # [m/s]
-        State_gps['NorthVelocity'] = 0 # [m/s]
-        State_gps['EastVelocity'] = 0  # [m/s]
-
-        State_gps['YawRate'] = 0           # [rad/s]
-        State_gps['LongitudinalAcc'] = 0   # [m/s^2]
-        State_gps['LateralAcc'] = 0        # [m/s^2]
-        State_gps['Longitude'] = 0
-        State_gps['Latitude'] = 0
+        state_gps['YawRate'] = 0           # [rad/s]
+        state_gps['LongitudinalAcc'] = 0   # [m/s^2]
+        state_gps['LateralAcc'] = 0        # [m/s^2]
+        state_gps['Longitude'] = 0
+        state_gps['Latitude'] = 0
 
         time_receive_gps = 0
 
@@ -64,11 +64,10 @@ class SubscriberGps():
                 if GpsJson is not None:
                     x_rear_axle = GpsJson["Gps"]["Gps"]["GaussX"]
                     y_rear_axle = 0.1+GpsJson["Gps"]["Gps"]["GaussY"]
-                    State_gps['Heading_ori'] = GpsJson["Gps"]["Gps"]["Heading"]
+                    state_gps['Heading_ori'] = GpsJson["Gps"]["Gps"]["Heading"]
                     heading = 1. + GpsJson["Gps"]["Gps"]["Heading"]
-                    State_gps['GaussX'], State_gps['GaussY'], State_gps['Heading'] =\
+                    state_gps['GaussX'], state_gps['GaussY'], state_gps['Heading'] =\
                         self.rotate_and_move(x_rear_axle, y_rear_axle, heading)
-
                     State_gps['NorthVelocity'] = GpsJson["Gps"]["Gps"]["NorthVelocity"]
                     State_gps['EastVelocity'] = GpsJson["Gps"]["Gps"]["EastVelocity"]
                     State_gps['GpsSpeed'] = math.sqrt(State_gps['NorthVelocity'] ** 2 + State_gps['EastVelocity']**2)
@@ -85,7 +84,7 @@ class SubscriberGps():
             self.receive_index += 1
 
             with self.lock:
-                self.shared_list[0] = State_gps.copy()
+                self.shared_list[0] = state_gps.copy()
                 self.shared_list[2] = time_receive_gps
 
             # self.receive_index_shared.value = self.receive_index

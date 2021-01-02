@@ -11,6 +11,7 @@ import tensorflow as tf
 from math import pi
 import bezier
 from utils.load_policy import LoadPolicy
+from collections import OrderedDict
 
 VEHICLE_MODE_DICT = dict(left=OrderedDict(dl=1, du=1, ud=2, ul=1), # dl=2, du=2, ud=2, ul=2
                          straight=OrderedDict(dl=1, du=1, ud=1, ru=2, ur=2), #vdl=1, du=2, ud=2, ru=2, ur=2
@@ -589,11 +590,6 @@ class Controller(object):
                 shared_index = self.receive_index_shared.value
                 if shared_index > self.read_index_old:
                     self.read_index_old = shared_index
-                    self.Time = []
-                    # if time.time()-time_start > 0.1:
-                    #     print("time!!!!!", time.time()-time_start)
-                    # else:
-                    #     print("time:", time.time()-time_start)
                     with self.lock:
                         state_gps = self.shared_list[0].copy()
                         # print(state_gps)
@@ -603,7 +599,8 @@ class Controller(object):
                         time_receive_radar = self.shared_list[4] if self.if_radar else 0.
                         state_other = self.State_Other_List[0].copy()
 
-                    state_ego = state_gps.copy()
+                    state_ego = OrderedDict()
+                    state_ego.update(state_gps)
                     state_ego.update(state_can)
 
                     self.time_in = time.time()
@@ -638,24 +635,23 @@ class Controller(object):
 
                     x, y, phi = state_ego['GaussX']+21277000., state_ego['GaussY']+3447700., \
                                 -state_ego['Heading'] + 90
-                    # print(state_ego['Heading_ori'])
                     msg4radar = struct.pack('6d', 0., 0., 0., x, y, phi)
                     self.socket_pub_radar.send(msg4radar)
 
-                    self.time_decision = time.time() - self.time_in
-                    self.Time.append(time.time() - self.time_initial)
+                    time_decision = time.time() - self.time_in
+                    run_time = time.time() - self.time_initial
 
-                    decision = {'Deceleration': decel,  # [m/s^2]
-                                'Torque': torque,  # [N*m]
-                                'Dec_flag': dec_flag,
-                                'Tor_flag': tor_flag,
-                                'SteerAngleAim': steer_wheel_deg,  # [deg]
-                                'first_out': first_out,
-                                'a_x': a_x}  # [m/s^2]
+                    decision = OrderedDict({'Deceleration': decel,  # [m/s^2]
+                                            'Torque': torque,  # [N*m]
+                                            'Dec_flag': dec_flag,
+                                            'Tor_flag': tor_flag,
+                                            'SteerAngleAim': steer_wheel_deg,  # [deg]
+                                            'first_out': first_out,
+                                            'a_x': a_x})  # [m/s^2]
 
                     with self.lock:
                         self.Info_List[0] = self.step
-                        self.Info_List[1] = self.Time.copy()
+                        self.Info_List[1] = run_time
                         self.Info_List[2] = decision.copy()
                         self.Info_List[3] = state_ego.copy()
                         self.Info_List[4] = state_other.copy()
@@ -679,8 +675,8 @@ class Controller(object):
                                 file_handle.write(k3 + ":" + str(v3) + ", ")
                                 if k3 == 'v_light':
                                     file_handle.write('\n')
-                            file_handle.write("Time Time:" + str(self.Time[0])  + ", " +
-                                              "time_decision:"+str(self.time_decision) + ", " +
+                            file_handle.write("Time Time:" + str(run_time)  + ", " +
+                                              "time_decision:"+str(time_decision) + ", " +
                                               "time_receive_gps:"+str(time_receive_gps) + ", " +
                                               "time_receive_can:"+str(time_receive_can) + ", " +
                                               "time_receive_radar:"+str(time_receive_radar)+ ", " + '\n')
