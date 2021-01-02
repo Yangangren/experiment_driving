@@ -14,8 +14,6 @@ from tensorflow.keras.layers import Dense
 
 tf.config.experimental.set_visible_devices([], 'GPU')
 
-tf.config.experimental.set_visible_devices([], 'GPU')
-
 
 class MLPNet(Model):
     def __init__(self, input_dim, num_hidden_layers, num_hidden_units, hidden_activation, output_dim, **kwargs):

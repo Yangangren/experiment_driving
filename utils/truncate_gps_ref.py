@@ -1,5 +1,6 @@
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+
 
 def truncate_gps_ref():
     left = np.load('../map/left_ref.npy')
@@ -40,6 +41,7 @@ def truncate_gps_ref():
     plt.plot(right_real[0], right_real[1])
     plt.show()
     np.save('../map/right_ref_cut.npy', right_real)
+
 
 if __name__ == '__main__':
     truncate_gps_ref()

@@ -8,17 +8,19 @@
 # =====================================
 
 from __future__ import print_function
+
+import argparse
 import multiprocessing as mp
-from multiprocessing import Process, Queue
 import os
 import time
+from multiprocessing import Process
+
 from controller import Controller
+from plot_online import Plot
 from subscriber_can import SubscriberCan
 from subscriber_gps import SubscriberGps
 from subscriber_radar import SubscriberRadar
 from traffic import Traffic
-from plot_online import Plot
-import argparse
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 

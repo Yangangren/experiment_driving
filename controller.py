@@ -1,17 +1,18 @@
-import zmq
 import json
-import time
-import struct
 import os
+import struct
+import time
+from collections import OrderedDict
 from datetime import datetime
-import numpy as np
-from traffic import TRAFFICSETTINGS
-from collections import OrderedDict
-import tensorflow as tf
 from math import pi
+
 import bezier
-from utils.load_policy import LoadPolicy, LoadPolicy2
-from collections import OrderedDict
+import numpy as np
+import tensorflow as tf
+import zmq
+
+from traffic import TRAFFICSETTINGS
+from utils.load_policy import LoadPolicy
 
 VEHICLE_MODE_DICT = dict(left=OrderedDict(dl=1, du=1, ud=2, ul=1), # dl=2, du=2, ud=2, ul=2
                          straight=OrderedDict(dl=1, du=1, ud=1, ru=2, ur=2), #vdl=1, du=2, ud=2, ru=2, ur=2
@@ -298,8 +299,6 @@ class Controller(object):
         self.num_future_data = 0
         if is_rela:
             TASK2MODEL = dict(left=LoadPolicy('./utils/models_rela/left', 95000),
-                              # LoadPolicy2('./utils/models/path_tracking', 6000),
-                              # LoadPolicy('./utils/models_rela/left', 95000)
                               straight=LoadPolicy('./utils/models_rela/straight', 100000),
                               right=LoadPolicy('./utils/models_rela/right', 100000))
         else:
@@ -535,14 +534,6 @@ class Controller(object):
                                                              np.array([ego_v_x], dtype=np.float32),
                                                              self.num_future_data).numpy()[0]
         self.per_tracking_info_dim = 3
-        # -----------tracking-----------------
-        # ego_v_x, ego_v_y, ego_r, ego_x, ego_y, ego_phi = ego_vector[0], ego_vector[1], ego_vector[2], \
-        #                                                  ego_vector[3], ego_vector[4], ego_vector[5]
-        # delta_y, delta_phi, delta_v = tracking_error[0], tracking_error[1], tracking_error[2]
-        # vector = np.array([delta_v, ego_v_y, ego_r, delta_y, delta_phi*np.pi/180, ego_x])
-        # obs_dict = OrderedDict(delta_v=delta_v, ego_v_y=ego_v_y, ego_r=ego_r, delta_y=delta_y,
-        #                        delta_phi_rad=delta_phi*np.pi/180, ego_x=ego_x)
-        # -----------tracking-----------------
         vector = np.concatenate((ego_vector, tracking_error, vehs_vector), axis=0)
         vector = self.convert_vehs_to_rela(vector)
         vehs_vector_rela = vector[self.ego_info_dim + self.per_tracking_info_dim * (self.num_future_data + 1):]

@@ -1,8 +1,10 @@
+import math
+import time
+from math import cos, sin, pi
+
 import matplotlib.pyplot as plt
 import numpy as np
-import math
-from math import cos, sin, pi
-import time
+
 from utils.misc import TimerStat
 
 CROSSROAD_SIZE = 22

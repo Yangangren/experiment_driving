@@ -7,10 +7,11 @@
 # @FileName: subscriber_can.py
 # =====================================
 
-import zmq
 import json
 import time
 from collections import OrderedDict
+
+import zmq
 
 
 class SubscriberCan():
