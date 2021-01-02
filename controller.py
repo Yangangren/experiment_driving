@@ -546,7 +546,7 @@ class Controller(object):
         vector = np.concatenate((ego_vector, tracking_error, vehs_vector), axis=0)
         vector = self.convert_vehs_to_rela(vector)
         vehs_vector_rela = vector[self.ego_info_dim + self.per_tracking_info_dim * (self.num_future_data + 1):]
-        obs_dict = OrderedDict(ego_vs=ego_vector[0], ego_vy=ego_vector[1], ego_r=ego_vector[2], ego_x=ego_vector[3],
+        obs_dict = OrderedDict(ego_vx=ego_vector[0], ego_vy=ego_vector[1], ego_r=ego_vector[2], ego_x=ego_vector[3],
                                ego_y=ego_vector[4], ego_phi=ego_vector[5],
                                tracking_delta_y=tracking_error[0], tracking_delta_phi=tracking_error[1],
                                tracking_delta_v=tracking_error[2],
