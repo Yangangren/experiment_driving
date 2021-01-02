@@ -699,12 +699,12 @@ class Controller(object):
                             for k4, v4 in obs_dict.items():
                                 file_handle.write(k4 + ":" + str(v4) + ", ")
                             file_handle.write('\n')
-
-                            file_handle.write("Time Time:" + str(run_time) +
-                                              "time_decision:"+str(time_decision) +
-                                              "time_receive_gps："+str(time_receive_gps) +
-                                              "time_receive_can："+str(time_receive_can) +
-                                              "time_receive_radar："+str(time_receive_radar)+'\n')
+                            
+                            file_handle.write("Time Time:" + str(run_time)  + ", " +
+                                              "time_decision:"+str(time_decision) + ", " +
+                                              "time_receive_gps:"+str(time_receive_gps) + ", " +
+                                              "time_receive_can:"+str(time_receive_can) + ", " +
+                                              "time_receive_radar:"+str(time_receive_radar)+ ", " + '\n')
 
 
 def test_control():

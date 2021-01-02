@@ -20,83 +20,23 @@ def load_data(record_dir):
     proj_root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
     path = proj_root_dir + '/record/' + record_dir + '/record.txt'
     contents, str_contents = get_contents(path)
-    data_all = {}
-    # state_gps: State_gps['GaussX'] = 0            # intersection coordinate [m]
-    #            State_gps['GaussY'] = 0            # intersection coordinate [m]
-    #            State_gps['Heading'] = 0           # intersection coordinate [deg]
-    #            State_gps['GpsSpeed'] = 0          # [m/s]
-    #            State_gps['NorthVelocity'] = 0     # [m/s]
-    #            State_gps['EastVelocity'] = 0      # [m/s]
-    #            State_gps['YawRate'] = 0           # [rad/s]
-    #            State_gps['LongitudinalAcc'] = 0   # [m/s^2]
-    #            State_gps['LateralAcc'] = 0        # [m/s^2]
-    #            State_gps['Longitude'] = 0
-    #            State_gps['Latitude'] = 0
-
-    # state_can: State_can['VehicleSPeedAct'] = 0   # [m/s]
-    #            State_can['SteerAngleAct'] = 0     # [m/s]
-    #            State_can['AutoGear'] = 0
-    #            State_can['VehicleMode'] = 0
-    #            State_can['Throttle'] = 0
-    #            State_can['BrkOn'] = 0
-    # TODO: if API is modified, change here
-    keys_decision = ['Deceleration',
-                     'Torque',
-                     'Dec_Flag',
-                     'Tor_Flag',
-
-                     'SteerAngleAim',
-                     'first_out',
-                     'a_x']
-    # Decision
-    # Deceleration: 0.0, Torque: 100.0, Dec_flag: 0, Tor_flag: 1, SteerAngleAim: 15.136967852006773, first_out: 144.2210555076599, a_x: 1.497500717639923,
-    keys_gps = ['X',
-                'Y',
-                'Heading',
-                'Heading_ori',
-                'GpsSpeed',
-                'NorthV','EastV',
-                'YawRate',
-                'LongAcc',
-                'LatAcc',
-                'Longitude',
-                'Latitude']
-
-    keys_can = ['VehicleSPeedAct',
-                'SteerAngleAct',
-                'AutoGear',
-                'VehicleMode',
-                'Throttle',
-                'BrkOn']
-    # State_ego
-    # GaussX: -0.6689948966567469, GaussY: 17.386370842934493, Heading: 76.67000000000002, Heading_ori: 283.33, GpsSpeed: 1.810288651016738, NorthVelocity: 0.38900000000000007, EastVelocity: -1.7680000000000002, YawRate: -6.45, LongitudinalAcc: 0.05180000000000001, LateralAcc: 0.040900000000000006, Longitude: 120.66230729999998, Latitude: 31.129647799999997, VehicleSPeedAct: 1.765625, SteerAngleAct: -152.4, AutoGear: 3, VehicleMode: 0, Throttle: 63.55489407514398, BrkOn: 1, model_vx: 1.8102887, model_vy: -0.20022604, model_r: -0.10935349, model_x: -1.2790437, model_y: 18.738672, model_phi: 79.645485,
-
-    keys_model = ['model_vx', 'model_vy', 'model_r', 'model_x', 'model_y', 'model_phi']
-    # keys_model = []
-    keys_others = ['x_other',
-                   'y_other',
-                   'v_other',
-                   'phi_other',
-                   'v_light']
-
-    keys_time = ['Time',
-                 'time_decision',
-                 'time_receive_gps',
-                 'time_receive_can',
-                 'time_receive_radar']
-    keys_dict = dict(Decision = keys_decision, State_ego = keys_gps + keys_can + keys_model, State_other=keys_others, Time = keys_time)
-
-    # combine all data together for best reuse of plot func:
-    for key in keys_decision + keys_can + keys_gps + keys_others + keys_model + keys_time:
-        data_all[key] = []
+    data_all_dict = {}
+    keys_for_data = {'Decision':[], 'State_ego':[], 'Time':[]} # 'Obs_dict':[],
+    for row in contents[0:len(keys_for_data.keys()) + 2]:
+        for keys_class in keys_for_data.keys(): #
+            if keys_class in row:
+                for i, d in enumerate(row.split(',')[:-1]): # -1 is \n
+                    data_key = d.split(':')[0]
+                    data_key=data_key.split(' ')[1]
+                    keys_for_data[keys_class].append(data_key)
+                    data_all_dict[data_key] = []
 
     for row in contents:
-        for keys_data in [ 'Decision', 'State_ego', 'Time']: #
-            if keys_data in row:
+        for keys_class in keys_for_data.keys(): #
+            if keys_class in row:
                 for i, d in enumerate(row.split(',')[:-1]):
-                    print(d.split(':'))
-                    data_number = d.split(':')[1]
-                    data_all[keys_dict[keys_data][i]].append(float(data_number))
+                    data = d.split(':')[1]
+                    data_all_dict[keys_for_data[keys_class][i]].append(float(data))
 
     # key_State_other = "State_other"
     # key_Time = 'Time'
@@ -119,12 +59,14 @@ def load_data(record_dir):
         #         for i, d in enumerate(row.split('|')):
         #             data_number = d.split(':')[1]
         #             data_all[keys_dict[keys_data][i]].append(data_number)
-    return data_all
+    # return data_all
+
+    return data_all_dict, keys_for_data
 
 
 
 def atest_load_txt():
-    data_dict = load_data('left_case0_20210101_151956')
+    data_dict, keys_for_data = load_data('left_case0_20210101_170308')
     a = 1
 
 
@@ -156,7 +98,6 @@ def atest_re():
         result_State_other = pat_State_other.findall(all)
         for i in result_State_other:
             result_num = re.findall(r'-?\d+\.?\d*e?-?\d*?', i)
-            # print(result_num)
             result_num_array = np.asarray(result_num).reshape(4, -1)
             Other_X.append(result_num_array[0])
             Other_Y.append(result_num_array[1])
