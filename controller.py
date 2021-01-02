@@ -295,16 +295,16 @@ class Controller(object):
         self.ref_path = ReferencePath(self.task)
         self.num_future_data = 0
         if is_rela:
-            TASK2MODEL = dict(left=LoadPolicy('./utils/models_rela/left', 65000),
-                              straight=LoadPolicy('./utils/models_rela/straight', 75000),
-                              right=LoadPolicy('./utils/models_rela/right', 80000))
+            TASK2MODEL = dict(left=LoadPolicy('./utils/models_rela/left', 95000),
+                              straight=LoadPolicy('./utils/models_rela/straight', 100000),
+                              right=LoadPolicy('./utils/models_rela/right', 100000))
         else:
             TASK2MODEL = dict(left=LoadPolicy('./utils/models/left', 50000),
                               straight=LoadPolicy('./utils/models/straight', 75000),
                               right=LoadPolicy('./utils/models/right', 80000))
 
         self.model = TASK2MODEL[task]
-        self.steer_factor = 20
+        self.steer_factor = 15
         self.Info_List = Info_List
         self.State_Other_List = State_Other_List
         self.Info_List[0] = -1
@@ -335,15 +335,19 @@ class Controller(object):
 
         self.last_steer_output = 0
         self.model_driven_by_can = VehicleDynamics()
-        self.model_state = np.array([[3., 0., 0., 1.75, -10., 90.]])
+        self.model_state = np.array([[3., 0., 0., 1.75, -30., 90.]], dtype=np.float32)
 
-    def model_step(self, state_can, delta_t):
+    def model_step(self, state_gps, state_can, delta_t):
+        speed = state_gps['GpsSpeed']
         steering_wheel = state_can['SteerAngleAct']
         front_wheel = steering_wheel/self.steer_factor *np.pi/180.
         acc = 0.
-        u = np.array([[front_wheel, acc]])
+        u = np.array([[front_wheel, acc]], dtype=np.float32)
         self.model_state = self.model_driven_by_can.prediction(self.model_state, u, delta_t)
-        v_x, v_y, r, x, y, phi = self.model_state[0:6]
+        # print(self.model_state)
+        self.model_state[0][0] = speed
+        v_x, v_y, r, x, y, phi = self.model_state[0][0], self.model_state[0][1], self.model_state[0][2], \
+                                 self.model_state[0][3], self.model_state[0][4], self.model_state[0][5]
         return dict(model_vx=v_x, model_vy=v_y, model_r=r, model_x=x, model_y=y, model_phi=phi)
 
     def _construct_ego_vector(self, state_gps, state_can):
@@ -533,7 +537,7 @@ class Controller(object):
         vector = self.convert_vehs_to_rela(vector)
         return vector
 
-    def _set_inertia(self, steer_from_policy, inertia_time=3., sampletime=0.1, k_G=1.): # todo: adjust the inertia time
+    def _set_inertia(self, steer_from_policy, inertia_time=1, sampletime=0.1, k_G=1.): # todo: adjust the inertia time
         steer_output = (1. - sampletime / inertia_time) * self.last_steer_output + \
                        k_G * sampletime / inertia_time * steer_from_policy
 
@@ -545,9 +549,9 @@ class Controller(object):
         action = np.clip(action, -1.0, 1.0)
         if self.is_rela:
             steering_wheel_v_norm, a_x_norm = action[0], action[1]
-            steering_wheel_v = 100. * steering_wheel_v_norm
+            steering_wheel_v = 150. * steering_wheel_v_norm
             steering_wheel = steering_wheel + delta_t * steering_wheel_v
-            steering_wheel = self._set_inertia(steering_wheel)    # todo
+            # steering_wheel = self._set_inertia(steering_wheel)    # todo
             first_out = steering_wheel_v
         else:
             front_wheel_norm_rad, a_x_norm = action[0], action[1]
@@ -592,6 +596,7 @@ class Controller(object):
                     #     print("time:", time.time()-time_start)
                     with self.lock:
                         state_gps = self.shared_list[0].copy()
+                        # print(state_gps)
                         state_can = self.shared_list[1].copy()
                         time_receive_gps = self.shared_list[2]
                         time_receive_can = self.shared_list[3]
@@ -607,7 +612,7 @@ class Controller(object):
                     delta_t = time.time()-time_start
                     steer_wheel_deg, torque, decel, tor_flag, dec_flag, first_out, a_x = \
                         self._action_transformation_for_end2end(state_can, action, delta_t)
-                    state_model = self.model_step(state_can, delta_t)
+                    state_model = self.model_step(state_gps, state_can, delta_t)
                     state_ego.update(state_model)
                     time_start = time.time()
                     control = {'Decision': {
@@ -702,7 +707,7 @@ def test_control():
                        phi_other=phi_other,
                        v_light=0)
     obs = controller._get_obs(state_gps, state_other)
-    print(obs)
+    # print(obs)
 
 
 if __name__ == "__main__":

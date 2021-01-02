@@ -228,7 +228,6 @@ class Plot():
                      color=h_color, linewidth=light_line_width)
 
 
-
             State_ego = self.Info_List[3].copy()
             ego_v = State_ego['VehicleSPeedAct']
             ego_steer = State_ego['SteerAngleAct']
@@ -250,6 +249,11 @@ class Plot():
             ego_w = EGO_WIDTH
             plot_phi_line(ego_x, ego_y, ego_phi, 'red')
             draw_rotate_rec(ego_x, ego_y, ego_phi, ego_l, ego_w, 'red')
+            model_x = State_ego['model_x']
+            model_y = State_ego['model_y']
+            model_phi = State_ego['model_phi']
+            draw_rotate_rec(model_x, model_y, model_phi, ego_l, ego_w, 'blue')
+
             time1 = time.time()
             delta_time = time1-start_time
             acc_actual = (ego_v-v_old)/delta_time
