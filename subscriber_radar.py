@@ -42,7 +42,7 @@ class SubscriberRadar(object):
                 state_other["y_other"] = y_other
                 state_other["v_other"] = v_other
                 state_other["phi_other"] = phi_other
-                state_other["v_light"] = 2  # todo add v light
+                state_other["v_light"] = 0  # todo add v light
                 time_receive_radar = time.time() - self.time_start
                 self.time_start = time.time()
             except zmq.ZMQError:

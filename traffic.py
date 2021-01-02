@@ -120,8 +120,8 @@ class Traffic(object):
         if not self.is_triggered:
             self.is_triggered_func(ego_y)
         self.time_since_triggered = time.time() - self.abso_time_start if self.is_triggered else 0.
-        state_other = {'x_other': [], 'y_other': [], 'v_other': [], 'phi_other': [], 'v_light': []}
-        state_other['v_light'].append(self.case_dict['v_light'])
+        state_other = {'x_other': [], 'y_other': [], 'v_other': [], 'phi_other': []}
+        state_other['v_light'] = self.case_dict['v_light']
         if self.surr_flag:
             if self.task == 'left':
                 veh_dl, veh_ud, veh_ul = self.others['dl'], self.others['ud'], self.others['ul']

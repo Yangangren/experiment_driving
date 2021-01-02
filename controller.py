@@ -36,7 +36,7 @@ MODE2TASK = {'dr': 'right', 'du': 'straight', 'dl': 'left',
              'ud': 'straight', 'ur': 'left', 'ul': 'right',
              'ld': 'right', 'lr': 'straight', 'lu': 'left'}
 
-EXPECTED_V = 5.
+EXPECTED_V = 4.
 
 
 def deal_with_phi_diff(phi_diff):
@@ -186,7 +186,7 @@ class ReferencePath(object):
 
         else:
             assert task == 'right'
-            control_ext = CROSSROAD_SIZE/5.
+            control_ext = CROSSROAD_SIZE/5.+3.
             end_offsets = [-LANE_WIDTH * 0.5]
             start_offsets = [LANE_WIDTH*(LANE_NUMBER-0.5)]
 
@@ -350,8 +350,8 @@ class Controller(object):
         ego_phi = state_gps['Heading']
         ego_x, ego_y = state_gps['GaussX'], state_gps['GaussY']
         ego_v_x, ego_v_y = state_gps['GpsSpeed'], 0.
-        ego_r = state_gps['YawRate']  # todo check units in subscriber
-        ego_steering_wheel = state_can['SteerAngleAct']  # todo deg?
+        ego_r = state_gps['YawRate']                      # rad/s
+        ego_steering_wheel = state_can['SteerAngleAct']   # deg
         self.ego_info_dim = 6
         ego_feature = [ego_v_x, ego_v_y, ego_r, ego_x, ego_y, ego_phi]
         return np.array(ego_feature, dtype=np.float32)
@@ -534,9 +534,9 @@ class Controller(object):
                              'other{}_delta_y'.format(i): vehs_vector_rela[4*i+1],
                              'other{}_delta_v'.format(i): vehs_vector_rela[4*i+2],
                              'other{}_delta_phi'.format(i): vehs_vector_rela[4*i+3]})
-        return vector, obs_dict
+        return vector, obs_dict, vehs_vector
 
-    def _set_inertia(self, steer_from_policy, inertia_time=1, sampletime=0.1, k_G=1.): # todo: adjust the inertia time
+    def _set_inertia(self, steer_from_policy, inertia_time=0.2, sampletime=0.1, k_G=1.): # todo: adjust the inertia time
         steer_output = (1. - sampletime / inertia_time) * self.last_steer_output + \
                        k_G * sampletime / inertia_time * steer_from_policy
 
@@ -554,14 +554,14 @@ class Controller(object):
         a_x = 2.25*a_x_norm - 0.75
         if a_x > 0:
             # torque = np.clip(a_x * 300., 0., 350.)
-            torque = np.clip((a_x-0.4)/0.4*50+150., 0., 100.)  #todo
+            torque = np.clip((a_x-0.4)/0.4*50+150., 0., 250.)  #todo
             decel = 0.
             tor_flag = 1
             dec_flag = 0
         else:
             torque = 0.
             # decel = np.clip(-a_x, 0., 4.)
-            decel = np.clip(-a_x, 0., 3.)
+            decel = -np.clip(-a_x, 0., 3.)
             tor_flag = 0
             dec_flag = 1
 
@@ -593,7 +593,7 @@ class Controller(object):
                     state_ego.update(state_can)
 
                     self.time_in = time.time()
-                    obs, obs_dict = self._get_obs(state_gps, state_can, state_other)
+                    obs, obs_dict, veh_vec = self._get_obs(state_gps, state_can, state_other)
                     action = self.model.run(obs)
                     delta_t = time.time()-time_start
                     steer_wheel_deg, torque, decel, tor_flag, dec_flag, front_wheel_deg, a_x = \
@@ -612,12 +612,12 @@ class Controller(object):
                                     'IsValid': True}}}
                     # control = {'Decision': {
                     #     'Control': {  # 'VehicleSpeedAim': 20/3.6,
-                    #         'Deceleration': -3.0,
+                    #         'Deceleration': -2.0,
                     #         'Torque': 0,
                     #         'Dec_flag': 1,
                     #         'Tor_flag': 0,
                     #         'SteerAngleAim': np.float64(0. + 1.7),
-                    #         'VehicleGearAim': 3,
+                    #         'VehicleGearAim': 1,
                     #         'IsValid': True}}}
                     json_cotrol = json.dumps(control)
                     self.socket_pub.send(json_cotrol.encode('utf-8'))
@@ -644,6 +644,8 @@ class Controller(object):
                         self.Info_List[2] = decision.copy()
                         self.Info_List[3] = state_ego.copy()
                         self.Info_List[4] = state_other.copy()
+                        self.Info_List[5] = list(veh_vec)
+
 
                     self.step += 1
 
@@ -702,4 +704,3 @@ def test_control():
 
 if __name__ == "__main__":
     test_control()
-

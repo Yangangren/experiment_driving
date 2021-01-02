@@ -49,17 +49,37 @@ def single_plot(data_all, keys=['Deceleration'], **kwargs):
         plt.show()
 
 if __name__ == '__main__':
-    exp_index = 'left_case0_20210102_124300'
+    exp_index = 'left_case0_20210102_164721'
     data_all, keys_for_data = load_data(exp_index)
     print(keys_for_data)
-    single_plot(data_all, ['SteerAngleAct', 'SteerAngleAim'], title='Steering Act', path = exp_index, y_lim=[-100,100], highlight=False)
-    single_plot(data_all, ['first_out'],  title='first out',  path = exp_index, highlight=False)
+    single_plot(data_all, ['SteerAngleAct', 'SteerAngleAim'], title='Steering Act', path = exp_index,  highlight=True)
+    single_plot(data_all, ['first_out'],  title='first out',  path = exp_index, highlight=True)
+    single_plot(data_all, ['Dec_flag','BrkOn'], title='Deceleration flag', path=exp_index, highlight=True)
+    single_plot(data_all, ['Deceleration','a_x','BrkOn'], title='Deceleration acc', path=exp_index, highlight=True)
+    # single_plot(data_all, ['BrkOn'], title='', path=exp_index, highlight=True)
+
+    # single_plot(data_all, ['v_light'], title='V light', path=exp_index, highlight=True)
     single_plot(data_all, [('GaussX','GaussY')], title='Trajectory', path=exp_index, x_lim=[-11,11], highlight=False)
-    single_plot(data_all, ['GaussX', 'GaussY'], title='Position', path=exp_index,  highlight=False)
-    single_plot(data_all, ['ego_vs', 'ego_vy'], title='Obs ego velocity', path=exp_index, highlight=False)
+    single_plot(data_all, ['GaussX', 'GaussY'], title='Position', path=exp_index,  highlight=True)
+    single_plot(data_all, ['ego_vx', 'ego_vy'], title='Obs ego velocity', path=exp_index, highlight=True)
+    # single_plot(data_all, ['ego_v_y'], title='Obs ego velocity', path=exp_index, highlight=True)
+
+    single_plot(data_all, ['ego_x'], title='Obs ego position', path=exp_index, highlight=True)
+    single_plot(data_all, ['ego_phi'], title='Obs ego phi', path=exp_index, highlight=True)
+    single_plot(data_all, ['tracking_delta_y'], title='Obs ego delta y', path=exp_index, highlight=True)
+    single_plot(data_all, ['tracking_delta_phi'], title='Obs ego delta phi', path=exp_index, highlight=True)
+    single_plot(data_all, ['tracking_delta_v'], title='Obs ego delta v', path=exp_index, highlight=True)
+    # single_plot(data_all, ['ego_r'], title='Obs ego r', path=exp_index, highlight=True)
+    # single_plot(data_all, ['delta_y'], title='Obs ego delta y', path=exp_index, highlight=True)
+    # single_plot(data_all, ['delta_phi_rad'], title='Obs ego x', path=exp_index, highlight=True)
+
     single_plot(data_all, ['Heading'], title='Heading', path=exp_index, highlight=True)
     single_plot(data_all, ['NorthVelocity','EastVelocity'], title='Velocity', path=exp_index, highlight=True)
     single_plot(data_all, ['VehicleMode'] , title='Mode', path=exp_index, highlight=True)
     single_plot(data_all, ['GpsSpeed', 'VehicleSPeedAct'], title='Speed', path=exp_index, highlight=True)
     single_plot(data_all, ['Throttle'], title='Throttle', path=exp_index, highlight=True)
+    single_plot(data_all, ['YawRate'], title='Yaw rate', path=exp_index, highlight=True)
+
+    single_plot(data_all, ['AutoGear'], title='AutoGear', path=exp_index, highlight=True)
+
     # # single_plot(data_all, ['YawRate'])

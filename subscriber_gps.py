@@ -10,6 +10,7 @@
 import json
 import math
 import time
+import numpy as np
 from collections import OrderedDict
 
 import zmq
@@ -46,9 +47,9 @@ class SubscriberGps():
         state_gps['GaussY'] = 0   # intersection coordinate [m]
         state_gps['Heading'] = 0  # intersection coordinate [deg]
 
-        state_gps['GpsSpeed'] = 0      # [m/s]
-        state_gps['NorthVelocity'] = 0 # [m/s]
-        state_gps['EastVelocity'] = 0  # [m/s]
+        state_gps['GpsSpeed'] = 0          # [m/s]
+        state_gps['NorthVelocity'] = 0     # [m/s]
+        state_gps['EastVelocity'] = 0      # [m/s]
 
         state_gps['YawRate'] = 0           # [rad/s]
         state_gps['LongitudinalAcc'] = 0   # [m/s^2]
@@ -72,7 +73,7 @@ class SubscriberGps():
                     state_gps['EastVelocity'] = GpsJson["Gps"]["Gps"]["EastVelocity"]
                     state_gps['GpsSpeed'] = math.sqrt(state_gps['NorthVelocity'] ** 2 + state_gps['EastVelocity']**2)
 
-                    state_gps['YawRate'] = -GpsJson["Gps"]["Gps"]["YawRate"]
+                    state_gps['YawRate'] = -GpsJson["Gps"]["Gps"]["YawRate"] * np.pi / 180
                     state_gps['LongitudinalAcc'] = GpsJson["Gps"]["Gps"]["LongitudinalAcc"]
                     state_gps['LateralAcc'] = GpsJson["Gps"]["Gps"]["LateralAcc"]
                     state_gps['Longitude'] = GpsJson["Gps"]["Gps"]["Longitude"]
