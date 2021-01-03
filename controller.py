@@ -96,6 +96,54 @@ class VehicleDynamics(object):
         return x_next.numpy()
 
 
+class VehicleDynamics1(object):
+    def __init__(self, ):
+        self.vehicle_params = dict(C_f=-128915.5,  # front wheel cornering stiffness [N/rad]
+                                   C_r=-85943.6,  # rear wheel cornering stiffness [N/rad]
+                                   a=1.06,  # distance from CG to front axle [m]
+                                   b=1.85,  # distance from CG to rear axle [m]
+                                   mass=1412.,  # mass [kg]
+                                   I_z=1536.7,  # Polar moment of inertia at CG [kg*m^2]
+                                   miu=1.0,  # tire-road friction coefficient
+                                   g=9.81,  # acceleration of gravity [m/s^2]
+                                   )
+        a, b, mass, g = self.vehicle_params['a'], self.vehicle_params['b'], \
+                        self.vehicle_params['mass'], self.vehicle_params['g']
+        F_zf, F_zr = b * mass * g / (a + b), a * mass * g / (a + b)
+        self.vehicle_params.update(dict(F_zf=F_zf,
+                                        F_zr=F_zr))
+        self.states = np.array([[3., 0., 0., 1.75, -40., 90.]], dtype=np.float32)
+        self.states = tf.convert_to_tensor(self.states, dtype=tf.float32)
+
+    def f_xu(self, actions, tau):  # states and actions are tensors, [[], [], ...]
+        v_x, v_y, r, x, y, phi = self.states[:, 0], self.states[:, 1], self.states[:, 2],\
+                                 self.states[:, 3], self.states[:, 4], self.states[:, 5]
+        phi = phi * np.pi / 180.
+        steer, a_x = actions[:, 0], actions[:, 1]
+        C_f = tf.convert_to_tensor(self.vehicle_params['C_f'], dtype=tf.float32)
+        C_r = tf.convert_to_tensor(self.vehicle_params['C_r'], dtype=tf.float32)
+        a = tf.convert_to_tensor(self.vehicle_params['a'], dtype=tf.float32)
+        b = tf.convert_to_tensor(self.vehicle_params['b'], dtype=tf.float32)
+        mass = tf.convert_to_tensor(self.vehicle_params['mass'], dtype=tf.float32)
+        I_z = tf.convert_to_tensor(self.vehicle_params['I_z'], dtype=tf.float32)
+
+        next_state = [v_x + tau * (a_x + v_y * r),
+                      (mass * v_y * v_x + tau * (
+                                  a * C_f - b * C_r) * r - tau * C_f * steer * v_x - tau * mass * tf.square(
+                          v_x) * r) / (mass * v_x - tau * (C_f + C_r)),
+                      (-I_z * r * v_x - tau * (a * C_f - b * C_r) * v_y + tau * a * C_f * steer * v_x) / (
+                                  tau * (tf.square(a) * C_f + tf.square(b) * C_r) - I_z * v_x),
+                      x + tau * (v_x * tf.cos(phi) - v_y * tf.sin(phi)),
+                      y + tau * (v_x * tf.sin(phi) + v_y * tf.cos(phi)),
+                      (phi + tau * r) * 180 / np.pi]
+
+        return tf.stack(next_state, 1)
+
+    def prediction(self, u_1, tau):
+        self.states = self.f_xu(u_1, tau)
+        return self.states.numpy()
+
+
 class ReferencePath(object):
     def __init__(self, task, mode=None, ref_index=None):
         self.mode = mode
@@ -323,6 +371,7 @@ class Controller(object):
 
         self.last_steer_output = 0
         self.model_driven_by_can = VehicleDynamics()
+        self.model_driven_by_own = VehicleDynamics1()
         # self.model_state = np.array([[3., 0., 0., 1.75, -30., 90.]], dtype=np.float32)
 
     def model_step(self, state_gps, state_can, delta_t):
@@ -584,16 +633,17 @@ class Controller(object):
         return steering_wheel, torque, decel, tor_flag, dec_flag, front_wheel_deg, a_x
 
     def run(self):
+        start_time = time.time()
         all_obs = []
-        time_start = time.time()
         with open(self.save_path + '/record.txt', 'a') as file_handle:
             file_handle.write(str("保存时间：" + datetime.now().strftime("%Y%m%d_%H%M%S")))
             file_handle.write('\n')
             while True:
                 time.sleep(0.07)
-                shared_index = self.receive_index_shared.value
-                if shared_index > self.read_index_old:
-                    self.read_index_old = shared_index
+                if True:   # test using model
+                    state_model = self.model_driven_by_own.states.numpy()[0]
+                    v_x, v_y, r, x, y, phi = state_model[0], state_model[1], state_model[2],\
+                                             state_model[3], state_model[4], state_model[5]
                     with self.lock:
                         state_gps = self.shared_list[0].copy()
                         time_receive_gps = self.shared_list[1]
@@ -602,6 +652,7 @@ class Controller(object):
                         state_other = self.shared_list[4].copy()
                         time_receive_radar = self.shared_list[5] if self.if_radar else 0.
 
+                    state_gps.update(GaussX=x, GaussY=y, Heading=phi, GpsSpeed=v_x, YawRate=r)
                     state_ego = OrderedDict()
                     state_ego.update(state_gps)
                     state_ego.update(state_can)
@@ -612,6 +663,8 @@ class Controller(object):
                     action = self.model.run(obs)
                     steer_wheel_deg, torque, decel, tor_flag, dec_flag, front_wheel_deg, a_x = \
                         self._action_transformation_for_end2end(action)
+                    self.model_driven_by_own.prediction(np.array([[front_wheel_deg*np.pi/180, a_x]]), time.time()-start_time)
+                    start_time = time.time()
                     # state_model = self.model_step(state_gps, state_can, delta_t)
                     # state_ego.update(state_model)
                     control = {'Decision': {
@@ -623,15 +676,6 @@ class Controller(object):
                                     'SteerAngleAim': np.float64(steer_wheel_deg+1.7),
                                     'VehicleGearAim': 1,
                                     'IsValid': True}}}
-                    # control = {'Decision': {
-                    #     'Control': {  # 'VehicleSpeedAim': 20/3.6,
-                    #         'Deceleration': -2.0,
-                    #         'Torque': 0,
-                    #         'Dec_flag': 1,
-                    #         'Tor_flag': 0,
-                    #         'SteerAngleAim': np.float64(0. + 1.7),
-                    #         'VehicleGearAim': 1,
-                    #         'IsValid': True}}}
                     json_cotrol = json.dumps(control)
                     self.socket_pub.send(json_cotrol.encode('utf-8'))
 
@@ -659,35 +703,103 @@ class Controller(object):
                         self.shared_list[10] = list(veh_vec)
 
                     self.step += 1
+                else:  # real test
+                    shared_index = self.receive_index_shared.value
+                    if shared_index > self.read_index_old:
+                        self.read_index_old = shared_index
+                        with self.lock:
+                            state_gps = self.shared_list[0].copy()
+                            time_receive_gps = self.shared_list[1]
+                            state_can = self.shared_list[2].copy()
+                            time_receive_can = self.shared_list[3]
+                            state_other = self.shared_list[4].copy()
+                            time_receive_radar = self.shared_list[5] if self.if_radar else 0.
 
-                    if self.if_save:
-                        np.save('./all_obs.npy', all_obs)
-                        if decision != {} and state_ego != {} and state_other != {}:
-                            file_handle.write("Decision ")
-                            for k1, v1 in decision.items():
-                                file_handle.write(k1 + ":" + str(v1) + ", ")
-                            file_handle.write('\n')
+                        state_ego = OrderedDict()
+                        state_ego.update(state_gps)
+                        state_ego.update(state_can)
 
-                            file_handle.write("State_ego ")
-                            for k2, v2 in state_ego.items():
-                                file_handle.write(k2 + ":" + str(v2) + ", ")
-                            file_handle.write('\n')
+                        self.time_in = time.time()
+                        obs, obs_dict, veh_vec = self._get_obs(state_gps, state_other)
+                        action = self.model.run(obs)
+                        steer_wheel_deg, torque, decel, tor_flag, dec_flag, front_wheel_deg, a_x = \
+                            self._action_transformation_for_end2end(action)
+                        # state_model = self.model_step(state_gps, state_can, delta_t)
+                        # state_ego.update(state_model)
+                        control = {'Decision': {
+                            'Control': {#'VehicleSpeedAim': 20/3.6,
+                                        'Deceleration': decel,
+                                        'Torque': torque,
+                                        'Dec_flag': dec_flag,
+                                        'Tor_flag': tor_flag,
+                                        'SteerAngleAim': np.float64(steer_wheel_deg+1.7),
+                                        'VehicleGearAim': 1,
+                                        'IsValid': True}}}
+                        # control = {'Decision': {
+                        #     'Control': {  # 'VehicleSpeedAim': 20/3.6,
+                        #         'Deceleration': -2.0,
+                        #         'Torque': 0,
+                        #         'Dec_flag': 1,
+                        #         'Tor_flag': 0,
+                        #         'SteerAngleAim': np.float64(0. + 1.7),
+                        #         'VehicleGearAim': 1,
+                        #         'IsValid': True}}}
+                        json_cotrol = json.dumps(control)
+                        self.socket_pub.send(json_cotrol.encode('utf-8'))
 
-                            file_handle.write("State_other ")
-                            for k3, v3 in state_other.items():
-                                file_handle.write(k3 + ":" + str(v3) + "| ")
-                            file_handle.write('\n')
+                        x, y, phi = state_ego['GaussX']+21277000., state_ego['GaussY']+3447700., \
+                                    -state_ego['Heading'] + 90
+                        msg4radar = struct.pack('6d', 0., 0., 0., x, y, phi)
+                        self.socket_pub_radar.send(msg4radar)
 
-                            file_handle.write("Obs_dict ")
-                            for k4, v4 in obs_dict.items():
-                                file_handle.write(k4 + ":" + str(v4) + ", ")
-                            file_handle.write('\n')
-                            
-                            file_handle.write("Time Time:" + str(run_time)  + ", " +
-                                              "time_decision:"+str(time_decision) + ", " +
-                                              "time_receive_gps:"+str(time_receive_gps) + ", " +
-                                              "time_receive_can:"+str(time_receive_can) + ", " +
-                                              "time_receive_radar:"+str(time_receive_radar)+ ", " + '\n')
+                        time_decision = time.time() - self.time_in
+                        run_time = time.time() - self.time_initial
+
+                        decision = OrderedDict({'Deceleration': decel,  # [m/s^2]
+                                                'Torque': torque,  # [N*m]
+                                                'Dec_flag': dec_flag,
+                                                'Tor_flag': tor_flag,
+                                                'SteerAngleAim': steer_wheel_deg,  # [deg]
+                                                'front_wheel_deg': front_wheel_deg,
+                                                'a_x': a_x})  # [m/s^2]
+
+                        with self.lock:
+                            self.shared_list[6] = self.step
+                            self.shared_list[7] = run_time
+                            self.shared_list[8] = decision.copy()
+                            self.shared_list[9] = state_ego.copy()
+                            self.shared_list[10] = list(veh_vec)
+
+                        self.step += 1
+
+                  if self.if_save:
+                      np.save('./all_obs.npy', all_obs)
+                      if decision != {} and state_ego != {} and state_other != {}:
+                          file_handle.write("Decision ")
+                          for k1, v1 in decision.items():
+                              file_handle.write(k1 + ":" + str(v1) + ", ")
+                          file_handle.write('\n')
+
+                          file_handle.write("State_ego ")
+                          for k2, v2 in state_ego.items():
+                              file_handle.write(k2 + ":" + str(v2) + ", ")
+                          file_handle.write('\n')
+
+                          file_handle.write("State_other ")
+                          for k3, v3 in state_other.items():
+                              file_handle.write(k3 + ":" + str(v3) + "| ")
+                          file_handle.write('\n')
+
+                          file_handle.write("Obs_dict ")
+                          for k4, v4 in obs_dict.items():
+                              file_handle.write(k4 + ":" + str(v4) + ", ")
+                          file_handle.write('\n')
+
+                          file_handle.write("Time Time:" + str(run_time)  + ", " +
+                                            "time_decision:"+str(time_decision) + ", " +
+                                            "time_receive_gps:"+str(time_receive_gps) + ", " +
+                                            "time_receive_can:"+str(time_receive_can) + ", " +
+                                            "time_receive_radar:"+str(time_receive_radar)+ ", " + '\n')
 
 
 def test_control():
