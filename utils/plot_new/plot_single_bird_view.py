@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 from utils.plot_new.plot_utils.load_record import load_data
-from utils.plot_new.plot_utils.search_index import search_geq
+from utils.plot_new.plot_utils.search_index import search_geq, search_automode_time
 from plot_online import Plot
 # from math import sin, cos, pi
 import math
@@ -19,7 +19,7 @@ STATE_OTHER_WIDTH = EGO_WIDTH
 
 
 class Single_bird_view_plot(object):
-    def __init__(self, data_all, task, draw_other_veh='scatter'):
+    def __init__(self, data_all, task, draw_other_veh='scatter', **kwargs):
         proj_root_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
         self.data_all = data_all
         self.ego_x = data_all['GaussX']
@@ -42,6 +42,10 @@ class Single_bird_view_plot(object):
         self.start_index = 0
         self.stop_index = -1
         self.draw_other_veh = draw_other_veh
+        self.root_dir = proj_root_dir
+        self.path = None
+        if 'path' in kwargs.keys():
+            self.path = kwargs['path']
 
     def _preprocess_data(self, sparse_ratio = 5):
         ego_x = self.ego_x
@@ -206,6 +210,11 @@ class Single_bird_view_plot(object):
         bar = mpl.colorbar.ColorbarBase(ax=ax1, cmap=cmap, norm=norm, orientation='vertical')
         bar.set_label('Time(s)', fontsize=10)
 
+        if self.path is not None:
+            self.save_plot()
+        else:
+            plt.show()
+
 
     def draw_other_vehicles_in_rec(self, color='black'):
         x_others = self.sparse_x_others[self.stop_index]
@@ -232,6 +241,12 @@ class Single_bird_view_plot(object):
     def draw_others_points(self):
         return None
 
+    def save_plot(self):
+        fig_path = self.root_dir + '/record/' + self.path + '/figure/bird_view_fig/'
+        if not os.path.exists(fig_path):
+            os.mkdir(fig_path)
+        name = fig_path + 'bird_view.jpg'
+        plt.savefig(name)
 
 
 
@@ -239,8 +254,10 @@ class Single_bird_view_plot(object):
 
 
 if __name__ == '__main__':
-    data_all, keys_for_data = load_data('left_case0_20210103_121512')
-    bird_view_plot = Single_bird_view_plot(data_all, 'left', draw_other_veh='rectangular') # rectangular, scatter
-    bird_view_plot.set_time(2, 12)
+    exp_index = 'left_case0_20210103_121512'
+    data_all, keys_for_data = load_data(exp_index)
+    # automode_start_time, automode_stop_time = search_automode_time(data_all)
+    # print('Auto mode start: {:.2f}s, stop: {:.2f}s'.format(automode_start_time, automode_stop_time))
+    bird_view_plot = Single_bird_view_plot(data_all, 'left', draw_other_veh='scatter', path=exp_index) # rectangular, scatter
+    # bird_view_plot.set_time(automode_start_time, automode_stop_time)
     bird_view_plot.single_exp_bird_view()
-    plt.show()

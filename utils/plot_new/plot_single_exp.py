@@ -40,7 +40,7 @@ def single_plot(data_all, keys=['Deceleration'], **kwargs):
         plt.title(kwargs['title'])
     if 'path' in kwargs.keys():
         proj_root_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-        fig_path = proj_root_dir + '/record/' + kwargs['path'] + '/figure/'
+        fig_path = proj_root_dir + '/record/' + kwargs['path'] + '/figure/data_fig/'
         if not os.path.exists(fig_path):
             os.mkdir(fig_path)
         name = fig_path + kwargs['title'] +'.jpg'
@@ -48,10 +48,10 @@ def single_plot(data_all, keys=['Deceleration'], **kwargs):
     else:
         plt.show()
 
-def single_plot_time_series(data_all, VehicleMode = True):
-    highlight = VehicleMode
+def single_plot_time_series(data_all, AutoMode = True):
+    highlight = AutoMode
     single_plot(data_all, ['SteerAngleAct', 'SteerAngleAim'], title='Steering Act', path=exp_index, highlight=highlight)
-    single_plot(data_all, ['first_out'], title='first out', path=exp_index, highlight=highlight)
+    single_plot(data_all, ['front_wheel_deg'], title='Front wheel deg', path=exp_index, highlight=highlight)
     single_plot(data_all, ['Dec_flag', 'BrkOn'], title='Deceleration flag', path=exp_index, highlight=highlight)
     single_plot(data_all, ['Deceleration', 'a_x', 'BrkOn'], title='Deceleration acc', path=exp_index, highlight=highlight)
     # single_plot(data_all, ['BrkOn'], title='', path=exp_index, highlight=highlight)
@@ -84,11 +84,11 @@ def single_plot_other_series(data_all):
     single_plot(data_all, [('GaussX', 'GaussY')], title='Trajectory', path=exp_index, x_lim=[-11, 11], highlight=False)
 
 if __name__ == '__main__':
-    exp_index = 'left_case0_20210102_164721'
+    exp_index = 'left_case0_20210103_121512'
     data_all, keys_for_data = load_data(exp_index)
     print(keys_for_data)
 
-    single_plot_time_series(data_all) # if not switch into auto mode, add kwargs: VehicleMode=False
+    single_plot_time_series(data_all, AutoMode=False) # if not switch into auto mode, add kwargs: VehicleMode=False
     single_plot_other_series(data_all)
 
 

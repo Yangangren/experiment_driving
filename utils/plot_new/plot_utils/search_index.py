@@ -21,6 +21,15 @@ def search_geq(data, threshold):
         if data[i] >= threshold:
             return i, data[i]
 
+def search_automode_index(data):
+    min_index = data['VehicleMode'].index(1.0)
+    max_index = min_index + data['VehicleMode'].count(1.0)
+
+    return min_index, max_index
+
+def search_automode_time(data):
+    min_index, max_index = search_automode_index(data)
+    return data['Time'][max_index], data['Time'][max_index]
 
 if __name__ == '__main__':
     data_all, keys_for_data = load_data('left_case0_20210102_170343')
