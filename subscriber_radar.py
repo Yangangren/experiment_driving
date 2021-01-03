@@ -1,14 +1,14 @@
-import zmq
 import struct
 import time
-import numpy as np
 from collections import OrderedDict
+
+import numpy as np
+import zmq
 
 
 class SubscriberRadar(object):
-    def __init__(self, shared_list, State_Other_List, lock):
+    def __init__(self, shared_list, lock):
         self.shared_list = shared_list
-        self.State_Other_List = State_Other_List
         self.time_start = 0
         self.lock=lock
         self.radar_x = []
@@ -47,8 +47,8 @@ class SubscriberRadar(object):
             except zmq.ZMQError:
                 pass
             with self.lock:
-                self.shared_list[4] = time_receive_radar
-                self.State_Other_List[0] = state_other.copy()
+                self.shared_list[4] = state_other.copy()
+                self.shared_list[5] = time_receive_radar
 
             if time_receive_radar > 0.1:
                 print("Subscriber of radar is more than 0.1s!", time_receive_radar)

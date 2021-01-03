@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
 # =====================================
 # @Time    : 2020/12/28
 # @Author  : Yangang Ren (Tsinghua Univ.)
 # @FileName: traffic.py
 # =====================================
-from collections import OrderedDict
+
+import multiprocessing as mp
 import time
+from collections import OrderedDict
+from math import cos, sin, pi
+
 import matplotlib.pyplot as plt
 import numpy as np
-import math
-from math import cos, sin, pi
-import multiprocessing as mp
+
+from utils.coordi_convert import rotate_coordination
 
 CROSSROAD_SIZE = 22
 LANE_WIDTH = 3.5
@@ -20,30 +22,6 @@ START_OFFSET = 3
 LANE_NUMBER = 1
 EGO_LENGTH = 4.8
 EGO_WIDTH = 2.0
-
-def rotate_coordination(orig_x, orig_y, orig_d, coordi_rotate_d):
-    """
-    :param orig_x: original x
-    :param orig_y: original y
-    :param orig_d: original degree
-    :param coordi_rotate_d: coordination rotation d, positive if anti-clockwise, unit: deg
-    :return:
-    transformed_x, transformed_y, transformed_d(range:(-180 deg, 180 deg])
-    """
-    coordi_rotate_d_in_rad = coordi_rotate_d * math.pi / 180
-    transformed_x = orig_x * math.cos(coordi_rotate_d_in_rad) + orig_y * math.sin(coordi_rotate_d_in_rad)
-    transformed_y = -orig_x * math.sin(coordi_rotate_d_in_rad) + orig_y * math.cos(coordi_rotate_d_in_rad)
-    transformed_d = orig_d - coordi_rotate_d
-    if transformed_d > 180:
-        while transformed_d > 180:
-            transformed_d = transformed_d - 360
-    elif transformed_d <= -180:
-        while transformed_d <= -180:
-            transformed_d = transformed_d + 360
-    else:
-        transformed_d = transformed_d
-    return transformed_x, transformed_y, transformed_d
-
 
 TRAFFICSETTINGS = dict(left=[dict(ego=dict(v_x=2., v_y=0., r=0., x=3.5/2, y=-29, phi=90.,),
                                   others=OrderedDict(dl=dict(x=3.5/2, y=-11, phi=90, l=4.8, w=2.0, v=0., route=('1o', '4i')),
@@ -79,9 +57,8 @@ TRAFFICSETTINGS = dict(left=[dict(ego=dict(v_x=2., v_y=0., r=0., x=3.5/2, y=-29,
 
 
 class Traffic(object):
-    def __init__(self, shared_list, State_Other_List, lock, task='left', case=0, surr_flag=True):
+    def __init__(self, shared_list, lock, task='left', case=0, surr_flag=True):
         self.shared_list = shared_list
-        self.state_other_list = State_Other_List
         self.abso_time_start = None
         self.abso_time_in_this_step = None
         self.is_triggered = False
@@ -262,8 +239,8 @@ class Traffic(object):
             time_receive_radar = self.abso_time_in_this_step
 
             with self.lock:
-                self.shared_list[4] = time_receive_radar
-                self.state_other_list[0] = state_other.copy()
+                self.shared_list[4] = state_other.copy()
+                self.shared_list[5] = time_receive_radar
 
             # if time_receive_radar > 0.1:
             #     print("Subscriber of radar is more than 0.1s!", time_receive_radar)

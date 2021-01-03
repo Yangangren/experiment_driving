@@ -7,10 +7,11 @@
 # @FileName: convert_map.py
 # =====================================
 
+import matplotlib.pyplot as plt
 import numpy as np
+
 from utils.coordi_convert import vec_convert_gps_coordi_to_intersection_coordi
 from utils.truncate_gps_ref import truncate_gps_ref
-import matplotlib.pyplot as plt
 
 
 def convert_map():

@@ -7,16 +7,16 @@
 # @FileName: subscriber_can.py
 # =====================================
 
-import zmq
 import json
 import time
 from collections import OrderedDict
 
+import zmq
+
 
 class SubscriberCan():
-    def __init__(self, shared_list, Info_List, receive_index, lock):
+    def __init__(self, shared_list, receive_index, lock):
         self.shared_list = shared_list
-        self.Info_List = Info_List
         self.receive_index_shared = receive_index
         self.time_start_can = 0.
         self.lock = lock
@@ -59,7 +59,7 @@ class SubscriberCan():
                 pass
 
             with self.lock:
-                self.shared_list[1] = state_can.copy()
+                self.shared_list[2] = state_can.copy()
                 self.shared_list[3] = time_receive_can
 
             self.receive_index_shared.value += 1

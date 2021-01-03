@@ -219,3 +219,4 @@ fabric.properties
 /map/right_ref.npy
 /map/left_ref.npy
 .idea/
+/utils/models/left/experiment-2021-01-03-12-38-00/logs/
