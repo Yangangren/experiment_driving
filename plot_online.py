@@ -208,8 +208,10 @@ class Plot():
             interested_vehs = self.shared_list[10].copy()
 
             for i in range(int(len(interested_vehs)/4)): # TODO:
+
                 veh_x = interested_vehs[4 * i + 0]
                 veh_y = interested_vehs[4 * i + 1]
+                plt.text(veh_x, veh_y,i, fontsize=12)
                 veh_phi = interested_vehs[4 * i + 3]
                 veh_l = STATE_OTHER_LENGTH
                 veh_w = STATE_OTHER_WIDTH
