@@ -14,9 +14,9 @@ import zmq
 from traffic import TRAFFICSETTINGS
 from utils.load_policy import LoadPolicy
 
-VEHICLE_MODE_DICT = dict(left=OrderedDict(dl=1, du=1, ud=2, ul=1), # dl=2, du=2, ud=2, ul=2
-                         straight=OrderedDict(dl=1, du=1, ud=1, ru=2, ur=2), #vdl=1, du=2, ud=2, ru=2, ur=2
-                         right=OrderedDict(dr=1, ur=2, lr=2)) #TODO: temp relevant to filter interested vehicle
+VEHICLE_MODE_DICT = dict(left=OrderedDict(dl=1, du=1, dr=1, ud=2, ul=1), # dl=2, du=2, ud=2, ul=2
+                         straight=OrderedDict(dl=1, du=1, dr=1, ud=1, ru=2, ur=2), #vdl=1, du=2, ud=2, ru=2, ur=2
+                         right=OrderedDict(dl=1, du=1, dr=1, ur=2, lr=2)) #TODO: temp relevant to filter interested vehicle
 
 
 ROUTE2MODE = {('1o', '2i'): 'dr', ('1o', '3i'): 'du', ('1o', '4i'): 'dl',
@@ -37,6 +37,7 @@ MODE2TASK = {'dr': 'right', 'du': 'straight', 'dl': 'left',
              'ld': 'right', 'lr': 'straight', 'lu': 'left'}
 
 EXPECTED_V = 4.
+START_OFFSET = 3.0
 
 
 def deal_with_phi_diff(phi_diff):
@@ -290,12 +291,13 @@ class ReferencePath(object):
 
 class Controller(object):
     def __init__(self, shared_list, receive_index, if_save, if_radar, lock, task, case,
-                 load_dir, load_ite):
+                 noise_factor, load_dir, load_ite, result_dir):
         self.time_out = 0
         self.task = task
         self.case = case
         self.ref_path = ReferencePath(self.task)
         self.num_future_data = 0
+        self.noise_factor = noise_factor
         self.model = LoadPolicy(load_dir, load_ite)
         self.steer_factor = 15
         self.shared_list = shared_list
@@ -315,9 +317,7 @@ class Controller(object):
         self.step = 0
         self.if_save = if_save
         self.if_radar = if_radar
-        self.save_path = './record/{}_case{}_{}'.format(task, case, datetime.now().strftime("%Y%m%d_%H%M%S"))
-        os.makedirs(self.save_path)
-
+        self.save_path = result_dir
         self.t_interval = 0
         self.time_decision = 0
         self.time_in = time.time()
@@ -393,26 +393,36 @@ class Controller(object):
                     lr.append(v)
                 elif start == name_setting['lo'] and end == name_setting['di']:
                     ld.append(v)
-            if v_light != 0 and ego_y < -CROSSROAD_SIZE/2:
+            if v_light != 0 and ego_y < -CROSSROAD_SIZE/2 - START_OFFSET:
                 dl.append(dict(x=LANE_WIDTH/2, y=-CROSSROAD_SIZE/2, v=0., phi=90, l=5, w=2.5, route=None))
                 dl.append(dict(x=LANE_WIDTH/2, y=-CROSSROAD_SIZE/2+2.5, v=0., phi=90, l=5, w=2.5, route=None))
                 du.append(dict(x=LANE_WIDTH*1.5, y=-CROSSROAD_SIZE/2, v=0., phi=90, l=5, w=2.5, route=None))
                 du.append(dict(x=LANE_WIDTH*1.5, y=-CROSSROAD_SIZE/2+2.5, v=0., phi=90, l=5, w=2.5, route=None))
 
             # fetch veh in range
-            dl = list(filter(lambda v: v['x'] > -CROSSROAD_SIZE/2-10 and v['y'] > ego_y-2, dl))  # interest of, left straight
-            du = list(filter(lambda v: ego_y-2 < v['y'] < CROSSROAD_SIZE/2+10 and v['x'] < ego_x+2, du))  # interest of left straight#
-
-            dr = list(filter(lambda v: v['x'] < CROSSROAD_SIZE/2+10 and v['y'] > ego_y, dr))  # interest of right
+            if task == 'left':
+                dl = list(filter(lambda v: v['x'] > -CROSSROAD_SIZE/2-10 and v['y'] > ego_y-2, dl))
+                du = list(filter(lambda v: ego_y-2 < v['y'] < CROSSROAD_SIZE/2+10 and v['x'] < ego_x+2, du))
+                dr = list(filter(lambda v: v['x'] < ego_x+2 and v['y'] > ego_y-2, dr))
+            elif task == 'straight':
+                dl = list(filter(lambda v: v['x'] > ego_x-2 and v['y'] > ego_y - 2, dl))
+                du = list(filter(lambda v: ego_y - 2 < v['y'] < CROSSROAD_SIZE / 2 + 10, du))
+                dr = list(filter(lambda v: v['x'] < ego_x+2 and v['y'] > ego_y-2, dr))
+            else:
+                assert task == 'right'
+                dl = list(filter(lambda v: v['x'] > ego_x - 2 and v['y'] > ego_y - 2, dl))
+                du = list(filter(lambda v: v['x'] > ego_x - 2 and v['y'] > ego_y - 2, du))
+                dr = list(filter(lambda v: v['x'] < CROSSROAD_SIZE/2+10 and v['y'] > ego_y-2, dr))
 
             rd = rd  # not interest in case of traffic light
             rl = rl  # not interest in case of traffic light
-            ru = list(filter(lambda v: v['x'] < CROSSROAD_SIZE/2+10 and v['y'] < CROSSROAD_SIZE/2+10, ru))  # interest of straight
+            ru = list(filter(lambda v: v['x'] < CROSSROAD_SIZE/2+10 and v['y'] < CROSSROAD_SIZE/2+10, ru))
 
-            ur_straight = list(filter(lambda v: v['x'] < ego_x + 2 and ego_y < v['y'] < CROSSROAD_SIZE/2+10, ur))  # interest of straight
-            ur_right = list(filter(lambda v: v['x'] < CROSSROAD_SIZE/2+10 and v['y'] < CROSSROAD_SIZE/2, ur))  # interest of right
-            ud = list(filter(lambda v: max(ego_y-2, -CROSSROAD_SIZE/2) < v['y'] < CROSSROAD_SIZE/2 and ego_x > v['x'], ud))  # interest of left
-            ul = list(filter(lambda v: -CROSSROAD_SIZE/2-10 < v['x'] < ego_x and v['y'] < CROSSROAD_SIZE/2, ul))  # interest of left
+            ur_straight = list(filter(lambda v: v['x'] < ego_x + 2 and ego_y < v['y'] < CROSSROAD_SIZE/2+10, ur))
+            ur_right = list(filter(lambda v: v['x'] < CROSSROAD_SIZE/2+10 and v['y'] < CROSSROAD_SIZE/2, ur))
+            ud = list(filter(lambda v: max(ego_y-2, -CROSSROAD_SIZE/2) < v['y'] < CROSSROAD_SIZE/2
+                                       and ego_x > v['x'] and ego_y > -CROSSROAD_SIZE/2-START_OFFSET, ud))
+            ul = list(filter(lambda v: -CROSSROAD_SIZE/2-10 < v['x'] < ego_x and v['y'] < CROSSROAD_SIZE/2, ul))
 
             lu = lu  # not interest in case of traffic light
             lr = list(filter(lambda v: -CROSSROAD_SIZE/2-10 < v['x'] < CROSSROAD_SIZE/2+10, lr))  # interest of right
@@ -454,21 +464,25 @@ class Controller(object):
             fill_value_for_ud = dict(x=-LANE_WIDTH*0.5, y=(CROSSROAD_SIZE/2+20), v=0, phi=-90, w=2.5, l=5, route=('3o', '1i'))
             fill_value_for_ul = dict(x=-LANE_WIDTH*(LANE_NUMBER-0.5), y=(CROSSROAD_SIZE/2+20), v=0, phi=-90, w=2.5, l=5, route=('3o', '4i'))
 
-            fill_value_for_lr = dict(x=-(CROSSROAD_SIZE/2+20), y=-LANE_WIDTH*1.5, v=0, phi=0, w=2.5, l=5, route=('4o', '2i'))
+            fill_value_for_lr = dict(x=-(CROSSROAD_SIZE/2+20), y=-LANE_WIDTH*0.5, v=0, phi=0, w=2.5, l=5, route=('4o', '2i'))
 
             tmp = OrderedDict()
             if task == 'left':
                 tmp['dl'] = slice_or_fill(dl, fill_value_for_dl, VEHICLE_MODE_DICT['left']['dl'])
                 tmp['du'] = slice_or_fill(du, fill_value_for_du, VEHICLE_MODE_DICT['left']['du'])
+                tmp['dr'] = slice_or_fill(dr, fill_value_for_dr, VEHICLE_MODE_DICT['left']['dr'])
                 tmp['ud'] = slice_or_fill(ud, fill_value_for_ud, VEHICLE_MODE_DICT['left']['ud'])
                 tmp['ul'] = slice_or_fill(ul, fill_value_for_ul, VEHICLE_MODE_DICT['left']['ul'])
             elif task == 'straight':
                 tmp['dl'] = slice_or_fill(dl, fill_value_for_dl, VEHICLE_MODE_DICT['straight']['dl'])
                 tmp['du'] = slice_or_fill(du, fill_value_for_du, VEHICLE_MODE_DICT['straight']['du'])
+                tmp['dr'] = slice_or_fill(dr, fill_value_for_dr, VEHICLE_MODE_DICT['straight']['dr'])
                 tmp['ud'] = slice_or_fill(ud, fill_value_for_ud, VEHICLE_MODE_DICT['straight']['ud'])
                 tmp['ru'] = slice_or_fill(ru, fill_value_for_ru, VEHICLE_MODE_DICT['straight']['ru'])
                 tmp['ur'] = slice_or_fill(ur_straight, fill_value_for_ur_straight, VEHICLE_MODE_DICT['straight']['ur'])
             elif task == 'right':
+                tmp['dl'] = slice_or_fill(dl, fill_value_for_dl, VEHICLE_MODE_DICT['right']['dl'])
+                tmp['du'] = slice_or_fill(du, fill_value_for_du, VEHICLE_MODE_DICT['right']['du'])
                 tmp['dr'] = slice_or_fill(dr, fill_value_for_dr, VEHICLE_MODE_DICT['right']['dr'])
                 tmp['ur'] = slice_or_fill(ur_right, fill_value_for_ur_right, VEHICLE_MODE_DICT['right']['ur'])
                 tmp['lr'] = slice_or_fill(lr, fill_value_for_lr, VEHICLE_MODE_DICT['right']['lr'])
@@ -510,19 +524,32 @@ class Controller(object):
                                                              self.num_future_data).numpy()[0]
         self.per_tracking_info_dim = 3
         vector = np.concatenate((ego_vector, tracking_error, vehs_vector), axis=0)
+        veh_idx_start = self.ego_info_dim + self.per_tracking_info_dim * (self.num_future_data + 1)
         vector = self.convert_vehs_to_rela(vector)
-        vehs_vector_rela = vector[self.ego_info_dim + self.per_tracking_info_dim * (self.num_future_data + 1):]
+        vehs_vector_rela = vector[veh_idx_start:]
+
+        noise = np.zeros_like(vector)
+        nf = self.noise_factor
+        noise[self.ego_info_dim] = nf * np.clip(np.random.normal(0, 0.017), -0.051, 0.051)
+        noise[self.ego_info_dim+1] = nf * np.clip(np.random.normal(0, 0.17), -0.51, 0.51)
+        for veh_idx in range(int(len(vehs_vector)/self.per_veh_info_dim)):
+            noise[veh_idx_start+self.per_veh_info_dim*veh_idx] = nf * np.clip(np.random.normal(0, 0.05), -0.15, 0.15)
+            noise[veh_idx_start+self.per_veh_info_dim*veh_idx+1] = nf * np.clip(np.random.normal(0, 0.05), -0.15, 0.15)
+            noise[veh_idx_start+self.per_veh_info_dim*veh_idx+2] = nf * np.clip(np.random.normal(0, 0.05), -0.15, 0.15)
+            noise[veh_idx_start+self.per_veh_info_dim*veh_idx+3] = nf * np.clip(np.random.normal(0, 1.4), -5.2, 5.2)
+
+        vector_with_noise = vector + noise
         obs_dict = OrderedDict(ego_vx=ego_vector[0], ego_vy=ego_vector[1], ego_r=ego_vector[2], ego_x=ego_vector[3],
                                ego_y=ego_vector[4], ego_phi=ego_vector[5],
                                tracking_delta_y=tracking_error[0], tracking_delta_phi=tracking_error[1],
                                tracking_delta_v=tracking_error[2],
                                )
-        for i in range(int(len(vehs_vector)/4.)):
-            obs_dict.update({'other{}_delta_x'.format(i): vehs_vector_rela[4*i],
-                             'other{}_delta_y'.format(i): vehs_vector_rela[4*i+1],
-                             'other{}_delta_v'.format(i): vehs_vector_rela[4*i+2],
-                             'other{}_delta_phi'.format(i): vehs_vector_rela[4*i+3]})
-        return vector, obs_dict, vehs_vector
+        for i in range(int(len(vehs_vector)/self.per_veh_info_dim)):
+            obs_dict.update({'other{}_delta_x'.format(i): vehs_vector_rela[self.per_veh_info_dim*i],
+                             'other{}_delta_y'.format(i): vehs_vector_rela[self.per_veh_info_dim*i+1],
+                             'other{}_delta_v'.format(i): vehs_vector_rela[self.per_veh_info_dim*i+2],
+                             'other{}_delta_phi'.format(i): vehs_vector_rela[self.per_veh_info_dim*i+3]})
+        return vector_with_noise, obs_dict, vehs_vector  # todo: if output vector without noise
 
     def _set_inertia(self, steer_from_policy, inertia_time=0.2, sampletime=0.1, k_G=1.): # todo: adjust the inertia time
         steer_output = (1. - sampletime / inertia_time) * self.last_steer_output + \

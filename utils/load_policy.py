@@ -20,7 +20,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 class LoadPolicy(object):
     def __init__(self, exp_dir, iter):
-        model_dir = exp_dir
+        model_dir = exp_dir + '/models'
         parser = argparse.ArgumentParser()
         params = json.loads(open(exp_dir + '/config.json').read())
         for key, val in params.items():
