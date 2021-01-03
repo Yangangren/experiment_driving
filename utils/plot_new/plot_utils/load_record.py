@@ -37,7 +37,7 @@ def load_data(record_dir):
                         data_key = data_key.split(' ')[1]
                         keys_for_data[keys_class].append(data_key)
                         data_all_dict[data_key] = []
-
+    keys_for_data['State_ego'].append('accActual')
     for row in contents:
         for keys_class in keys_for_data.keys(): #
             if keys_class in row:
@@ -49,6 +49,13 @@ def load_data(record_dir):
                     for i, d in enumerate(row.split(',')[:-1]):
                         data = d.split(':')[1]
                         data_all_dict[keys_for_data[keys_class][i]].append(float(data))
+
+    data_all_dict['accActual'] = []
+    for i in range(len(data_all_dict['GpsSpeed'])-1):
+        # print(data_all_dict['GpsSpeed'])
+        data_all_dict['accActual'].append((float(data_all_dict['GpsSpeed'][i+1]) - float(data_all_dict['GpsSpeed'][i])) / (data_all_dict['Time'][i+1]-data_all_dict['Time'][i]))
+    data_all_dict['accActual'].append(data_all_dict['accActual'][-1])
+
 
     return data_all_dict, keys_for_data
 

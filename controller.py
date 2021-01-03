@@ -18,7 +18,6 @@ VEHICLE_MODE_DICT = dict(left=OrderedDict(dl=1, du=1, dr=1, ud=2, ul=1), # dl=2,
                          straight=OrderedDict(dl=1, du=1, dr=1, ud=1, ru=2, ur=2), #vdl=1, du=2, ud=2, ru=2, ur=2
                          right=OrderedDict(dl=1, du=1, dr=1, ur=2, lr=2)) #TODO: temp relevant to filter interested vehicle
 
-
 ROUTE2MODE = {('1o', '2i'): 'dr', ('1o', '3i'): 'du', ('1o', '4i'): 'dl',
               ('2o', '1i'): 'rd', ('2o', '3i'): 'ru', ('2o', '4i'): 'rl',
               ('3o', '1i'): 'ud', ('3o', '2i'): 'ur', ('3o', '4i'): 'ul',
@@ -549,9 +548,9 @@ class Controller(object):
                              'other{}_delta_y'.format(i): vehs_vector_rela[self.per_veh_info_dim*i+1],
                              'other{}_delta_v'.format(i): vehs_vector_rela[self.per_veh_info_dim*i+2],
                              'other{}_delta_phi'.format(i): vehs_vector_rela[self.per_veh_info_dim*i+3]})
-        return vector_with_noise, obs_dict, vehs_vector  # todo: if output vector without noise
+        return vector, obs_dict, vehs_vector  # todo: if output vector without noise
 
-    def _set_inertia(self, steer_from_policy, inertia_time=0.2, sampletime=0.1, k_G=1.): # todo: adjust the inertia time
+    def _set_inertia(self, steer_from_policy, inertia_time=1.0, sampletime=0.1, k_G=1.): # todo: adjust the inertia time
         steer_output = (1. - sampletime / inertia_time) * self.last_steer_output + \
                        k_G * sampletime / inertia_time * steer_from_policy
 
@@ -563,7 +562,7 @@ class Controller(object):
         front_wheel_norm_rad, a_x_norm = action[0], action[1]
         front_wheel_deg = 0.4 / pi * 180 * front_wheel_norm_rad
         steering_wheel = front_wheel_deg * self.steer_factor
-        # steering_wheel = self._set_inertia(steering_wheel)
+        steering_wheel = self._set_inertia(steering_wheel)
 
         steering_wheel = np.clip(steering_wheel, -360., 360)
         a_x = 2.25*a_x_norm - 0.75
@@ -585,6 +584,7 @@ class Controller(object):
         return steering_wheel, torque, decel, tor_flag, dec_flag, front_wheel_deg, a_x
 
     def run(self):
+        all_obs = []
         time_start = time.time()
         with open(self.save_path + '/record.txt', 'a') as file_handle:
             file_handle.write(str("保存时间：" + datetime.now().strftime("%Y%m%d_%H%M%S")))
@@ -608,6 +608,7 @@ class Controller(object):
 
                     self.time_in = time.time()
                     obs, obs_dict, veh_vec = self._get_obs(state_gps, state_other)
+                    all_obs.append(obs)
                     action = self.model.run(obs)
                     steer_wheel_deg, torque, decel, tor_flag, dec_flag, front_wheel_deg, a_x = \
                         self._action_transformation_for_end2end(action)
@@ -660,6 +661,7 @@ class Controller(object):
                     self.step += 1
 
                     if self.if_save:
+                        np.save('./all_obs.npy', all_obs)
                         if decision != {} and state_ego != {} and state_other != {}:
                             file_handle.write("Decision ")
                             for k1, v1 in decision.items():
