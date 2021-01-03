@@ -595,8 +595,8 @@ class Controller(object):
         for i in range(int(len(vehs_vector)/self.per_veh_info_dim)):
             obs_dict.update({'other{}_delta_x'.format(i): vehs_vector_rela[self.per_veh_info_dim*i],
                              'other{}_delta_y'.format(i): vehs_vector_rela[self.per_veh_info_dim*i+1],
-                             'other{}_delta_v'.format(i): vehs_vector_rela[self.per_veh_info_dim*i+2],
-                             'other{}_delta_phi'.format(i): vehs_vector_rela[self.per_veh_info_dim*i+3]})
+                             'other{}_v'.format(i): vehs_vector_rela[self.per_veh_info_dim*i+2],
+                             'other{}_phi'.format(i): vehs_vector_rela[self.per_veh_info_dim*i+3]})
         return vector, obs_dict, vehs_vector  # todo: if output vector without noise
 
     def _set_inertia(self, steer_from_policy, inertia_time=1.0, sampletime=0.1, k_G=1.): # todo: adjust the inertia time
