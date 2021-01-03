@@ -28,7 +28,6 @@ class SubscriberRadar(object):
         v_lat = np.array([data[i*8+4] for i in range(3)])
         v_other = np.sqrt(v_lon ** 2 + v_lat ** 2).tolist()
         phi_other = [data[i*8+7]*180/np.pi for i in range(3)]
-        print(phi_other[0])
         return x_other, y_other, v_other, phi_other
 
     def run(self):
@@ -42,9 +41,6 @@ class SubscriberRadar(object):
                 state_other["y_other"] = y_other
                 state_other["v_other"] = v_other
                 state_other["phi_other"] = phi_other
-                # temp_phi = np.array(phi_other) / np.pi * 180
-                # state_other["phi_other"] = temp_phi.tolist()
-
                 state_other["v_light"] = 0  # todo add v light
                 time_receive_radar = time.time() - self.time_start
                 self.time_start = time.time()

@@ -109,7 +109,7 @@ class Traffic(object):
         return next_x, next_y, next_v, next_phi
 
     def is_triggered_func(self, ego_y):
-        if ego_y > -14 - 6:
+        if ego_y > -14 - 15:
             self.is_triggered = True
             self.abso_time_start = time.time()
             self.abso_time_in_this_step = time.time()
@@ -234,7 +234,7 @@ class Traffic(object):
             delta_time_in_this_step = time.time() - self.abso_time_in_this_step if self.is_triggered else 0.
             # print(delta_time_in_this_step)
             state_other = self.step(delta_time_in_this_step)
-            # self.render()
+            self.render()
             self.abso_time_in_this_step = time.time()
             time_receive_radar = self.abso_time_in_this_step
 
@@ -373,6 +373,6 @@ class Traffic(object):
 
 
 if __name__ == '__main__':
-    ego_list = [dict(GaussX=3.5 / 2, GaussY=-23), 0, 0, 0, 0]
-    traffic = Traffic(shared_list=ego_list, State_Other_List=[2, 3], lock = mp.Lock(), task='right', case=0)
+    ego_list = [dict(GaussX=3.5 / 2, GaussY=-19.5), 0, 0, 0, 0, 0]
+    traffic = Traffic(shared_list=ego_list, lock=mp.Lock(), task='left', case=0)
     traffic.run()

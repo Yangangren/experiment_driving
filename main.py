@@ -28,9 +28,9 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 
 def controller_agent(shared_list, receive_index, if_save, if_radar,
-                     lock, task, case, noise_factor, load_dir, load_ite, result_dir, inertia_time):
+                     lock, task, case, noise_factor, load_dir, load_ite, result_dir):
     publisher_ = Controller(shared_list, receive_index, if_save, if_radar,
-                            lock, task, case, noise_factor, load_dir, load_ite, result_dir, inertia_time)
+                            lock, task, case, noise_factor, load_dir, load_ite, result_dir)
     time.sleep(0.5)
     publisher_.run()
 
@@ -73,7 +73,6 @@ def built_parser():
     parser.add_argument('--load_ite', type=str, default=100000)
     parser.add_argument('--noise_factor', type=float, default=0.)
     parser.add_argument('--surr_flag', type=bool, default=True)
-    parser.add_argument('--inertia_time', type=float, default=1.)
     parser.add_argument('--backup', type=str, default='')
     noise = int(parser.parse_args().noise_factor)
     result_dir = './record/{task}/case{case}_noise{noise}_{time}'.format(task=task,
@@ -137,7 +136,7 @@ def main():
         procs.append(Process(target=traffic, args=(shared_list, lock, args.task, args.case, args.surr_flag)))
     procs.append(Process(target=controller_agent, args=(shared_list, receive_index, args.if_save, args.if_radar, lock,
                                                         args.task, args.case, args.noise_factor, args.load_dir,
-                                                        args.load_ite, args.result_dir,args.inertia_time)))
+                                                        args.load_ite, args.result_dir)))
     procs.append(Process(target=plot_agent, args=(shared_list, lock, args.task)))
 
     for p in procs:

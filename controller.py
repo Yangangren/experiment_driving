@@ -290,7 +290,7 @@ class ReferencePath(object):
 
 class Controller(object):
     def __init__(self, shared_list, receive_index, if_save, if_radar, lock, task, case,
-                 noise_factor, load_dir, load_ite, result_dir, inertia_time):
+                 noise_factor, load_dir, load_ite, result_dir):
         self.time_out = 0
         self.task = task
         self.case = case
@@ -323,7 +323,6 @@ class Controller(object):
 
         self.last_steer_output = 0
         self.model_driven_by_can = VehicleDynamics()
-        self.inertia_time = inertia_time
         # self.model_state = np.array([[3., 0., 0., 1.75, -30., 90.]], dtype=np.float32)
 
     def model_step(self, state_gps, state_can, delta_t):
@@ -551,7 +550,7 @@ class Controller(object):
                              'other{}_delta_phi'.format(i): vehs_vector_rela[self.per_veh_info_dim*i+3]})
         return vector, obs_dict, vehs_vector  # todo: if output vector without noise
 
-    def _set_inertia(self, steer_from_policy, inertia_time, sampletime=0.1, k_G=1.): # todo: adjust the inertia time
+    def _set_inertia(self, steer_from_policy, inertia_time=1.0, sampletime=0.1, k_G=1.): # todo: adjust the inertia time
         steer_output = (1. - sampletime / inertia_time) * self.last_steer_output + \
                        k_G * sampletime / inertia_time * steer_from_policy
 
@@ -563,7 +562,7 @@ class Controller(object):
         front_wheel_norm_rad, a_x_norm = action[0], action[1]
         front_wheel_deg = 0.4 / pi * 180 * front_wheel_norm_rad
         steering_wheel = front_wheel_deg * self.steer_factor
-        steering_wheel = self._set_inertia(steering_wheel, inertia_time=self.inertia_time)
+        steering_wheel = self._set_inertia(steering_wheel)
 
         steering_wheel = np.clip(steering_wheel, -360., 360)
         a_x = 2.25*a_x_norm - 0.75
