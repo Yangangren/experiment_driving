@@ -57,9 +57,8 @@ TRAFFICSETTINGS = dict(left=[dict(ego=dict(v_x=2., v_y=0., r=0., x=3.5/2, y=-29,
 
 
 class Traffic(object):
-    def __init__(self, shared_list, State_Other_List, lock, task='left', case=0, surr_flag=True):
+    def __init__(self, shared_list, lock, task='left', case=0, surr_flag=True):
         self.shared_list = shared_list
-        self.state_other_list = State_Other_List
         self.abso_time_start = None
         self.abso_time_in_this_step = None
         self.is_triggered = False
@@ -240,8 +239,8 @@ class Traffic(object):
             time_receive_radar = self.abso_time_in_this_step
 
             with self.lock:
-                self.shared_list[4] = time_receive_radar
-                self.state_other_list[0] = state_other.copy()
+                self.shared_list[4] = state_other.copy()
+                self.shared_list[5] = time_receive_radar
 
             # if time_receive_radar > 0.1:
             #     print("Subscriber of radar is more than 0.1s!", time_receive_radar)

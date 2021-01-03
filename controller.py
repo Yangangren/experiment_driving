@@ -45,7 +45,6 @@ def deal_with_phi_diff(phi_diff):
     return phi_diff
 
 
-
 class VehicleDynamics(object):
     def __init__(self, ):
         self.vehicle_params = dict(C_f=-128915.5,  # front wheel cornering stiffness [N/rad]
@@ -186,7 +185,7 @@ class ReferencePath(object):
 
         else:
             assert task == 'right'
-            control_ext = CROSSROAD_SIZE/5.+3.
+            control_ext = CROSSROAD_SIZE/5. + 3.
             end_offsets = [-LANE_WIDTH * 0.5]
             start_offsets = [LANE_WIDTH*(LANE_NUMBER-0.5)]
 
@@ -290,21 +289,15 @@ class ReferencePath(object):
 
 
 class Controller(object):
-    def __init__(self, shared_list, Info_List, State_Other_List, receive_index,
-                 if_save, if_radar, lock, task, case):
+    def __init__(self, shared_list, receive_index, if_save, if_radar, lock, task, case,
+                 load_dir, load_ite):
         self.time_out = 0
         self.task = task
         self.case = case
         self.ref_path = ReferencePath(self.task)
         self.num_future_data = 0
-        TASK2MODEL = dict(left=LoadPolicy('./utils/models/left', 50000),
-                          straight=LoadPolicy('./utils/models/straight', 75000),
-                          right=LoadPolicy('./utils/models/right', 80000),)
-        self.model = TASK2MODEL[task]
+        self.model = LoadPolicy(load_dir, load_ite)
         self.steer_factor = 15
-        self.Info_List = Info_List
-        self.State_Other_List = State_Other_List
-        self.Info_List[0] = -1
         self.shared_list = shared_list
         self.read_index_old = 0
         self.receive_index_shared = receive_index
@@ -331,7 +324,7 @@ class Controller(object):
 
         self.last_steer_output = 0
         self.model_driven_by_can = VehicleDynamics()
-        self.model_state = np.array([[3., 0., 0., 1.75, -30., 90.]], dtype=np.float32)
+        # self.model_state = np.array([[3., 0., 0., 1.75, -30., 90.]], dtype=np.float32)
 
     def model_step(self, state_gps, state_can, delta_t):
         speed = state_gps['GpsSpeed']
@@ -340,18 +333,16 @@ class Controller(object):
         acc = 0.
         u = np.array([[front_wheel, acc]], dtype=np.float32)
         self.model_state = self.model_driven_by_can.prediction(self.model_state, u, delta_t)
-        # print(self.model_state)
         self.model_state[0][0] = speed
         v_x, v_y, r, x, y, phi = self.model_state[0][0], self.model_state[0][1], self.model_state[0][2], \
                                  self.model_state[0][3], self.model_state[0][4], self.model_state[0][5]
         return OrderedDict(model_vx=v_x, model_vy=v_y, model_r=r, model_x=x, model_y=y, model_phi=phi)
 
-    def _construct_ego_vector(self, state_gps, state_can):
+    def _construct_ego_vector(self, state_gps):
         ego_phi = state_gps['Heading']
         ego_x, ego_y = state_gps['GaussX'], state_gps['GaussY']
         ego_v_x, ego_v_y = state_gps['GpsSpeed'], 0.
         ego_r = state_gps['YawRate']                      # rad/s
-        ego_steering_wheel = state_can['SteerAngleAct']   # deg
         self.ego_info_dim = 6
         ego_feature = [ego_v_x, ego_v_y, ego_r, ego_x, ego_y, ego_phi]
         return np.array(ego_feature, dtype=np.float32)
@@ -359,9 +350,6 @@ class Controller(object):
     def _construct_veh_vector(self, ego_x, ego_y, state_others): #TODO: temp mht
         mode_list = list(TRAFFICSETTINGS[self.task][self.case]['others'].keys())
         all_vehicles = []
-        # all_vehicles
-        # dict(x=x, y=y, v=v, phi=a, l=length,
-        #      w=width, route=route)
         v_light = state_others['v_light']
         xs, ys, vs, phis = state_others['x_other'], state_others['y_other'],\
                            state_others['v_other'], state_others['phi_other']
@@ -509,12 +497,12 @@ class Controller(object):
         out = np.concatenate((ego_infos, tracking_infos, vehs_rela), axis=0)
         return out
 
-    def _get_obs(self, state_gps, state_can, state_others):
+    def _get_obs(self, state_gps, state_others):
         ego_x, ego_y = state_gps['GaussX'], state_gps['GaussY']
         ego_phi = state_gps['Heading']
         ego_v_x, ego_v_y = state_gps['GpsSpeed'], 0.
         vehs_vector = self._construct_veh_vector(ego_x, ego_y, state_others)
-        ego_vector = self._construct_ego_vector(state_gps, state_can)
+        ego_vector = self._construct_ego_vector(state_gps)
         tracking_error = self.ref_path.tracking_error_vector(np.array([ego_x], dtype=np.float32),
                                                              np.array([ego_y], dtype=np.float32),
                                                              np.array([ego_phi], dtype=np.float32),
@@ -581,26 +569,23 @@ class Controller(object):
                     self.read_index_old = shared_index
                     with self.lock:
                         state_gps = self.shared_list[0].copy()
-                        # print(state_gps)
-                        state_can = self.shared_list[1].copy()
-                        time_receive_gps = self.shared_list[2]
+                        time_receive_gps = self.shared_list[1]
+                        state_can = self.shared_list[2].copy()
                         time_receive_can = self.shared_list[3]
-                        time_receive_radar = self.shared_list[4] if self.if_radar else 0.
-                        state_other = self.State_Other_List[0].copy()
+                        state_other = self.shared_list[4].copy()
+                        time_receive_radar = self.shared_list[5] if self.if_radar else 0.
 
                     state_ego = OrderedDict()
                     state_ego.update(state_gps)
                     state_ego.update(state_can)
 
                     self.time_in = time.time()
-                    obs, obs_dict, veh_vec = self._get_obs(state_gps, state_can, state_other)
+                    obs, obs_dict, veh_vec = self._get_obs(state_gps, state_other)
                     action = self.model.run(obs)
-                    delta_t = time.time()-time_start
                     steer_wheel_deg, torque, decel, tor_flag, dec_flag, front_wheel_deg, a_x = \
                         self._action_transformation_for_end2end(action)
-                    state_model = self.model_step(state_gps, state_can, delta_t)
-                    state_ego.update(state_model)
-                    time_start = time.time()
+                    # state_model = self.model_step(state_gps, state_can, delta_t)
+                    # state_ego.update(state_model)
                     control = {'Decision': {
                         'Control': {#'VehicleSpeedAim': 20/3.6,
                                     'Deceleration': decel,
@@ -639,13 +624,11 @@ class Controller(object):
                                             'a_x': a_x})  # [m/s^2]
 
                     with self.lock:
-                        self.Info_List[0] = self.step
-                        self.Info_List[1] = run_time
-                        self.Info_List[2] = decision.copy()
-                        self.Info_List[3] = state_ego.copy()
-                        self.Info_List[4] = state_other.copy()
-                        self.Info_List[5] = list(veh_vec)
-
+                        self.shared_list[6] = self.step
+                        self.shared_list[7] = run_time
+                        self.shared_list[8] = decision.copy()
+                        self.shared_list[9] = state_ego.copy()
+                        self.shared_list[10] = list(veh_vec)
 
                     self.step += 1
 

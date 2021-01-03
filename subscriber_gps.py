@@ -19,9 +19,8 @@ from utils.coordi_convert import convert_gps_coordi_to_intersection_coordi
 
 
 class SubscriberGps():
-    def __init__(self, shared_list, Info_List, receive_index, lock):
+    def __init__(self, shared_list, receive_index, lock):
         self.shared_list = shared_list
-        self.Info_List = Info_List
         self.receive_index_shared = receive_index
         self.receive_index = 0
         self.time_start_gps = 0.
@@ -86,9 +85,7 @@ class SubscriberGps():
 
             with self.lock:
                 self.shared_list[0] = state_gps.copy()
-                self.shared_list[2] = time_receive_gps
-
-            # self.receive_index_shared.value = self.receive_index
+                self.shared_list[1] = time_receive_gps
             self.receive_index_shared.value += 1
 
             # check the time interval of gps
