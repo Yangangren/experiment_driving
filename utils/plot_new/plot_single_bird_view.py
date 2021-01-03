@@ -254,10 +254,10 @@ class Single_bird_view_plot(object):
 
 
 if __name__ == '__main__':
-    exp_index = 'left_case0_20210103_121512'
+    exp_index = 'left/case0_noise0_20210103_160622'
     data_all, keys_for_data = load_data(exp_index)
-    # automode_start_time, automode_stop_time = search_automode_time(data_all)
-    # print('Auto mode start: {:.2f}s, stop: {:.2f}s'.format(automode_start_time, automode_stop_time))
+    automode_start_time, automode_stop_time = search_automode_time(data_all)
+    print('Auto mode start: {:.2f}s, stop: {:.2f}s'.format(automode_start_time, automode_stop_time))
     bird_view_plot = Single_bird_view_plot(data_all, 'left', draw_other_veh='scatter', path=exp_index) # rectangular, scatter
-    # bird_view_plot.set_time(automode_start_time, automode_stop_time)
+    bird_view_plot.set_time(automode_start_time, automode_stop_time)
     bird_view_plot.single_exp_bird_view()

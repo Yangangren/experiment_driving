@@ -109,7 +109,7 @@ class Traffic(object):
         return next_x, next_y, next_v, next_phi
 
     def is_triggered_func(self, ego_y):
-        if ego_y > -14 - 15:
+        if ego_y > -14 - 6:
             self.is_triggered = True
             self.abso_time_start = time.time()
             self.abso_time_in_this_step = time.time()

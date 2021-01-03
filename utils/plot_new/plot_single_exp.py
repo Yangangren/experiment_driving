@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 from utils.plot_new.plot_utils.load_record import load_data
 import os
 
+
 def single_plot(data_all, keys=['Deceleration'], **kwargs):
     if 'fig_num' in kwargs.keys():
         plt.figure(kwargs['fig_num'])
@@ -40,9 +41,11 @@ def single_plot(data_all, keys=['Deceleration'], **kwargs):
         plt.title(kwargs['title'])
     if 'path' in kwargs.keys():
         proj_root_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-        fig_path = proj_root_dir + '/record/' + kwargs['path'] + '/figure/data_fig/'
+        fig_path = proj_root_dir + '/record/' + kwargs['path'] + '/figure/'
+        data_fig_path = proj_root_dir + '/record/' + kwargs['path'] + '/figure/data_fig/'
         if not os.path.exists(fig_path):
             os.mkdir(fig_path)
+            os.mkdir(data_fig_path)
         name = fig_path + kwargs['title'] +'.jpg'
         plt.savefig(name)
     else:
@@ -53,8 +56,9 @@ def single_plot_time_series(data_all, AutoMode = True):
     single_plot(data_all, ['SteerAngleAct', 'SteerAngleAim'], title='Steering Act', path=exp_index, highlight=highlight)
     single_plot(data_all, ['front_wheel_deg'], title='Front wheel deg', path=exp_index, highlight=highlight)
     single_plot(data_all, ['Dec_flag', 'BrkOn'], title='Deceleration flag', path=exp_index, highlight=highlight)
-    single_plot(data_all, ['Deceleration', 'a_x', 'BrkOn'], title='Deceleration acc', path=exp_index, highlight=highlight)
+    single_plot(data_all, ['accActual', 'a_x'], title='Deceleration acc', path=exp_index, highlight=highlight)
     # single_plot(data_all, ['BrkOn'], title='', path=exp_index, highlight=highlight)
+    single_plot(data_all, ['LongitudinalAcc', 'LateralAcc'], title='Long and lat acc', path=exp_index, highlight=highlight)
 
     # single_plot(data_all, ['v_light'], title='V light', path=exp_index, highlight=highlight)
 
@@ -72,6 +76,7 @@ def single_plot_time_series(data_all, AutoMode = True):
     # single_plot(data_all, ['delta_phi_rad'], title='Obs ego x', path=exp_index, highlight=highlight)
 
     single_plot(data_all, ['Heading'], title='Heading', path=exp_index, highlight=highlight)
+    single_plot(data_all, ['accActual'], title='Acc actual', path=exp_index, highlight=highlight)
     single_plot(data_all, ['NorthVelocity', 'EastVelocity'], title='Velocity', path=exp_index, highlight=highlight)
     single_plot(data_all, ['VehicleMode'], title='Mode', path=exp_index, highlight=highlight)
     single_plot(data_all, ['GpsSpeed', 'VehicleSPeedAct'], title='Speed', path=exp_index, highlight=highlight)
@@ -83,8 +88,9 @@ def single_plot_time_series(data_all, AutoMode = True):
 def single_plot_other_series(data_all):
     single_plot(data_all, [('GaussX', 'GaussY')], title='Trajectory', path=exp_index, x_lim=[-11, 11], highlight=False)
 
+
 if __name__ == '__main__':
-    exp_index = 'left_case0_20210103_121512'
+    exp_index = 'left/case0_noise0_20210103_191123'
     data_all, keys_for_data = load_data(exp_index)
     print(keys_for_data)
 
