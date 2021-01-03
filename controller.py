@@ -772,34 +772,34 @@ class Controller(object):
 
                         self.step += 1
 
-                  if self.if_save:
-                      np.save('./all_obs.npy', all_obs)
-                      if decision != {} and state_ego != {} and state_other != {}:
-                          file_handle.write("Decision ")
-                          for k1, v1 in decision.items():
-                              file_handle.write(k1 + ":" + str(v1) + ", ")
-                          file_handle.write('\n')
+                if self.if_save:
+                    np.save('./all_obs.npy', all_obs)
+                    if decision != {} and state_ego != {} and state_other != {}:
+                        file_handle.write("Decision ")
+                        for k1, v1 in decision.items():
+                            file_handle.write(k1 + ":" + str(v1) + ", ")
+                        file_handle.write('\n')
 
-                          file_handle.write("State_ego ")
-                          for k2, v2 in state_ego.items():
-                              file_handle.write(k2 + ":" + str(v2) + ", ")
-                          file_handle.write('\n')
+                        file_handle.write("State_ego ")
+                        for k2, v2 in state_ego.items():
+                            file_handle.write(k2 + ":" + str(v2) + ", ")
+                        file_handle.write('\n')
 
-                          file_handle.write("State_other ")
-                          for k3, v3 in state_other.items():
-                              file_handle.write(k3 + ":" + str(v3) + "| ")
-                          file_handle.write('\n')
+                        file_handle.write("State_other ")
+                        for k3, v3 in state_other.items():
+                            file_handle.write(k3 + ":" + str(v3) + "| ")
+                        file_handle.write('\n')
 
-                          file_handle.write("Obs_dict ")
-                          for k4, v4 in obs_dict.items():
-                              file_handle.write(k4 + ":" + str(v4) + ", ")
-                          file_handle.write('\n')
+                        file_handle.write("Obs_dict ")
+                        for k4, v4 in obs_dict.items():
+                            file_handle.write(k4 + ":" + str(v4) + ", ")
+                        file_handle.write('\n')
 
-                          file_handle.write("Time Time:" + str(run_time)  + ", " +
-                                            "time_decision:"+str(time_decision) + ", " +
-                                            "time_receive_gps:"+str(time_receive_gps) + ", " +
-                                            "time_receive_can:"+str(time_receive_can) + ", " +
-                                            "time_receive_radar:"+str(time_receive_radar)+ ", " + '\n')
+                        file_handle.write("Time Time:" + str(run_time)  + ", " +
+                                          "time_decision:"+str(time_decision) + ", " +
+                                          "time_receive_gps:"+str(time_receive_gps) + ", " +
+                                          "time_receive_can:"+str(time_receive_can) + ", " +
+                                          "time_receive_radar:"+str(time_receive_radar)+ ", " + '\n')
 
 
 def test_control():
