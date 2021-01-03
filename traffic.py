@@ -373,6 +373,6 @@ class Traffic(object):
 
 
 if __name__ == '__main__':
-    ego_list = [dict(GaussX=3.5 / 2, GaussY=-23), 0, 0, 0, 0]
-    traffic = Traffic(shared_list=ego_list, State_Other_List=[2, 3], lock = mp.Lock(), task='right', case=0)
+    ego_list = [dict(GaussX=3.5 / 2, GaussY=-19.5), 0, 0, 0, 0, 0]
+    traffic = Traffic(shared_list=ego_list, lock=mp.Lock(), task='left', case=0)
     traffic.run()

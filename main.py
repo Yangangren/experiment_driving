@@ -73,6 +73,7 @@ def built_parser():
     parser.add_argument('--load_ite', type=str, default=100000)
     parser.add_argument('--noise_factor', type=float, default=0.)
     parser.add_argument('--surr_flag', type=bool, default=True)
+    parser.add_argument('--backup', type=str, default='')
     noise = int(parser.parse_args().noise_factor)
     result_dir = './record/{task}/case{case}_noise{noise}_{time}'.format(task=task,
                                                                           case=case,
