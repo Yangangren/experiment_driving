@@ -88,14 +88,22 @@ def single_plot_time_series(data_all, AutoMode = True):
 def single_plot_other_series(data_all):
     single_plot(data_all, [('GaussX', 'GaussY')], title='Trajectory', path=exp_index, x_lim=[-11, 11], highlight=False)
 
+def single_plot_other_vehicles(data_all, exp_index, highlight=True):
+    for i in range(6):
+        for real_key in ['delta_x','delta_y','delta_v','delta_phi']:
+            key = 'other' + str(i) + '_' + real_key
+            title = 'obs ' + key
+            single_plot(data_all, [key], title=title,  path=exp_index, highlight=highlight)
+
 
 if __name__ == '__main__':
-    exp_index = 'left/case0_noise0_20210103_191123'
+    exp_index = 'left/case0_noise0_20210103_152139'
     data_all, keys_for_data = load_data(exp_index)
     print(keys_for_data)
 
-    single_plot_time_series(data_all, AutoMode=False) # if not switch into auto mode, add kwargs: VehicleMode=False
-    single_plot_other_series(data_all)
+    # single_plot_time_series(data_all, AutoMode=False) # if not switch into auto mode, add kwargs: VehicleMode=False
+    # single_plot_other_series(data_all)
+    single_plot_other_vehicles(data_all, exp_index)
 
 
     # # single_plot(data_all, ['YawRate'])
