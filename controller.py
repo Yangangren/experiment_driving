@@ -646,7 +646,7 @@ class Controller(object):
 
                             file_handle.write("State_other ")
                             for k3, v3 in state_other.items():
-                                file_handle.write(k3 + ":" + str(v3) + ", ")
+                                file_handle.write(k3 + ":" + str(v3) + "| ")
                             file_handle.write('\n')
 
                             file_handle.write("Obs_dict ")
