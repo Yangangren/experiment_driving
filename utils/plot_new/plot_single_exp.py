@@ -82,6 +82,7 @@ def single_plot_time_series(data_all, AutoMode = True):
     single_plot(data_all, ['GpsSpeed', 'VehicleSPeedAct'], title='Speed', path=exp_index, highlight=highlight)
     single_plot(data_all, ['Throttle'], title='Throttle', path=exp_index, highlight=highlight)
     single_plot(data_all, ['YawRate'], title='Yaw rate', path=exp_index, highlight=highlight)
+    single_plot(data_all, ['time_receive_gps', 'time_receive_can', 'time_receive_radar', 'time_decision'], title='Time', path=exp_index, highlight=highlight)
 
     single_plot(data_all, ['AutoGear'], title='AutoGear', path=exp_index, highlight=highlight)
 
@@ -97,13 +98,13 @@ def single_plot_other_vehicles(data_all, exp_index, highlight=True):
 
 
 if __name__ == '__main__':
-    exp_index = 'left/case0_noise0_20210103_152139'
+    exp_index = 'left/case0_noise0_20210103_222131'
     data_all, keys_for_data = load_data(exp_index)
     print(keys_for_data)
 
-    # single_plot_time_series(data_all, AutoMode=False) # if not switch into auto mode, add kwargs: VehicleMode=False
-    # single_plot_other_series(data_all)
-    single_plot_other_vehicles(data_all, exp_index)
+    single_plot_time_series(data_all) # if not switch into auto mode, add kwargs: VehicleMode=False
+    single_plot_other_series(data_all)
+    # single_plot_other_vehicles(data_all, exp_index)
 
 
     # # single_plot(data_all, ['YawRate'])

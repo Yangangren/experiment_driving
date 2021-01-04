@@ -115,7 +115,8 @@ class Traffic(object):
             self.abso_time_in_this_step = time.time()
 
     def step(self, delta_time):
-        _, ego_y = self.shared_list[0]['GaussX'], self.shared_list[0]['GaussY']
+        ego_y = self.shared_list[0]['GaussY'] if self.shared_list[9] == 0 else self.shared_list[9]['GaussY']
+        # ego_y = self.shared_list[0]['GaussY']
         if not self.is_triggered:
             self.is_triggered_func(ego_y)
         self.time_since_triggered = time.time() - self.abso_time_start if self.is_triggered else 0.
@@ -232,7 +233,6 @@ class Traffic(object):
         while True:
             time.sleep(0.05)
             delta_time_in_this_step = time.time() - self.abso_time_in_this_step if self.is_triggered else 0.
-            # print(delta_time_in_this_step)
             state_other = self.step(delta_time_in_this_step)
             # self.render()
             self.abso_time_in_this_step = time.time()
@@ -361,18 +361,20 @@ class Traffic(object):
                 draw_rotate_rec(veh_x, veh_y, veh_phi, veh_l, veh_w, 'black')
 
         # plot ego vehicles
-        ego_veh = self.case_dict['ego']
-        veh_x = ego_veh['x']
-        veh_y = ego_veh['y']
-        veh_phi = ego_veh['phi']
-        plot_phi_line(veh_x, veh_y, veh_phi, 'red')
-        draw_rotate_rec(veh_x, veh_y, veh_phi, EGO_LENGTH, EGO_WIDTH, 'red')
+        _, trigger_line = self.shared_list[0]['GaussX'], self.shared_list[0]['GaussY']
+        plt.plot([0, 3.75], [trigger_line, trigger_line], color='r')
+        # ego_veh = self.case_dict['ego']
+        # veh_x = ego_veh['x']
+        # veh_y = ego_veh['y']
+        # veh_phi = ego_veh['phi']
+        # plot_phi_line(veh_x, veh_y, veh_phi, 'red')
+        # draw_rotate_rec(veh_x, veh_y, veh_phi, EGO_LENGTH, EGO_WIDTH, 'red')
 
         # plt.show()
         plt.pause(0.01)
 
 
 if __name__ == '__main__':
-    ego_list = [dict(GaussX=3.5 / 2, GaussY=-19.5), 0, 0, 0, 0, 0]
+    ego_list = [dict(GaussX=3.5 / 2, GaussY=-35.0), 0, 0, 0, 0, 0]
     traffic = Traffic(shared_list=ego_list, lock=mp.Lock(), task='left', case=0)
     traffic.run()
