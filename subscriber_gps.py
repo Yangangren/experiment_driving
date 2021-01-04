@@ -42,8 +42,8 @@ class SubscriberGps():
 
     def run(self):
         state_gps = OrderedDict()
-        state_gps['GaussX'] = 0   # intersection coordinate [m]
-        state_gps['GaussY'] = 0   # intersection coordinate [m]
+        state_gps['GaussX'] = 1.75   # intersection coordinate [m]
+        state_gps['GaussY'] = -40   # intersection coordinate [m]
         state_gps['Heading'] = 0  # intersection coordinate [deg]
 
         state_gps['GpsSpeed'] = 0          # [m/s]
