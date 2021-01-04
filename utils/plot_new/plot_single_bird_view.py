@@ -254,7 +254,7 @@ class Single_bird_view_plot(object):
 
 
 if __name__ == '__main__':
-    exp_index = 'left/case0_noise1_20210104_195204'
+    exp_index = 'left/case0_noise1_20210104_195830'
     data_all, keys_for_data = load_data(exp_index)
     automode_start_time, automode_stop_time = search_automode_time(data_all)
     print('Auto mode start: {:.2f}s, stop: {:.2f}s'.format(automode_start_time, automode_stop_time))
