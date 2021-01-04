@@ -16,7 +16,7 @@ from utils.load_policy import LoadPolicy
 
 VEHICLE_MODE_DICT = dict(left=OrderedDict(dl=1, du=1, dr=1, ud=2, ul=1), # dl=2, du=2, ud=2, ul=2
                          straight=OrderedDict(dl=1, du=1, dr=1, ud=1, ru=2, ur=2), #vdl=1, du=2, ud=2, ru=2, ur=2
-                         right=OrderedDict(dl=1, du=1, dr=1, ur=2, lr=2)) #TODO: temp relevant to filter interested vehicle
+                         right=OrderedDict(dl=1, du=1, dr=1, ur=2, lr=2))
 
 ROUTE2MODE = {('1o', '2i'): 'dr', ('1o', '3i'): 'du', ('1o', '4i'): 'dl',
               ('2o', '1i'): 'rd', ('2o', '3i'): 'ru', ('2o', '4i'): 'rl',
@@ -143,7 +143,7 @@ class ReferencePath(object):
     def __init__(self, task, mode=None, ref_index=None):
         self.mode = mode
         self.traj_mode = None
-        self.exp_v = EXPECTED_V #TODO: temp
+        self.exp_v = EXPECTED_V
         self.task = task
         self.path_list = []
         self.path_len_list = []
@@ -162,10 +162,10 @@ class ReferencePath(object):
     def _construct_ref_path(self, task):
         sl = 40  # straight length
         meter_pointnum_ratio = 30
-        control_ext = CROSSROAD_SIZE/3. #TODO: temp
+        control_ext = CROSSROAD_SIZE/3.
         if task == 'left':
-            end_offsets = [LANE_WIDTH*(i+0.5) for i in range(LANE_NUMBER)] #TODO: temp
-            start_offsets = [LANE_WIDTH*0.5] #TODO: temp
+            end_offsets = [LANE_WIDTH*(i+0.5) for i in range(LANE_NUMBER)]
+            start_offsets = [LANE_WIDTH*0.5]
             for start_offset in start_offsets:
                 for end_offset in end_offsets:
                     control_point1 = start_offset, -CROSSROAD_SIZE/2
@@ -260,7 +260,7 @@ class ReferencePath(object):
                     self.path_list.append(planed_trj)
                     self.path_len_list.append((sl * meter_pointnum_ratio, len(trj_data[0]), len(xs_1)))
 
-    def find_closest_point(self, xs, ys, ratio=6): #TODO: temp ratio yasuobili
+    def find_closest_point(self, xs, ys, ratio=6):
         path_len = len(self.path[0])
         reduced_idx = np.arange(0, path_len, ratio)
         reduced_len = len(reduced_idx)
@@ -378,7 +378,7 @@ class Controller(object):
         ego_feature = [ego_v_x, ego_v_y, ego_r, ego_x, ego_y, ego_phi]
         return np.array(ego_feature, dtype=np.float32)
 
-    def _construct_veh_vector(self, ego_x, ego_y, state_others): #TODO: temp mht
+    def _construct_veh_vector(self, ego_x, ego_y, state_others):
         mode_list = list(TRAFFICSETTINGS[self.task][self.case]['others'].keys())
         all_vehicles = []
         v_light = state_others['v_light']
@@ -589,12 +589,12 @@ class Controller(object):
         self.last_steer_output = steer_output
         return steer_output
 
-    def _action_transformation_for_end2end(self, action):  # [-1, 1] # TODO: wait real car
+    def _action_transformation_for_end2end(self, action):  # [-1, 1]
         action = np.clip(action, -1.0, 1.0)
         front_wheel_norm_rad, a_x_norm = action[0], action[1]
         front_wheel_deg = 0.4 / pi * 180 * front_wheel_norm_rad
         steering_wheel = front_wheel_deg * self.steer_factor
-        steering_wheel = self._set_inertia(steering_wheel)
+        # steering_wheel = self._set_inertia(steering_wheel)  #TODO:set inertia
 
         steering_wheel = np.clip(steering_wheel, -360., 360)
         a_x = 2.25*a_x_norm - 0.75
