@@ -71,12 +71,13 @@ def built_parser():
     parser.add_argument('--if_radar', type=bool, default=False)
     task = parser.parse_args().task
     case = parser.parse_args().case
-    parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-04-15-06-05'.format(task))
-    parser.add_argument('--load_ite', type=str, default=35000)
+    parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-04-15-50-23'.format(task))
+    parser.add_argument('--load_ite', type=str, default=40000)
     parser.add_argument('--noise_factor', type=float, default=1.)
     parser.add_argument('--surr_flag', type=bool, default=False)
     parser.add_argument('--model_only_test', type=bool, default=False)
-    parser.add_argument('--backup', type=str, default='abso_POLICY: 0103_model_parameters CLIP TORQUE TO 250: CANCEL inertia: modify state_gps heading')
+    parser.add_argument('--backup', type=str, default='abso_POLICY: add_random init:0103_model_parameters CLIP TORQUE TO 250: CANCEL inertia: '
+                                                      'modify and clipped state_gps heading')
     noise = int(parser.parse_args().noise_factor)
     result_dir = './record/{task}/case{case}_noise{noise}_{time}'.format(task=task,
                                                                          case=case,
