@@ -74,10 +74,10 @@ def built_parser():
     parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-04-21-47-07'.format(task))
     parser.add_argument('--load_ite', type=str, default=40000)
     parser.add_argument('--noise_factor', type=float, default=1.)
-    parser.add_argument('--surr_flag', type=bool, default=False)
+    parser.add_argument('--surr_flag', type=bool, default=True)
     parser.add_argument('--model_only_test', type=bool, default=False)
     parser.add_argument('--backup', type=str, default='abso_POLICY: add_random init:0103_model_parameters CLIP TORQUE TO 250: CANCEL inertia: '
-    'debug vehicle dynamics, modify done position: add noise in all states')
+    'debug vehicle dynamics, modify done position: add noise in all states: add traffic')
 
     noise = int(parser.parse_args().noise_factor)
     result_dir = './record/{task}/case{case}_noise{noise}_{time}'.format(task=task,
