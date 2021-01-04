@@ -31,7 +31,7 @@ def single_plot(data_all, keys, **kwargs):
             axes = plt.gca()
             ylim = axes.get_ylim()
             plt.plot([data_all['Time'][min_index], data_all['Time'][min_index]], ylim, c='red', linestyle='--')
-            # plt.plot([data_all['Time'][max_index], data_all['Time'][max_index]], ylim, c='red', linestyle='--')
+            plt.plot([data_all['Time'][max_index], data_all['Time'][max_index]], ylim, c='red', linestyle='--')
 
     plt.legend(labels=labels, loc='best')
     plt.grid()
@@ -123,7 +123,7 @@ def single_plot_other_vehicles(data_all, exp_index, highlight=True):
 
 
 if __name__ == '__main__':
-    exp_index = 'left/case0_noise1_20210104_195830'
+    exp_index = 'left/case0_noise1_20210104_202143'
     data_all, keys_for_data = load_data(exp_index)
     print(keys_for_data)
 
