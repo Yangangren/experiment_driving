@@ -68,9 +68,9 @@ class SubscriberGps():
                     heading = 1. + GpsJson["Gps"]["Gps"]["Heading"]
                     state_gps['GaussX'], state_gps['GaussY'], state_gps['Heading'] =\
                         self.rotate_and_move(x_rear_axle, y_rear_axle, heading)
-                    # if -180 < state_gps['Heading'] < -90:
-                    #     state_gps['Heading'] += 360.
-                    #     state_gps['Heading'] = np.clip(state_gps['Heading'], 0, 180)
+                    if -180 < state_gps['Heading'] < -90:
+                        state_gps['Heading'] += 360.
+                        state_gps['Heading'] = np.clip(state_gps['Heading'], 0, 178)
 
                     state_gps['NorthVelocity'] = GpsJson["Gps"]["Gps"]["NorthVelocity"]
                     state_gps['EastVelocity'] = GpsJson["Gps"]["Gps"]["EastVelocity"]

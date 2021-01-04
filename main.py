@@ -77,7 +77,7 @@ def built_parser():
     parser.add_argument('--surr_flag', type=bool, default=False)
     parser.add_argument('--model_only_test', type=bool, default=False)
     parser.add_argument('--backup', type=str, default='abso_POLICY: add_random init:0103_model_parameters CLIP TORQUE TO 250: CANCEL inertia: '
-    'debug vehicle dynamics, modify done position, add x y phi noise init, no end random init')
+    'debug vehicle dynamics, modify done position, add x y phi noise init, no end random init: add end phi clip')
 
     noise = int(parser.parse_args().noise_factor)
     result_dir = './record/{task}/case{case}_noise{noise}_{time}'.format(task=task,
