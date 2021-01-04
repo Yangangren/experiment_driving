@@ -260,6 +260,20 @@ class Plot():
             ego_phi = state_ego['Heading']
             ego_l = EGO_LENGTH
             ego_w = EGO_WIDTH
+            real_action_x = state_ego['model_x_in_real_action']
+            real_action_y = state_ego['model_y_in_real_action']
+            real_action_phi = state_ego['model_phi_in_real_action']
+            plot_phi_line(real_action_x, real_action_y, real_action_phi, 'blue')
+            draw_rotate_rec(real_action_x, real_action_y, real_action_phi, ego_l, ego_w, 'blue')
+
+            model_action_x = state_ego['model_x_in_model_action']
+            model_action_y = state_ego['model_y_in_model_action']
+            model_action_phi = state_ego['model_phi_in_model_action']
+            plot_phi_line(model_action_x, model_action_y, model_action_phi, 'coral')
+            draw_rotate_rec(model_action_x, model_action_y, model_action_phi, ego_l, ego_w, 'coral')
+
+            ego_l = EGO_LENGTH
+            ego_w = EGO_WIDTH
             plot_phi_line(ego_x, ego_y, ego_phi, 'red')
             draw_rotate_rec(ego_x, ego_y, ego_phi, ego_l, ego_w, 'red')
             # model_x = state_ego['model_x']

@@ -600,7 +600,7 @@ class Controller(object):
         a_x = 2.25*a_x_norm - 0.75
         if a_x > 0:
             # torque = np.clip(a_x * 300., 0., 350.)
-            torque = np.clip((a_x-0.4)/0.4*50+150., 0., 100.)  #todo
+            torque = np.clip((a_x-0.4)/0.4*50+150., 0., 250.)  #todo
             decel = 0.
             tor_flag = 1
             dec_flag = 0
