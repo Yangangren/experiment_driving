@@ -76,7 +76,7 @@ def built_parser():
     parser.add_argument('--noise_factor', type=float, default=1.)
     parser.add_argument('--surr_flag', type=bool, default=False)
     parser.add_argument('--model_only_test', type=bool, default=False)
-    parser.add_argument('--backup', type=str, default='abso_POLICY: 0103_model_parameters CLIP TORQUE TO 250: CANCEL inertia')
+    parser.add_argument('--backup', type=str, default='abso_POLICY: 0103_model_parameters CLIP TORQUE TO 250: CANCEL inertia: modify state_gps heading')
     noise = int(parser.parse_args().noise_factor)
     result_dir = './record/{task}/case{case}_noise{noise}_{time}'.format(task=task,
                                                                          case=case,
