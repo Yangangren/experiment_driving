@@ -123,11 +123,11 @@ def single_plot_other_vehicles(data_all, exp_index, highlight=True):
 
 
 if __name__ == '__main__':
-    exp_index = 'left/case0_noise1_20210104_155618'
+    exp_index = 'left/case0_noise1_20210104_164031'
     data_all, keys_for_data = load_data(exp_index)
     print(keys_for_data)
 
-    single_plot_time_series(data_all) # if not switch into auto mode, add kwargs: VehicleMode=False
+    single_plot_time_series(data_all, AutoMode=False) # if not switch into auto mode, add kwargs: VehicleMode=False
     single_plot_other_series(data_all)
     # single_plot_other_vehicles(data_all, exp_index, highlight=False)
-    single_plot_compare_response(data_all,AutoMode=True)
+    single_plot_compare_response(data_all,AutoMode=False)

@@ -84,8 +84,10 @@ class VehicleDynamics(object):
         b = tf.convert_to_tensor(self.vehicle_params['b'], dtype=tf.float32)
         mass = tf.convert_to_tensor(self.vehicle_params['mass'], dtype=tf.float32)
         I_z = tf.convert_to_tensor(self.vehicle_params['I_z'], dtype=tf.float32)
+        v_x_next = v_x + tau * (a_x + v_y * r)
+        v_x_next = tf.clip_by_value(v_x_next, 0.,10.)
 
-        next_state = [v_x + tau * (a_x + v_y * r),
+        next_state = [v_x_next,
                       (mass * v_y * v_x + tau * (
                                   a * C_f - b * C_r) * r - tau * C_f * steer * v_x - tau * mass * tf.square(
                           v_x) * r) / (mass * v_x - tau * (C_f + C_r)),
