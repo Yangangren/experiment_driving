@@ -556,8 +556,7 @@ class Controller(object):
         self.per_tracking_info_dim = 3
         vector = np.concatenate((ego_vector, tracking_error, vehs_vector), axis=0)
         veh_idx_start = self.ego_info_dim + self.per_tracking_info_dim * (self.num_future_data + 1)
-        vector = self.convert_vehs_to_rela(vector)
-        vehs_vector_rela = vector[veh_idx_start:]
+        # vector = self.convert_vehs_to_rela(vector)
 
         noise = np.zeros_like(vector)
         nf = self.noise_factor
@@ -576,10 +575,10 @@ class Controller(object):
                                tracking_delta_v=tracking_error[2],
                                )
         for i in range(int(len(vehs_vector)/self.per_veh_info_dim)):
-            obs_dict.update({'other{}_delta_x'.format(i): vehs_vector_rela[self.per_veh_info_dim*i],
-                             'other{}_delta_y'.format(i): vehs_vector_rela[self.per_veh_info_dim*i+1],
-                             'other{}_v'.format(i): vehs_vector_rela[self.per_veh_info_dim*i+2],
-                             'other{}_phi'.format(i): vehs_vector_rela[self.per_veh_info_dim*i+3]})
+            obs_dict.update({'other{}_x'.format(i): vehs_vector[self.per_veh_info_dim*i],
+                             'other{}_y'.format(i): vehs_vector[self.per_veh_info_dim*i+1],
+                             'other{}_v'.format(i): vehs_vector[self.per_veh_info_dim*i+2],
+                             'other{}_phi'.format(i): vehs_vector[self.per_veh_info_dim*i+3]})
         return vector, obs_dict, vehs_vector  # todo: if output vector without noise
 
     def _set_inertia(self, steer_from_policy, inertia_time=0.2, sampletime=0.1, k_G=1.): # todo: adjust the inertia time
