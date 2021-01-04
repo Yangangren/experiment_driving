@@ -72,7 +72,7 @@ def built_parser():
     task = parser.parse_args().task
     case = parser.parse_args().case
     parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-04-01-24-07'.format(task))
-    parser.add_argument('--load_ite', type=str, default=100000)
+    parser.add_argument('--load_ite', type=str, default=60000)
     parser.add_argument('--noise_factor', type=float, default=1.)
     parser.add_argument('--surr_flag', type=bool, default=False)
     parser.add_argument('--model_only_test', type=bool, default=False)
