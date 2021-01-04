@@ -582,7 +582,7 @@ class Controller(object):
                              'other{}_phi'.format(i): vehs_vector_rela[self.per_veh_info_dim*i+3]})
         return vector, obs_dict, vehs_vector  # todo: if output vector without noise
 
-    def _set_inertia(self, steer_from_policy, inertia_time=1.0, sampletime=0.1, k_G=1.): # todo: adjust the inertia time
+    def _set_inertia(self, steer_from_policy, inertia_time=0.2, sampletime=0.1, k_G=1.): # todo: adjust the inertia time
         steer_output = (1. - sampletime / inertia_time) * self.last_steer_output + \
                        k_G * sampletime / inertia_time * steer_from_policy
 
@@ -594,7 +594,7 @@ class Controller(object):
         front_wheel_norm_rad, a_x_norm = action[0], action[1]
         front_wheel_deg = 0.4 / pi * 180 * front_wheel_norm_rad
         steering_wheel = front_wheel_deg * self.steer_factor
-        # steering_wheel = self._set_inertia(steering_wheel)  #TODO:set inertia
+        steering_wheel = self._set_inertia(steering_wheel)  #TODO:set inertia
 
         steering_wheel = np.clip(steering_wheel, -360., 360)
         a_x = 2.25*a_x_norm - 0.75
