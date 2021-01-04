@@ -13,12 +13,12 @@ def plot_others(data_all, exp_index):
 
 
 
-    def single_plot_for_each_others(data, y_lim, name, path):
+    def single_plot_for_each_others(data, name, path):
         plt.figure()
         plt.plot(data_all['Time'], data)
         plt.title(name)
         plt.grid()
-        plt.ylim([-y_lim, y_lim])
+        # plt.ylim([-y_lim, y_lim])
         # plt.xlim([0,80])
         if not os.path.exists(path):
             os.mkdir(path)
@@ -30,7 +30,7 @@ def plot_others(data_all, exp_index):
             name = keys[j] + str(i) + '.jpg'
             proj_root_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
             fig_path = proj_root_dir + '/record/' + exp_index + '/figure/data_fig/'
-            single_plot_for_each_others(numpy_dict[keys[j]][:, i],y_lim_list[j], name, fig_path)
+            single_plot_for_each_others(numpy_dict[keys[j]][:, i], name, fig_path)
 
 
 
@@ -46,5 +46,5 @@ def plot_others(data_all, exp_index):
 
 
 if __name__ == '__main__':
-    data_all, keys_for_data = load_data('left/case0_noise0_20210103_152139')
-    plot_others(data_all, 'left/case0_noise0_20210103_152139')
+    data_all, keys_for_data = load_data('left/case0_noise0_20210103_205805')
+    plot_others(data_all, 'left/case0_noise0_20210103_205805')
