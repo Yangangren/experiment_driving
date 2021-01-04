@@ -66,7 +66,7 @@ def plot_agent(shared_list, lock, task):
 def built_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--task', type=str, default='left')
-    parser.add_argument('--case', type=int, default=0)
+    parser.add_argument('--case', type=int, default=1)
     parser.add_argument('--if_save', type=bool, default=True)
     parser.add_argument('--if_radar', type=bool, default=False)
     task = parser.parse_args().task
@@ -77,7 +77,7 @@ def built_parser():
     parser.add_argument('--surr_flag', type=bool, default=True)
     parser.add_argument('--model_only_test', type=bool, default=False)
     parser.add_argument('--backup', type=str, default='abso_POLICY: add_random init:0103_model_parameters CLIP TORQUE TO 250: CANCEL inertia: '
-    'debug vehicle dynamics, modify done position: add noise in all states: add traffic')
+    'debug vehicle dynamics, modify done position: add noise in all states: add traffic: case 1')
 
     noise = int(parser.parse_args().noise_factor)
     result_dir = './record/{task}/case{case}_noise{noise}_{time}'.format(task=task,
