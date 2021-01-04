@@ -594,7 +594,7 @@ class Controller(object):
         front_wheel_norm_rad, a_x_norm = action[0], action[1]
         front_wheel_deg = 0.4 / pi * 180 * front_wheel_norm_rad
         steering_wheel = front_wheel_deg * self.steer_factor
-        steering_wheel = self._set_inertia(steering_wheel)  #TODO:set inertia
+        # steering_wheel = self._set_inertia(steering_wheel)  #TODO:set inertia
 
         steering_wheel = np.clip(steering_wheel, -360., 360)
         a_x = 2.25*a_x_norm - 0.75
