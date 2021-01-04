@@ -127,7 +127,7 @@ if __name__ == '__main__':
     data_all, keys_for_data = load_data(exp_index)
     print(keys_for_data)
 
-    single_plot_time_series(data_all, AutoMode=False) # if not switch into auto mode, add kwargs: VehicleMode=False
+    single_plot_time_series(data_all, AutoMode=True) # if not switch into auto mode, add kwargs: VehicleMode=False
     single_plot_other_series(data_all)
     # single_plot_other_vehicles(data_all, exp_index, highlight=False)
-    single_plot_compare_response(data_all,AutoMode=False)
+    single_plot_compare_response(data_all,AutoMode=True)
