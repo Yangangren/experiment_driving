@@ -29,10 +29,10 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 def controller_agent(shared_list, receive_index, if_save, if_radar,
                      lock, task, case, noise_factor, load_dir, load_ite,
-                     result_dir, model_only_test):
+                     result_dir, model_only_test, clipped_v):
     publisher_ = Controller(shared_list, receive_index, if_save, if_radar,
                             lock, task, case, noise_factor, load_dir, load_ite,
-                            result_dir, model_only_test)
+                            result_dir, model_only_test, clipped_v)
     time.sleep(0.5)
     publisher_.run()
 
@@ -65,25 +65,29 @@ def plot_agent(shared_list, lock, task, model_only_test):
 
 def built_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--task', type=str, default='left')
+    parser.add_argument('--task', type=str, default='right')
     parser.add_argument('--case', type=int, default=0)
     parser.add_argument('--if_save', type=bool, default=True)
     parser.add_argument('--if_radar', type=bool, default=False)
     task = parser.parse_args().task
     case = parser.parse_args().case
-    parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-04-21-47-07'.format(task))
-    parser.add_argument('--load_ite', type=str, default=40000)
+    parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-05-01-07-20'.format(task))
+    parser.add_argument('--load_ite', type=str, default=100000)
     parser.add_argument('--noise_factor', type=float, default=1.)
     parser.add_argument('--surr_flag', type=bool, default=True)
     parser.add_argument('--model_only_test', type=bool, default=True)
-    parser.add_argument('--backup', type=str, default='abso_POLICY: add_random init:0103_model_parameters CLIP TORQUE TO 250: CANCEL inertia: '
-    'debug vehicle dynamics, modify done position: add noise in all states: add traffic: case 1')
+    parser.add_argument('--clipped_v', type=float, default=3., help='m/s')
 
+    parser.add_argument('--backup', type=str, default='CLIP TORQUE 100 v>3, v<3 250: CANCEL inertia;')
+
+    load_dir = parser.parse_args().load_dir
+    model_only_test = parser.parse_args().model_only_test
+    flag = 'model' if model_only_test else 'real'
     noise = int(parser.parse_args().noise_factor)
-    result_dir = './record/{task}/case{case}_noise{noise}_{time}'.format(task=task,
-                                                                         case=case,
-                                                                         noise=noise,
-                                                                         time=datetime.now().strftime("%Y%m%d_%H%M%S"))
+    result_dir = load_dir + '/record/case{case}/noise{noise}/{time}_{flag}'.format(case=case,
+                                                                                noise=noise,
+                                                                                time=datetime.now().strftime("%d_%H%M%S"),
+                                                                                flag=flag)
     parser.add_argument('--result_dir', type=str, default=result_dir)
     return parser.parse_args()
 
@@ -141,7 +145,7 @@ def main():
         procs.append(Process(target=traffic, args=(shared_list, lock, args.task, args.case, args.surr_flag)))
     procs.append(Process(target=controller_agent, args=(shared_list, receive_index, args.if_save, args.if_radar, lock,
                                                         args.task, args.case, args.noise_factor, args.load_dir,
-                                                        args.load_ite, args.result_dir, args.model_only_test)))
+                                                        args.load_ite, args.result_dir, args.model_only_test, args.clipped_v)))
     procs.append(Process(target=plot_agent, args=(shared_list, lock, args.task, args.model_only_test)))
 
     for p in procs:
