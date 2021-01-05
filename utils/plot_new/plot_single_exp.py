@@ -127,7 +127,7 @@ def single_plot_other_vehicles(data_all, exp_index, highlight=True):
 
 
 if __name__ == '__main__':
-    exp_index = 'left/case0_noise1_20210104_221847'
+    exp_index = 'left/case0/noise1/20210105_144104_real'
     data_all, keys_for_data = load_data(exp_index)
     print(keys_for_data)
 
