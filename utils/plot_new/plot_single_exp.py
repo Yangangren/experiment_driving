@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 from utils.plot_new.plot_utils.load_record import load_data
+from utils.plot_new.plot_utils.search_index import search_geq,search_leq
 import os
 
 
@@ -12,6 +13,7 @@ def single_plot(data_all, keys, **kwargs):
     if kwargs['highlight'] == True:
         min_index = data_all['VehicleMode'].index(1.0)
         max_index = min_index + data_all['VehicleMode'].count(1.0)
+
 
     labels = []
     for key in keys:
@@ -32,6 +34,8 @@ def single_plot(data_all, keys, **kwargs):
             ylim = axes.get_ylim()
             plt.plot([data_all['Time'][min_index], data_all['Time'][min_index]], ylim, c='red', linestyle='--')
             plt.plot([data_all['Time'][max_index], data_all['Time'][max_index]], ylim, c='red', linestyle='--')
+            out_index, _ = search_leq(data_all['GaussX'], -11.0)
+            plt.plot([data_all['Time'][out_index], data_all['Time'][out_index]], ylim, c='coral', linestyle='--')
 
     plt.legend(labels=labels, loc='best')
     plt.grid()
@@ -95,16 +99,12 @@ def single_plot_compare_response(data_all, AutoMode=True):
     highlight = AutoMode
     single_plot(data_all, ['GaussX','model_x_in_real_action', 'model_x_in_model_action'],
                 title='Response-positionX', path=exp_index, highlight=highlight)
-
     single_plot(data_all, ['GaussY', 'model_y_in_real_action', 'model_y_in_model_action'],
                 title='Response-positionY', path=exp_index, highlight=highlight)
     single_plot(data_all, ['Heading', 'model_phi_in_real_action', 'model_phi_in_model_action'],
                 title='Response-heading', path=exp_index, highlight=highlight)
-    single_plot(data_all, ['ego_vx', 'model_vx_in_real_action', 'model_vx_in_model_action'],
-                title='Response-speedX', path=exp_index, highlight=highlight)
-    single_plot(data_all, ['ego_vy', 'model_vy_in_real_action', 'model_vy_in_model_action'],
-                title='Response-speedY', path=exp_index, highlight=highlight)
-
+    single_plot(data_all, ['GpsSpeed', 'model_vx_in_real_action', 'model_vx_in_model_action'],
+                title='Response-speed', path=exp_index, highlight=highlight)
     single_plot(data_all, ['YawRate', 'model_r_in_real_action', 'model_r_in_model_action'],
                 title='Response-yawrate', path=exp_index, highlight=highlight)
     single_plot(data_all, ['model_front_wheel_rad_in_real_action', 'model_front_wheel_rad_in_model_action'],
@@ -127,11 +127,11 @@ def single_plot_other_vehicles(data_all, exp_index, highlight=True):
 
 
 if __name__ == '__main__':
-    exp_index = 'left/case0/noise1/20210105_140139'
+    exp_index = 'left/case0_noise1_20210104_221847'
     data_all, keys_for_data = load_data(exp_index)
     print(keys_for_data)
 
-    single_plot_time_series(data_all, AutoMode=False) # if not switch into auto mode, add kwargs: VehicleMode=False
+    single_plot_time_series(data_all) # if not switch into auto mode, add kwargs: VehicleMode=False
     single_plot_other_series(data_all)
     # single_plot_other_vehicles(data_all, exp_index, highlight=False)
-    single_plot_compare_response(data_all,AutoMode=False)
+    single_plot_compare_response(data_all,AutoMode=True)
