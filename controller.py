@@ -335,7 +335,7 @@ class ReferencePath(object):
 
 class Controller(object):
     def __init__(self, shared_list, receive_index, if_save, if_radar, lock, task, case,
-                 noise_factor, load_dir, load_ite, result_dir, model_only_test):
+                 noise_factor, load_dir, load_ite, result_dir, model_only_test, clipped_v):
         self.time_out = 0
         self.task = task
         self.case = case
@@ -348,6 +348,7 @@ class Controller(object):
         self.read_index_old = 0
         self.receive_index_shared = receive_index
         self.model_only_test = model_only_test
+        self.clipped_v = clipped_v
         # self.read_index_old = Info_List[0]
 
         self.lock = lock
@@ -599,18 +600,18 @@ class Controller(object):
 
     def _action_transformation_for_end2end(self, action, state_gps):  # [-1, 1]
         ego_v_x = state_gps['GpsSpeed']
-        torque_clip = 100. if ego_v_x > 3. else 250.
+        torque_clip = 100. if ego_v_x > self.clipped_v else 250.         # todo: clipped v
         action = np.clip(action, -1.0, 1.0)
         front_wheel_norm_rad, a_x_norm = action[0], action[1]
         front_wheel_deg = 0.4 / pi * 180 * front_wheel_norm_rad
         steering_wheel = front_wheel_deg * self.steer_factor
-        # steering_wheel = self._set_inertia(steering_wheel)  #TODO:set inertia
+        # steering_wheel = self._set_inertia(steering_wheel)             # todo:set inertia
 
         steering_wheel = np.clip(steering_wheel, -360., 360)
         a_x = 2.25*a_x_norm - 0.75
         if a_x > 0:
             # torque = np.clip(a_x * 300., 0., 350.)
-            torque = np.clip((a_x-0.4)/0.4*50+150., 0., torque_clip)  #todo
+            torque = np.clip((a_x-0.4)/0.4*50+150., 0., torque_clip)
             decel = 0.
             tor_flag = 1
             dec_flag = 0
