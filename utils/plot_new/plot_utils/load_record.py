@@ -11,14 +11,14 @@ def get_contents(path):
         str_contents = file_object.read()
     return contents, str_contents
 
-def load_data(record_dir):
+def load_data(model_dir, record_dir):
     """
     :param record_dir:
     :return:
     """
     # get project root directory
     proj_root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-    path = proj_root_dir + '/record/' + record_dir + '/record.txt'
+    path = proj_root_dir + '/utils/models/'+ model_dir + '/record/' + record_dir + '/record.txt'
     contents, str_contents = get_contents(path)
     data_all_dict = {}
     keys_for_data = {'Decision':[], 'State_ego':[],'State_other':[], 'Obs_dict':[], 'Time':[]} # 'Obs_dict':[],
@@ -62,7 +62,7 @@ def load_data(record_dir):
 
 
 def atest_load_txt():
-    data_dict, keys_for_data = load_data('left_case0_20210103_121512')
+    data_dict, keys_for_data = load_data('left/experiment-2021-01-04-01-15-35','left_case0_20210103_121512')
     a = 1
 
 
