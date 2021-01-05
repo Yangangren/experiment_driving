@@ -382,7 +382,6 @@ class Controller(object):
             ego_v_x = v_in_y_coord * np.sin(ego_phi_rad) + v_in_x_coord * np.cos(ego_phi_rad)
             ego_v_y = v_in_y_coord * np.cos(ego_phi_rad) - v_in_x_coord * np.sin(ego_phi_rad)  # todo: check the sign
             ego_v_y = - ego_v_y
-        ego_v_y = 0.
         ego_r = state_gps['YawRate']                      # rad/s
         self.ego_info_dim = 6
         ego_feature = [ego_v_x, ego_v_y, ego_r, ego_x, ego_y, ego_phi]
@@ -493,9 +492,9 @@ class Controller(object):
                         sorted_list.append(fill_value)
                     return sorted_list
 
-            fill_value_for_dl = dict(x=LANE_WIDTH/2, y=-(CROSSROAD_SIZE/2+40), v=0, phi=90, w=2.5, l=5, route=('1o', '4i'))
-            fill_value_for_du = dict(x=LANE_WIDTH*0.5, y=-(CROSSROAD_SIZE/2+40), v=0, phi=90, w=2.5, l=5, route=('1o', '3i'))
-            fill_value_for_dr = dict(x=LANE_WIDTH*(LANE_NUMBER-0.5), y=-(CROSSROAD_SIZE/2+40), v=0, phi=90, w=2.5, l=5, route=('1o', '2i'))
+            fill_value_for_dl = dict(x=LANE_WIDTH/2, y=-(CROSSROAD_SIZE/2+30), v=0, phi=90, w=2.5, l=5, route=('1o', '4i'))
+            fill_value_for_du = dict(x=LANE_WIDTH*0.5, y=-(CROSSROAD_SIZE/2+30), v=0, phi=90, w=2.5, l=5, route=('1o', '3i'))
+            fill_value_for_dr = dict(x=LANE_WIDTH*(LANE_NUMBER-0.5), y=-(CROSSROAD_SIZE/2+30), v=0, phi=90, w=2.5, l=5, route=('1o', '2i'))
 
             fill_value_for_ru = dict(x=(CROSSROAD_SIZE/2+15), y=LANE_WIDTH*(LANE_NUMBER-0.5), v=0, phi=180, w=2.5, l=5, route=('2o', '3i'))
 
@@ -598,7 +597,9 @@ class Controller(object):
         self.last_steer_output = steer_output
         return steer_output
 
-    def _action_transformation_for_end2end(self, action):  # [-1, 1]
+    def _action_transformation_for_end2end(self, action, state_gps):  # [-1, 1]
+        # ego_v_x = state_gps['GpsSpeed']
+        # torque_clip = 100. if ego_v_x > 3. else 250.
         action = np.clip(action, -1.0, 1.0)
         front_wheel_norm_rad, a_x_norm = action[0], action[1]
         front_wheel_deg = 0.4 / pi * 180 * front_wheel_norm_rad
@@ -654,7 +655,7 @@ class Controller(object):
                     all_obs.append(obs)
                     action = self.model.run(obs)
                     steer_wheel_deg, torque, decel, tor_flag, dec_flag, front_wheel_deg, a_x = \
-                        self._action_transformation_for_end2end(action)
+                        self._action_transformation_for_end2end(action, state_gps)
                     action = np.array([[front_wheel_deg * np.pi / 180, a_x]], dtype=np.float32)
                     state_model_in_model_action = self.model_driven_by_model_action.model_step(state_gps, 1,
                                                                                                action,
@@ -718,7 +719,7 @@ class Controller(object):
                         obs, obs_dict, veh_vec = self._get_obs(state_gps, state_other)
                         action = self.model.run(obs)
                         steer_wheel_deg, torque, decel, tor_flag, dec_flag, front_wheel_deg, a_x = \
-                            self._action_transformation_for_end2end(action)
+                            self._action_transformation_for_end2end(action, state_gps)
                         # ==============================================================================================
                         # ------------------drive model in real action---------------------------------
                         realaction4model = np.array([[front_wheel_deg*np.pi/180, a_x]], dtype=np.float32)
@@ -736,7 +737,7 @@ class Controller(object):
                         obs_model, obs_dict_model, veh_vec_model = self._get_obs(state_gps_modified_by_model, state_other)
                         action_model = self.model.run(obs_model)
                         _, _, _, _, _, front_wheel_deg_model, a_x_model = \
-                            self._action_transformation_for_end2end(action_model)
+                            self._action_transformation_for_end2end(action_model, state_gps)
                         modelaction4model = np.array([[front_wheel_deg_model*np.pi/180, a_x_model]], dtype=np.float32)
                         state_model_in_model_action = self.model_driven_by_model_action.model_step(state_gps, state_can['VehicleMode'],
                                                                                                    modelaction4model,
