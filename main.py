@@ -65,13 +65,13 @@ def plot_agent(shared_list, lock, task, model_only_test):
 
 def built_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--task', type=str, default='straight')
+    parser.add_argument('--task', type=str, default='right')
     parser.add_argument('--case', type=int, default=0)
     parser.add_argument('--if_save', type=bool, default=True)
     parser.add_argument('--if_radar', type=bool, default=False)
     task = parser.parse_args().task
     case = parser.parse_args().case
-    parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-05-01-07-08'.format(task))
+    parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-05-01-07-20'.format(task))
     parser.add_argument('--load_ite', type=str, default=100000)
     parser.add_argument('--noise_factor', type=float, default=1.)
     parser.add_argument('--surr_flag', type=bool, default=True)
