@@ -71,19 +71,21 @@ def built_parser():
     parser.add_argument('--if_radar', type=bool, default=False)
     task = parser.parse_args().task
     case = parser.parse_args().case
-    parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-05-10-29-18'.format(task))
+    parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-05-01-12-20'.format(task))
     parser.add_argument('--load_ite', type=str, default=100000)
     parser.add_argument('--noise_factor', type=float, default=1.)
     parser.add_argument('--surr_flag', type=bool, default=False)
     parser.add_argument('--model_only_test', type=bool, default=False)
     parser.add_argument('--backup', type=str, default='abso_POLICY: add_random init:0103_model_parameters CLIP TORQUE TO 250: CANCEL inertia: '
-    'debug vehicle dynamics, modify done position: add noise in all states: change phi only start init')
-
+    'debug vehicle dynamics, modify done position: add noise in all states: change phi init whole traj 100000')
+    model_only_test = parser.parse_args().model_only_test
+    flag = 'model' if model_only_test else 'real'
     noise = int(parser.parse_args().noise_factor)
-    result_dir = './record/{task}/case{case}/noise{noise}/{time}'.format(task=task,
-                                                                         case=case,
-                                                                         noise=noise,
-                                                                         time=datetime.now().strftime("%Y%m%d_%H%M%S"))
+    result_dir = './record/{task}/case{case}/noise{noise}/{time}_{flag}'.format(task=task,
+                                                                                case=case,
+                                                                                noise=noise,
+                                                                                time=datetime.now().strftime("%Y%m%d_%H%M%S"),
+                                                                                flag=flag)
     parser.add_argument('--result_dir', type=str, default=result_dir)
     return parser.parse_args()
 
