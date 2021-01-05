@@ -598,8 +598,8 @@ class Controller(object):
         return steer_output
 
     def _action_transformation_for_end2end(self, action, state_gps):  # [-1, 1]
-        # ego_v_x = state_gps['GpsSpeed']
-        # torque_clip = 100. if ego_v_x > 3. else 250.
+        ego_v_x = state_gps['GpsSpeed']
+        torque_clip = 100. if ego_v_x > 3. else 250.
         action = np.clip(action, -1.0, 1.0)
         front_wheel_norm_rad, a_x_norm = action[0], action[1]
         front_wheel_deg = 0.4 / pi * 180 * front_wheel_norm_rad
@@ -610,7 +610,7 @@ class Controller(object):
         a_x = 2.25*a_x_norm - 0.75
         if a_x > 0:
             # torque = np.clip(a_x * 300., 0., 350.)
-            torque = np.clip((a_x-0.4)/0.4*50+150., 0., 250.)  #todo
+            torque = np.clip((a_x-0.4)/0.4*50+150., 0., torque_clip)  #todo
             decel = 0.
             tor_flag = 1
             dec_flag = 0
