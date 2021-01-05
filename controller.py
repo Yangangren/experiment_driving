@@ -16,7 +16,7 @@ from utils.load_policy import LoadPolicy
 
 VEHICLE_MODE_DICT = dict(left=OrderedDict(dl=1, du=1, dr=1, ud=2, ul=1), # dl=2, du=2, ud=2, ul=2
                          straight=OrderedDict(dl=1, du=1, dr=1, ud=1, ru=2, ur=2), #vdl=1, du=2, ud=2, ru=2, ur=2
-                         right=OrderedDict(dl=1, du=1, dr=1, ur=2, lr=2)) #TODO: temp relevant to filter interested vehicle
+                         right=OrderedDict(dl=1, du=1, dr=1, ur=2, lr=2))
 
 ROUTE2MODE = {('1o', '2i'): 'dr', ('1o', '3i'): 'du', ('1o', '4i'): 'dl',
               ('2o', '1i'): 'rd', ('2o', '3i'): 'ru', ('2o', '4i'): 'rl',
@@ -84,8 +84,10 @@ class VehicleDynamics(object):
         b = tf.convert_to_tensor(self.vehicle_params['b'], dtype=tf.float32)
         mass = tf.convert_to_tensor(self.vehicle_params['mass'], dtype=tf.float32)
         I_z = tf.convert_to_tensor(self.vehicle_params['I_z'], dtype=tf.float32)
+        v_x_next = v_x + tau * (a_x + v_y * r)
+        v_x_next = tf.clip_by_value(v_x_next, 0.,10.)
 
-        next_state = [v_x + tau * (a_x + v_y * r),
+        next_state = [v_x_next,
                       (mass * v_y * v_x + tau * (
                                   a * C_f - b * C_r) * r - tau * C_f * steer * v_x - tau * mass * tf.square(
                           v_x) * r) / (mass * v_x - tau * (C_f + C_r)),
@@ -143,7 +145,7 @@ class ReferencePath(object):
     def __init__(self, task, mode=None, ref_index=None):
         self.mode = mode
         self.traj_mode = None
-        self.exp_v = EXPECTED_V #TODO: temp
+        self.exp_v = EXPECTED_V
         self.task = task
         self.path_list = []
         self.path_len_list = []
@@ -162,10 +164,10 @@ class ReferencePath(object):
     def _construct_ref_path(self, task):
         sl = 40  # straight length
         meter_pointnum_ratio = 30
-        control_ext = CROSSROAD_SIZE/3. #TODO: temp
+        control_ext = CROSSROAD_SIZE/3.
         if task == 'left':
-            end_offsets = [LANE_WIDTH*(i+0.5) for i in range(LANE_NUMBER)] #TODO: temp
-            start_offsets = [LANE_WIDTH*0.5] #TODO: temp
+            end_offsets = [LANE_WIDTH*(i+0.5) for i in range(LANE_NUMBER)]
+            start_offsets = [LANE_WIDTH*0.5]
             for start_offset in start_offsets:
                 for end_offset in end_offsets:
                     control_point1 = start_offset, -CROSSROAD_SIZE/2
@@ -260,7 +262,7 @@ class ReferencePath(object):
                     self.path_list.append(planed_trj)
                     self.path_len_list.append((sl * meter_pointnum_ratio, len(trj_data[0]), len(xs_1)))
 
-    def find_closest_point(self, xs, ys, ratio=6): #TODO: temp ratio yasuobili
+    def find_closest_point(self, xs, ys, ratio=6):
         path_len = len(self.path[0])
         reduced_idx = np.arange(0, path_len, ratio)
         reduced_len = len(reduced_idx)
@@ -381,7 +383,7 @@ class Controller(object):
         ego_feature = [ego_v_x, ego_v_y, ego_r, ego_x, ego_y, ego_phi]
         return np.array(ego_feature, dtype=np.float32)
 
-    def _construct_veh_vector(self, ego_x, ego_y, state_others): #TODO: temp mht
+    def _construct_veh_vector(self, ego_x, ego_y, state_others):
         mode_list = list(TRAFFICSETTINGS[self.task][self.case]['others'].keys())
         all_vehicles = []
         v_light = state_others['v_light']
@@ -559,8 +561,7 @@ class Controller(object):
         self.per_tracking_info_dim = 3
         vector = np.concatenate((ego_vector, tracking_error, vehs_vector), axis=0)
         veh_idx_start = self.ego_info_dim + self.per_tracking_info_dim * (self.num_future_data + 1)
-        vector = self.convert_vehs_to_rela(vector)
-        vehs_vector_rela = vector[veh_idx_start:]
+        # vector = self.convert_vehs_to_rela(vector)
 
         noise = np.zeros_like(vector)
         nf = self.noise_factor
@@ -579,25 +580,25 @@ class Controller(object):
                                tracking_delta_v=tracking_error[2],
                                )
         for i in range(int(len(vehs_vector)/self.per_veh_info_dim)):
-            obs_dict.update({'other{}_delta_x'.format(i): vehs_vector_rela[self.per_veh_info_dim*i],
-                             'other{}_delta_y'.format(i): vehs_vector_rela[self.per_veh_info_dim*i+1],
-                             'other{}_v'.format(i): vehs_vector_rela[self.per_veh_info_dim*i+2],
-                             'other{}_phi'.format(i): vehs_vector_rela[self.per_veh_info_dim*i+3]})
+            obs_dict.update({'other{}_x'.format(i): vehs_vector[self.per_veh_info_dim*i],
+                             'other{}_y'.format(i): vehs_vector[self.per_veh_info_dim*i+1],
+                             'other{}_v'.format(i): vehs_vector[self.per_veh_info_dim*i+2],
+                             'other{}_phi'.format(i): vehs_vector[self.per_veh_info_dim*i+3]})
         return vector, obs_dict, vehs_vector  # todo: if output vector without noise
 
-    def _set_inertia(self, steer_from_policy, inertia_time=1.0, sampletime=0.1, k_G=1.): # todo: adjust the inertia time
+    def _set_inertia(self, steer_from_policy, inertia_time=0.2, sampletime=0.1, k_G=1.): # todo: adjust the inertia time
         steer_output = (1. - sampletime / inertia_time) * self.last_steer_output + \
                        k_G * sampletime / inertia_time * steer_from_policy
 
         self.last_steer_output = steer_output
         return steer_output
 
-    def _action_transformation_for_end2end(self, action):  # [-1, 1] # TODO: wait real car
+    def _action_transformation_for_end2end(self, action):  # [-1, 1]
         action = np.clip(action, -1.0, 1.0)
         front_wheel_norm_rad, a_x_norm = action[0], action[1]
         front_wheel_deg = 0.4 / pi * 180 * front_wheel_norm_rad
         steering_wheel = front_wheel_deg * self.steer_factor
-        steering_wheel = self._set_inertia(steering_wheel)
+        # steering_wheel = self._set_inertia(steering_wheel)  #TODO:set inertia
 
         steering_wheel = np.clip(steering_wheel, -360., 360)
         a_x = 2.25*a_x_norm - 0.75

@@ -57,8 +57,8 @@ def subscriber_radar_agent(shared_list, lock):
     subscriber_radar.run()
 
 
-def plot_agent(shared_list, lock, task):
-    plot_ = Plot(shared_list, lock, task)
+def plot_agent(shared_list, lock, task, model_only_test):
+    plot_ = Plot(shared_list, lock, task, model_only_test)
     time.sleep(3)
     plot_.run()
 
@@ -71,12 +71,14 @@ def built_parser():
     parser.add_argument('--if_radar', type=bool, default=False)
     task = parser.parse_args().task
     case = parser.parse_args().case
-    parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-03-12-38-00'.format(task))
-    parser.add_argument('--load_ite', type=str, default=100000)
+    parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-04-21-47-07'.format(task))
+    parser.add_argument('--load_ite', type=str, default=40000)
     parser.add_argument('--noise_factor', type=float, default=1.)
     parser.add_argument('--surr_flag', type=bool, default=True)
-    parser.add_argument('--model_only_test', type=bool, default=False)
-    parser.add_argument('--backup', type=str, default='')
+    parser.add_argument('--model_only_test', type=bool, default=True)
+    parser.add_argument('--backup', type=str, default='abso_POLICY: add_random init:0103_model_parameters CLIP TORQUE TO 250: CANCEL inertia: '
+    'debug vehicle dynamics, modify done position: add noise in all states: add traffic: case 1')
+
     noise = int(parser.parse_args().noise_factor)
     result_dir = './record/{task}/case{case}_noise{noise}_{time}'.format(task=task,
                                                                          case=case,
@@ -140,7 +142,7 @@ def main():
     procs.append(Process(target=controller_agent, args=(shared_list, receive_index, args.if_save, args.if_radar, lock,
                                                         args.task, args.case, args.noise_factor, args.load_dir,
                                                         args.load_ite, args.result_dir, args.model_only_test)))
-    procs.append(Process(target=plot_agent, args=(shared_list, lock, args.task)))
+    procs.append(Process(target=plot_agent, args=(shared_list, lock, args.task, args.model_only_test)))
 
     for p in procs:
         p.start()

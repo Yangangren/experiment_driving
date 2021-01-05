@@ -103,7 +103,7 @@ def single_plot_compare_response(data_all, AutoMode=True):
                 title='Response-speed', path=exp_index, highlight=highlight)
     single_plot(data_all, ['YawRate', 'model_r_in_real_action', 'model_r_in_model_action'],
                 title='Response-yawrate', path=exp_index, highlight=highlight)
-    single_plot(data_all, ['SteerAngleAct', 'model_front_wheel_rad_in_real_action', 'model_front_wheel_rad_in_model_action'],
+    single_plot(data_all, ['model_front_wheel_rad_in_real_action', 'model_front_wheel_rad_in_model_action'],
                 title='Response-steering', path=exp_index, highlight=highlight)
     single_plot(data_all, ['accActual','Deceleration', 'model_acc_in_real_action', 'model_acc_in_model_action'],
                 title='Response-acc', path=exp_index, highlight=highlight)
@@ -112,7 +112,7 @@ def single_plot_compare_response(data_all, AutoMode=True):
 
 
 def single_plot_other_series(data_all):
-    single_plot(data_all, [('GaussX', 'GaussY')], title='Trajectory', path=exp_index, x_lim=[-11, 11], highlight=False)
+    single_plot(data_all, [('GaussX', 'GaussY'),('model_x_in_model_action','model_y_in_model_action'),('model_x_in_real_action','model_y_in_real_action')], title='Trajectory', path=exp_index,  highlight=False)
 
 def single_plot_other_vehicles(data_all, exp_index, highlight=True):
     for i in range(6):
@@ -123,11 +123,11 @@ def single_plot_other_vehicles(data_all, exp_index, highlight=True):
 
 
 if __name__ == '__main__':
-    exp_index = 'left/case0_noise1_20210104_112938'
+    exp_index = 'left/case0_noise1_20210104_221446'
     data_all, keys_for_data = load_data(exp_index)
     print(keys_for_data)
 
-    single_plot_time_series(data_all) # if not switch into auto mode, add kwargs: VehicleMode=False
-    # single_plot_other_series(data_all)
-    single_plot_other_vehicles(data_all, exp_index, highlight=False)
-    single_plot_compare_response(data_all,AutoMode=False)
+    single_plot_time_series(data_all, AutoMode=True) # if not switch into auto mode, add kwargs: VehicleMode=False
+    single_plot_other_series(data_all)
+    # single_plot_other_vehicles(data_all, exp_index, highlight=False)
+    single_plot_compare_response(data_all,AutoMode=True)
