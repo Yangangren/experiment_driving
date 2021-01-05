@@ -54,3 +54,20 @@ class TimerStat:
         if not time_total:
             return 0.0
         return float(sum(self._units_processed)) / time_total
+
+
+class ValueSmooth:
+    def __init__(self, window_size=10):
+        self._window_size = window_size
+        self._samples = []
+
+    def push(self, sample):
+        self._samples.append(sample)
+        if len(self._samples) > self._window_size:
+            self._samples.pop(0)
+
+    @property
+    def mean(self):
+        if not self._samples:
+            return 0
+        return np.mean(np.array(self._samples), axis=0)

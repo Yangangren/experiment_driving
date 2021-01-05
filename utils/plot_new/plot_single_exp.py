@@ -107,7 +107,7 @@ def single_plot_compare_response(data_all, AutoMode=True):
                 title='Response-speed', path=exp_index, highlight=highlight)
     single_plot(data_all, ['YawRate', 'model_r_in_real_action', 'model_r_in_model_action'],
                 title='Response-yawrate', path=exp_index, highlight=highlight)
-    single_plot(data_all, ['SteerAngleAct', 'model_front_wheel_rad_in_real_action', 'model_front_wheel_rad_in_model_action'],
+    single_plot(data_all, ['model_front_wheel_rad_in_real_action', 'model_front_wheel_rad_in_model_action'],
                 title='Response-steering', path=exp_index, highlight=highlight)
     single_plot(data_all, ['accActual','Deceleration', 'model_acc_in_real_action', 'model_acc_in_model_action'],
                 title='Response-acc', path=exp_index, highlight=highlight)

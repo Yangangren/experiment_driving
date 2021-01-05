@@ -29,6 +29,13 @@ TRAFFICSETTINGS = dict(left=[dict(ego=dict(v_x=2., v_y=0., r=0., x=3.5/2, y=-29,
                                                      ul=dict(x=-3.5/2, y=45, phi=-90, l=4.8, w=2.0, v=3., route=('3o', '4i')),),
                                   v_light=0,
                                   ),
+                            dict(ego=dict(v_x=2., v_y=0., r=0., x=3.5/2, y=-29, phi=90.,),
+                                  others=OrderedDict(dl=dict(x=3.5/2, y=-11, phi=90, l=4.8, w=2.0, v=0., route=('1o', '4i')),
+                                                     ud=dict(x=-3.5/2, y=12, phi=-90, l=4.8, w=2.0, v=3., route=('3o', '1i')),
+                                                     ul=dict(x=-3.5/2, y=45, phi=-90, l=4.8, w=2.0, v=3., route=('3o', '4i')),),
+                                  v_light=0,
+                                  ),
+
                              dict(ego=dict(v_x=2., v_y=0., r=0., x=3.5/2, y=-29, phi=90.,),
                                   others=OrderedDict(dl=dict(x=3.5/2, y=-14, phi=90, l=4.8, w=2.0, v=0., route=('1o', '4i')),
                                                      ud=dict(x=-3.5/2, y=11, phi=-90, l=4.8, w=2.0, v=3., route=('3o', '1i')),
@@ -115,7 +122,8 @@ class Traffic(object):
             self.abso_time_in_this_step = time.time()
 
     def step(self, delta_time):
-        _, ego_y = self.shared_list[0]['GaussX'], self.shared_list[0]['GaussY']
+        ego_y = self.shared_list[0]['GaussY'] if self.shared_list[9] == 0 else self.shared_list[9]['GaussY']
+        # ego_y = self.shared_list[0]['GaussY']
         if not self.is_triggered:
             self.is_triggered_func(ego_y)
         self.time_since_triggered = time.time() - self.abso_time_start if self.is_triggered else 0.
@@ -131,11 +139,10 @@ class Traffic(object):
                             dl_next_x, dl_next_y, dl_next_v, dl_next_phi = self.prediction('dl', veh_dl, 0., delta_time)
                         else:
                             dl_next_x, dl_next_y, dl_next_v, dl_next_phi = self.prediction('dl', veh_dl, 2.0, delta_time)
-                        # print(dl_next_y)
                         # veh_ud
                         ud_next_x, ud_next_y, ud_next_v, ud_next_phi = self.prediction('ud', veh_ud, 2., delta_time)
                         # veh_ul
-                        ul_next_x, ul_next_y, ul_next_v, ul_next_phi = self.prediction('ul', veh_ul, 0., delta_time)
+                        ul_next_x, ul_next_y, ul_next_v, ul_next_phi = self.prediction('ul', veh_ul, -0.14, delta_time)
                     elif self.case == 1:
                         # veh_dl
                         dl_next_x, dl_next_y, dl_next_v, dl_next_phi = self.prediction('dl', veh_dl, 2.5, delta_time)
@@ -232,7 +239,6 @@ class Traffic(object):
         while True:
             time.sleep(0.05)
             delta_time_in_this_step = time.time() - self.abso_time_in_this_step if self.is_triggered else 0.
-            # print(delta_time_in_this_step)
             state_other = self.step(delta_time_in_this_step)
             # self.render()
             self.abso_time_in_this_step = time.time()
@@ -361,18 +367,20 @@ class Traffic(object):
                 draw_rotate_rec(veh_x, veh_y, veh_phi, veh_l, veh_w, 'black')
 
         # plot ego vehicles
-        ego_veh = self.case_dict['ego']
-        veh_x = ego_veh['x']
-        veh_y = ego_veh['y']
-        veh_phi = ego_veh['phi']
-        plot_phi_line(veh_x, veh_y, veh_phi, 'red')
-        draw_rotate_rec(veh_x, veh_y, veh_phi, EGO_LENGTH, EGO_WIDTH, 'red')
+        _, trigger_line = self.shared_list[0]['GaussX'], self.shared_list[0]['GaussY']
+        plt.plot([0, 3.75], [trigger_line, trigger_line], color='r')
+        # ego_veh = self.case_dict['ego']
+        # veh_x = ego_veh['x']
+        # veh_y = ego_veh['y']
+        # veh_phi = ego_veh['phi']
+        # plot_phi_line(veh_x, veh_y, veh_phi, 'red')
+        # draw_rotate_rec(veh_x, veh_y, veh_phi, EGO_LENGTH, EGO_WIDTH, 'red')
 
         # plt.show()
         plt.pause(0.01)
 
 
 if __name__ == '__main__':
-    ego_list = [dict(GaussX=3.5 / 2, GaussY=-19.5), 0, 0, 0, 0, 0]
-    traffic = Traffic(shared_list=ego_list, lock=mp.Lock(), task='left', case=0)
+    ego_list = [dict(GaussX=3.5 / 2, GaussY=-28.0), 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    traffic = Traffic(shared_list=ego_list, lock=mp.Lock(), task='straight', case=0)
     traffic.run()

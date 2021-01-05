@@ -42,8 +42,8 @@ class SubscriberGps():
 
     def run(self):
         state_gps = OrderedDict()
-        state_gps['GaussX'] = 0   # intersection coordinate [m]
-        state_gps['GaussY'] = 0   # intersection coordinate [m]
+        state_gps['GaussX'] = 1.75   # intersection coordinate [m]
+        state_gps['GaussY'] = -40   # intersection coordinate [m]
         state_gps['Heading'] = 0  # intersection coordinate [deg]
 
         state_gps['GpsSpeed'] = 0          # [m/s]
@@ -68,6 +68,10 @@ class SubscriberGps():
                     heading = 1. + GpsJson["Gps"]["Gps"]["Heading"]
                     state_gps['GaussX'], state_gps['GaussY'], state_gps['Heading'] =\
                         self.rotate_and_move(x_rear_axle, y_rear_axle, heading)
+                    if -180 < state_gps['Heading'] < -90:
+                        state_gps['Heading'] += 360.
+                        # state_gps['Heading'] = np.clip(state_gps['Heading'], 0, 178)
+
                     state_gps['NorthVelocity'] = GpsJson["Gps"]["Gps"]["NorthVelocity"]
                     state_gps['EastVelocity'] = GpsJson["Gps"]["Gps"]["EastVelocity"]
                     state_gps['GpsSpeed'] = math.sqrt(state_gps['NorthVelocity'] ** 2 + state_gps['EastVelocity']**2)
