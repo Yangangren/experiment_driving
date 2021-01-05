@@ -371,8 +371,11 @@ class Controller(object):
 
     def _construct_ego_vector(self, state_gps):
         ego_phi = state_gps['Heading']
+        ego_phi_rad = ego_phi * np.pi / 180.
         ego_x, ego_y = state_gps['GaussX'], state_gps['GaussY']
-        ego_v_x, ego_v_y = state_gps['GpsSpeed'], 0.
+        v_in_y_coord, v_in_x_coord = -state_gps['EastVelocity'], state_gps['NorthVelocity']
+        ego_v_x = v_in_y_coord * np.sin(ego_phi_rad) + v_in_x_coord * np.cos(ego_phi_rad)
+        ego_v_y = v_in_y_coord * np.cos(ego_phi_rad) - v_in_x_coord * np.sin(ego_phi_rad)  # todo: check the sign
         ego_r = state_gps['YawRate']                      # rad/s
         self.ego_info_dim = 6
         ego_feature = [ego_v_x, ego_v_y, ego_r, ego_x, ego_y, ego_phi]
