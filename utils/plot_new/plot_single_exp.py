@@ -34,7 +34,7 @@ def single_plot(data_all, keys, **kwargs):
             ylim = axes.get_ylim()
             plt.plot([data_all['Time'][min_index], data_all['Time'][min_index]], ylim, c='red', linestyle='--')
             plt.plot([data_all['Time'][max_index], data_all['Time'][max_index]], ylim, c='red', linestyle='--')
-            out_index, _ = search_leq(data_all['GaussX'], -11.0)
+            out_index, _ = search_geq(data_all['GaussX'], 11.0)
             plt.plot([data_all['Time'][out_index], data_all['Time'][out_index]], ylim, c='coral', linestyle='--')
 
     plt.legend(labels=labels, loc='best')
@@ -128,13 +128,13 @@ def single_plot_other_vehicles(data_all, path, highlight=True):
 
 
 if __name__ == '__main__':
-    exp_index = 'case0/noise1/20210105_151510_real'
-    model_index = 'left/experiment-2021-01-05-10-29-18'
+    exp_index = 'case0/noise1/05_211334_real'
+    model_index = 'right/experiment-2021-01-05-01-07-20'
     data_all, keys_for_data = load_data(model_index, exp_index)
     print(keys_for_data)
     path = (exp_index, model_index)
 
     single_plot_time_series(data_all, path, AutoMode=True) # if not switch into auto mode, add kwargs: VehicleMode=False
-    # single_plot_other_series(data_all, path)
+    single_plot_other_series(data_all, path)
     # single_plot_other_vehicles(data_all, exp_index, highlight=False)
     single_plot_compare_response(data_all, path, AutoMode=True)
