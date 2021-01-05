@@ -78,7 +78,7 @@ def built_parser():
     parser.add_argument('--model_only_test', type=bool, default=False)
     # parser.add_argument('--backup', type=str, default='abso_POLICY: add_random init:0103_model_parameters CLIP TORQUE TO 100: CANCEL inertia: '
     # 'debug vehicle dynamics, modify done position: add noise in all states: change phi only start init 100000 change init position')
-    parser.add_argument('--backup', type=str, default='abso_POLICY: no_random init:0103_model_parameters CLIP TORQUE TO 100: CANCEL inertia')
+    parser.add_argument('--backup', type=str, default='abso_POLICY: no_random init:0103_model_parameters CLIP TORQUE TO 250: CANCEL inertia')
 
     model_only_test = parser.parse_args().model_only_test
     flag = 'model' if model_only_test else 'real'
