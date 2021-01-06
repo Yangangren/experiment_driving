@@ -599,34 +599,27 @@ class Controller(object):
                              'other{}_phi'.format(i): vehs_vector[self.per_veh_info_dim*i+3]})
         return vector, obs_dict, vehs_vector  # todo: if output vector without noise
 
-    def _set_inertia(self, steer_from_policy, inertia_time=0.2, sampletime=0.1, k_G=1.): # todo: adjust the inertia time
-        steer_output = (1. - sampletime / inertia_time) * self.last_steer_output + \
-                       k_G * sampletime / inertia_time * steer_from_policy
-
-        self.last_steer_output = steer_output
-        return steer_output
-
     def _action_transformation_for_end2end(self, action, state_gps, model_flag):  # [-1, 1]
-        ego_v_x = state_gps['GpsSpeed'] if not model_flag else 0.
+        ego_v_x = state_gps['GpsSpeed'] if not model_flag else state_gps['v_x']
         torque_clip = 100. if ego_v_x > self.clipped_v else 250.         # todo: clipped v
         action = np.clip(action, -1.0, 1.0)
         front_wheel_norm_rad, a_x_norm = action[0], action[1]
         front_wheel_deg = 0.4 / pi * 180 * front_wheel_norm_rad
         steering_wheel = front_wheel_deg * self.steer_factor
-        # steering_wheel = self._set_inertia(steering_wheel)             # todo:set inertia
 
+        # steering_wheel = self._set_inertia(steering_wheel)             # todo:set inertia
         steering_wheel = np.clip(steering_wheel, -360., 360)
         a_x = 2.25*a_x_norm - 0.75
-        if a_x > 0:
+        if a_x > -0.1:
             # torque = np.clip(a_x * 300., 0., 350.)
-            torque = np.clip((a_x-0.4)/0.4*50+150., 0., torque_clip)
+            torque = np.clip((a_x+0.1-0.4)/0.4*80+150., 0., torque_clip)
             decel = 0.
             tor_flag = 1
             dec_flag = 0
         else:
             torque = 0.
             # decel = np.clip(-a_x, 0., 4.)
-            decel = -np.clip(-a_x, 0., 3.)
+            decel = a_x-0.1
             tor_flag = 0
             dec_flag = 1
 
@@ -739,6 +732,16 @@ class Controller(object):
                         # ------------------drive model in real action---------------------------------
 
                         # ------------------drive model in model action---------------------------------
+                        if self.step % 5 == 0:
+                            v_in_y_coord, v_in_x_coord = -state_gps['EastVelocity'], state_gps['NorthVelocity']
+                            ego_phi = state_gps['Heading']
+                            ego_phi_rad = ego_phi * np.pi / 180.
+                            ego_vx = v_in_y_coord * np.sin(ego_phi_rad) + v_in_x_coord * np.cos(ego_phi_rad)
+                            ego_vy = v_in_y_coord * np.cos(ego_phi_rad) - v_in_x_coord * np.sin(ego_phi_rad)
+                            ego_vy = -ego_vy
+                            ego_r, ego_x, ego_y, ego_phi = state_gps['YawRate'], state_gps['GaussX'], state_gps[
+                                'GaussY'], state_gps['Heading']
+                            self.model_driven_by_model_action.set_states(np.array([[ego_vx, ego_vy, ego_r, ego_x, ego_y, ego_phi]], dtype=np.float32))
                         state_driven_by_model_action = self.model_driven_by_model_action.get_states()[0]
                         v_x, v_y, r, x, y, phi = state_driven_by_model_action[0], state_driven_by_model_action[1], state_driven_by_model_action[2], \
                                                  state_driven_by_model_action[3], state_driven_by_model_action[4], state_driven_by_model_action[5]
@@ -746,8 +749,8 @@ class Controller(object):
                         obs_model, obs_dict_model, veh_vec_model = self._get_obs(state_gps_modified_by_model,
                                                                                  state_other, model_flag=True)
                         action_model = self.model.run(obs_model)
-                        _, _, _, _, _, front_wheel_deg_model, a_x_model = \
-                            self._action_transformation_for_end2end(action_model, state_gps, model_flag=True)
+                        steer_wheel_deg_model, torque_model, decel_model, tor_flag_model, dec_flag_model, front_wheel_deg_model, a_x_model = \
+                            self._action_transformation_for_end2end(action_model, state_gps_modified_by_model, model_flag=True)
                         modelaction4model = np.array([[front_wheel_deg_model*np.pi/180, a_x_model]], dtype=np.float32)
                         state_model_in_model_action = self.model_driven_by_model_action.model_step(state_gps, state_can['VehicleMode'],
                                                                                                    modelaction4model,
@@ -758,15 +761,24 @@ class Controller(object):
                         # ==============================================================================================
 
                         start_time = time.time()
+                        # control = {'Decision': {
+                        #     'Control': {#'VehicleSpeedAim': 20/3.6,
+                        #                 'Deceleration': decel,
+                        #                 'Torque': torque,
+                        #                 'Dec_flag': dec_flag,
+                        #                 'Tor_flag': tor_flag,
+                        #                 'SteerAngleAim': np.float64(steer_wheel_deg+1.7),
+                        #                 'VehicleGearAim': 1,
+                        #                 'IsValid': True}}}
                         control = {'Decision': {
-                            'Control': {#'VehicleSpeedAim': 20/3.6,
-                                        'Deceleration': decel,
-                                        'Torque': torque,
-                                        'Dec_flag': dec_flag,
-                                        'Tor_flag': tor_flag,
-                                        'SteerAngleAim': np.float64(steer_wheel_deg+1.7),
-                                        'VehicleGearAim': 1,
-                                        'IsValid': True}}}
+                            'Control': {  # 'VehicleSpeedAim': 20/3.6,
+                                'Deceleration': decel_model,
+                                'Torque': torque_model,
+                                'Dec_flag': dec_flag_model,
+                                'Tor_flag': tor_flag_model,
+                                'SteerAngleAim': np.float64(steer_wheel_deg_model + 1.7),
+                                'VehicleGearAim': 1,
+                                'IsValid': True}}}
                         # control = {'Decision': {
                         #     'Control': {  # 'VehicleSpeedAim': 20/3.6,
                         #         'Deceleration': -2.0,
@@ -787,13 +799,13 @@ class Controller(object):
                         time_decision = time.time() - self.time_in
                         run_time = time.time() - self.time_initial
 
-                        decision = OrderedDict({'Deceleration': decel,  # [m/s^2]
-                                                'Torque': torque,  # [N*m]
-                                                'Dec_flag': dec_flag,
-                                                'Tor_flag': tor_flag,
-                                                'SteerAngleAim': steer_wheel_deg,  # [deg]
-                                                'front_wheel_deg': front_wheel_deg,
-                                                'a_x': a_x})  # [m/s^2]
+                        decision = OrderedDict({'Deceleration': decel_model,  # [m/s^2]
+                                                'Torque': torque_model,  # [N*m]
+                                                'Dec_flag': dec_flag_model,
+                                                'Tor_flag': tor_flag_model,
+                                                'SteerAngleAim': steer_wheel_deg_model,  # [deg]
+                                                'front_wheel_deg': front_wheel_deg_model,
+                                                'a_x': a_x_model})  # [m/s^2]
 
                         with self.lock:
                             self.shared_list[6] = self.step
