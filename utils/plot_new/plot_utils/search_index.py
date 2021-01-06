@@ -45,6 +45,8 @@ def search_leq(data, threshold):
 def search_automode_index(data):
     min_index = data['VehicleMode'].index(1.0)
     max_index = min_index + data['VehicleMode'].count(1.0)
+    if max_index == len(data['VehicleMode']):
+        max_index = -1
 
     return min_index, max_index
 

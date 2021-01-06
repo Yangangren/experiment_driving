@@ -2,13 +2,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 from utils.plot_new.plot_utils.load_record import load_data
-from utils.plot_new.plot_utils.search_index import search_geq, search_automode_time
+from utils.plot_new.plot_utils.search_index import search_geq, search_automode_time, search_leq
 from plot_online import Plot
 # from math import sin, cos, pi
 import math
 import os
 
 CROSSROAD_SIZE = 22
+EXTENSION = 25
 LANE_WIDTH = 3.5
 START_OFFSET = 3
 LANE_NUMBER = 1
@@ -19,7 +20,7 @@ STATE_OTHER_WIDTH = EGO_WIDTH
 
 
 class Single_bird_view_plot(object):
-    def __init__(self, data_all, task, draw_other_veh='scatter', **kwargs):
+    def __init__(self, data_all, draw_other_veh='scatter', **kwargs):
         proj_root_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
         self.data_all = data_all
         self.ego_x = data_all['GaussX']
@@ -36,8 +37,8 @@ class Single_bird_view_plot(object):
         right_construct_traj = np.load(join_path('/map/right_construct.npy'))
         self.ref_path_all = {'left': left_construct_traj, 'straight': straight_construct_traj,
                              'right': right_construct_traj}
-        self.ref_path = self.ref_path_all[task]
-        self.fig = plt.figure()
+        # self.ref_path = self.ref_path_all[task]
+        self.fig = plt.figure(dpi=200)
         self._preprocess_data()
         self.start_index = 0
         self.stop_index = -1
@@ -105,7 +106,7 @@ class Single_bird_view_plot(object):
     def single_exp_bird_view(self):
         square_length = CROSSROAD_SIZE
         start_offset = START_OFFSET
-        extension = 40
+        extension = EXTENSION
         lane_width = LANE_WIDTH
         light_line_width = 3
         dotted_line_style = '--'
@@ -115,12 +116,7 @@ class Single_bird_view_plot(object):
         plt.axis("equal")
         plt.axis('off')
 
-        def is_in_plot_area(x, y, tolerance=5):
-            if -square_length / 2 - extension + tolerance < x < square_length / 2 + extension - tolerance and \
-                    -square_length / 2 - extension + tolerance < y < square_length / 2 + extension - tolerance:
-                return True
-            else:
-                return False
+
 
         self.ax.add_patch(plt.Rectangle((-square_length / 2 - extension, -square_length / 2 - extension - start_offset),
                                    square_length + 2 * extension, square_length + 2 * extension + start_offset,
@@ -129,11 +125,11 @@ class Single_bird_view_plot(object):
         self.ax.set_title('Bird View')
 
         # ----------arrow--------------
-        plt.arrow(lane_width / 2, -square_length / 2 - 10, 0, 5, color='b')
-        plt.arrow(lane_width / 2, -square_length / 2 - 10 + 5, -0.5, 0, color='b', head_width=1)
-        plt.arrow(lane_width / 2, -square_length / 2 - 10, 0, 5, color='b', head_width=1)
-        plt.arrow(lane_width / 2, -square_length / 2 - 10, 0, 5, color='b')
-        plt.arrow(lane_width / 2, -square_length / 2 - 10 + 5, 0.5, 0, color='b', head_width=1)
+        # plt.arrow(lane_width / 2, -square_length / 2 - 10, 0, 5, color='b')
+        # plt.arrow(lane_width / 2, -square_length / 2 - 10 + 5, -0.5, 0, color='b', head_width=1)
+        # plt.arrow(lane_width / 2, -square_length / 2 - 10, 0, 5, color='b', head_width=1)
+        # plt.arrow(lane_width / 2, -square_length / 2 - 10, 0, 5, color='b')
+        # plt.arrow(lane_width / 2, -square_length / 2 - 10 + 5, 0.5, 0, color='b', head_width=1)
 
         # ----------horizon--------------
         plt.plot([-square_length / 2 - extension, -square_length / 2], [0, 0], color='black')
@@ -204,7 +200,7 @@ class Single_bird_view_plot(object):
             self.draw_other_vehicles_in_points()
         elif self.draw_other_veh == 'rectangular':
             self.draw_other_vehicles_in_rec()
-        ax1 = self.fig.add_axes([0.85, 0.072, 0.04, 0.815])
+        ax1 = self.fig.add_axes([0.8, 0.2, 0.04, 0.6])
         cmap = mpl.cm.plasma_r
         norm = mpl.colors.Normalize(vmin=float(self.sparse_time[self.start_index]), vmax=float(self.sparse_time[self.stop_index]))
         bar = mpl.colorbar.ColorbarBase(ax=ax1, cmap=cmap, norm=norm, orientation='vertical')
@@ -221,20 +217,39 @@ class Single_bird_view_plot(object):
         y_others = self.sparse_y_others[self.stop_index]
         phi_others = self.sparse_phi_others[self.stop_index]
         for i in range(len(x_others)):
-            self.draw_rotate_rec(x_others[i], y_others[i], phi_others[i], 4.8, 2.0, color)
+            if -CROSSROAD_SIZE/2-EXTENSION < x_others[i] < CROSSROAD_SIZE/2 + EXTENSION\
+                    and -CROSSROAD_SIZE - EXTENSION < y_others[i] < CROSSROAD_SIZE - EXTENSION:
+                self.draw_rotate_rec(x_others[i], y_others[i], phi_others[i], 4.8, 2.0, color)
 
     def draw_other_vehicles_in_points(self):
+        square_length = CROSSROAD_SIZE
+        extension = EXTENSION
+        def is_in_plot_area(x, y, tolerance=1):
+            if -square_length / 2 - extension + tolerance < x < square_length / 2 + extension - tolerance and \
+                    -square_length / 2 - extension + tolerance < y < square_length / 2 + extension - tolerance:
+                return True
+            else:
+                return False
+        if self.stop_index == -1:
+            self.stop_index = len(self.sparse_time) - 1
         for i in range(self.sparse_x_others.shape[1]):
-            plt.scatter(self.sparse_x_others[self.start_index: self.stop_index, i], self.sparse_y_others[self.start_index: self.stop_index, i],
+            # judge real stop_index
+            for j in range(self.stop_index - self.start_index):
+                if is_in_plot_area(self.sparse_x_others[self.start_index + j, i], self.sparse_y_others[self.start_index + j, i]) == False:
+                    stop_index = self.start_index + j
+                    break
+                else:
+                    stop_index = self.stop_index
+            plt.scatter(self.sparse_x_others[self.start_index: stop_index, i], self.sparse_y_others[self.start_index: stop_index, i],
                         marker='D',
                         alpha=0.5,
-                        s = 15,
-                        c=self.sparse_time[self.start_index: self.stop_index], cmap='plasma_r')
+                        s = 20,
+                        c=self.sparse_time[self.start_index: stop_index], cmap='plasma_r')
 
     def draw_ego_points(self):
         plt.scatter(self.sparse_ego_x[self.start_index: self.stop_index], self.sparse_ego_y[self.start_index: self.stop_index],
                     marker='o',
-                    s = 15,
+                    s = 20,
                     c=self.sparse_time[self.start_index: self.stop_index], cmap='plasma_r')
 
 
@@ -242,10 +257,16 @@ class Single_bird_view_plot(object):
         return None
 
     def save_plot(self):
-        fig_path = self.root_dir + '/record/' + self.path + '/figure/bird_view_fig/'
+        # fig_path = self.root_dir + '/record/' + self.path + '/figure/bird_view_fig/'
+        # if not os.path.exists(fig_path):
+        #     os.mkdir(fig_path)
+        fig_path = self.root_dir + '/utils/models/' + model_index + '/record/' + exp_index + '/figure/'
+        class_fig_path = fig_path + 'bird_view_fig/'
         if not os.path.exists(fig_path):
             os.mkdir(fig_path)
-        name = fig_path + 'bird_view.jpg'
+        if not os.path.exists(class_fig_path):
+            os.mkdir(class_fig_path)
+        name = class_fig_path + 'bird_view.jpg'
         plt.savefig(name)
 
 
@@ -254,10 +275,18 @@ class Single_bird_view_plot(object):
 
 
 if __name__ == '__main__':
-    exp_index = 'left/case0_noise1_20210104_221847'
-    data_all, keys_for_data = load_data(exp_index)
-    automode_start_time, automode_stop_time = search_automode_time(data_all)
-    print('Auto mode start: {:.2f}s, stop: {:.2f}s'.format(automode_start_time, automode_stop_time))
-    bird_view_plot = Single_bird_view_plot(data_all, 'left', draw_other_veh='scatter', path=exp_index) # rectangular, scatter
-    bird_view_plot.set_time(automode_start_time, automode_stop_time)
+    # exp_index = 'left/case0_noise1_20210104_221847'
+    exp_index = 'case0/noise1/06_185351_real'
+    model_index = 'left/experiment-2021-01-06-14-33-09'
+    path = (exp_index, model_index)
+    data_all, keys_for_data = load_data(model_index, exp_index)
+    bird_view_plot = Single_bird_view_plot(data_all, draw_other_veh='scatter',
+                                           path=path)  # rectangular, scatter
+    try:
+        automode_start_time, automode_stop_time = search_automode_time(data_all)
+        print('Auto mode start: {:.2f}s, stop: {:.2f}s'.format(automode_start_time, automode_stop_time))
+        bird_view_plot.set_time(automode_start_time, automode_stop_time)
+    except (ValueError):
+        print('Not switch into autonomous mode!')
+
     bird_view_plot.single_exp_bird_view()
