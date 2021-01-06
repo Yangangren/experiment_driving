@@ -655,7 +655,7 @@ class Controller(object):
                         time_receive_radar = self.shared_list[5] if self.if_radar else 0.
 
                     state_ego = OrderedDict()
-                    state_gps.update(dict(GaussX=x, GaussY=y, Heading=r))  # only for plot online
+                    state_gps.update(dict(GaussX=x, GaussY=y, Heading=phi, GpsSpeed=v_x))  # only for plot online
                     state_ego.update(state_gps)
                     state_ego.update(state_can)
 
