@@ -134,8 +134,8 @@ def single_plot_other_vehicles(data_all, path, highlight=True):
 
 
 if __name__ == '__main__':
-    exp_index = 'case0/noise1/06_193450_model'
-    model_index = 'straight/experiment-2021-01-05-01-05-43'
+    exp_index = 'case0/noise1/06_195738_real'
+    model_index = 'right/experiment-2021-01-05-01-05-43'
     data_all, keys_for_data = load_data(model_index, exp_index)
     print(keys_for_data)
     path = (exp_index, model_index)

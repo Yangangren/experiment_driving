@@ -600,7 +600,7 @@ class Controller(object):
         return vector, obs_dict, vehs_vector  # todo: if output vector without noise
 
     def _action_transformation_for_end2end(self, action, state_gps, model_flag):  # [-1, 1]
-        ego_v_x = state_gps['GpsSpeed'] if not model_flag else 0.
+        ego_v_x = state_gps['GpsSpeed'] if not model_flag else state_gps['v_x']
         torque_clip = 100. if ego_v_x > self.clipped_v else 250.         # todo: clipped v
         action = np.clip(action, -1.0, 1.0)
         front_wheel_norm_rad, a_x_norm = action[0], action[1]
@@ -750,7 +750,7 @@ class Controller(object):
                                                                                  state_other, model_flag=True)
                         action_model = self.model.run(obs_model)
                         steer_wheel_deg_model, torque_model, decel_model, tor_flag_model, dec_flag_model, front_wheel_deg_model, a_x_model = \
-                            self._action_transformation_for_end2end(action_model, state_gps, model_flag=True)
+                            self._action_transformation_for_end2end(action_model, state_gps_modified_by_model, model_flag=True)
                         modelaction4model = np.array([[front_wheel_deg_model*np.pi/180, a_x_model]], dtype=np.float32)
                         state_model_in_model_action = self.model_driven_by_model_action.model_step(state_gps, state_can['VehicleMode'],
                                                                                                    modelaction4model,
