@@ -8,11 +8,13 @@ def single_plot(data_all, keys, **kwargs):
     if 'fig_num' in kwargs.keys():
         plt.figure(kwargs['fig_num'])
     else:
-        plt.figure()
+        plt.figure(dpi=200)
 
     if kwargs['highlight'] == True:
         min_index = data_all['VehicleMode'].index(1.0)
         max_index = min_index + data_all['VehicleMode'].count(1.0)
+        if max_index >= len(data_all['VehicleMode']):
+            max_index = -1
 
 
     labels = []
@@ -36,6 +38,8 @@ def single_plot(data_all, keys, **kwargs):
             plt.plot([data_all['Time'][max_index], data_all['Time'][max_index]], ylim, c='red', linestyle='--')
             out_index, _ = search_leq(data_all['GaussX'], -11.0)
             plt.plot([data_all['Time'][out_index], data_all['Time'][out_index]], ylim, c='coral', linestyle='--')
+            in_index, _ = search_geq(data_all['GaussY'], -14.0)
+            plt.plot([data_all['Time'][in_index], data_all['Time'][in_index]], ylim, c='coral', linestyle='--')
 
     plt.legend(labels=labels, loc='best')
     plt.grid()
