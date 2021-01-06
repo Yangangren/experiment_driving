@@ -47,24 +47,24 @@ def deal_with_phi_diff(phi_diff):
 
 class VehicleDynamics(object):
     def __init__(self, ):
-        # self.vehicle_params = dict(C_f=-155495,  # front wheel cornering stiffness [N/rad]
-        #                            C_r=-155495,  # rear wheel cornering stiffness [N/rad]
-        #                            a=1.19,  # distance from CG to front axle [m]
-        #                            b=1.46,  # distance from CG to rear axle [m]
-        #                            mass=1520.,  # mass [kg]
-        #                            I_z=2642,  # Polar moment of inertia at CG [kg*m^2]
-        #                            miu=0.8,  # tire-road friction coefficient
-        #                            g=9.81,  # acceleration of gravity [m/s^2]
-        #                            )
-        self.vehicle_params = dict(C_f=-128915.5,  # front wheel cornering stiffness [N/rad]
-                                   C_r=-85943.6,  # rear wheel cornering stiffness [N/rad]
-                                   a=1.06,  # distance from CG to front axle [m]
-                                   b=1.85,  # distance from CG to rear axle [m]
-                                   mass=1412.,  # mass [kg]
-                                   I_z=1536.7,  # Polar moment of inertia at CG [kg*m^2]
-                                   miu=1.0,  # tire-road friction coefficient
+        self.vehicle_params = dict(C_f=-155495,  # front wheel cornering stiffness [N/rad]
+                                   C_r=-155495,  # rear wheel cornering stiffness [N/rad]
+                                   a=1.19,  # distance from CG to front axle [m]
+                                   b=1.46,  # distance from CG to rear axle [m]
+                                   mass=1520.,  # mass [kg]
+                                   I_z=2642,  # Polar moment of inertia at CG [kg*m^2]
+                                   miu=0.8,  # tire-road friction coefficient
                                    g=9.81,  # acceleration of gravity [m/s^2]
                                    )
+        # self.vehicle_params = dict(C_f=-128915.5,  # front wheel cornering stiffness [N/rad]
+        #                            C_r=-85943.6,  # rear wheel cornering stiffness [N/rad]
+        #                            a=1.06,  # distance from CG to front axle [m]
+        #                            b=1.85,  # distance from CG to rear axle [m]
+        #                            mass=1412.,  # mass [kg]
+        #                            I_z=1536.7,  # Polar moment of inertia at CG [kg*m^2]
+        #                            miu=1.0,  # tire-road friction coefficient
+        #                            g=9.81,  # acceleration of gravity [m/s^2]
+        #                            )
         a, b, mass, g = self.vehicle_params['a'], self.vehicle_params['b'], \
                         self.vehicle_params['mass'], self.vehicle_params['g']
         F_zf, F_zr = b * mass * g / (a + b), a * mass * g / (a + b)
@@ -372,21 +372,25 @@ class Controller(object):
         self.model_driven_by_model_action = VehicleDynamics()
         self.model_driven_by_real_action = VehicleDynamics()
 
-    def _construct_ego_vector(self, state_gps):
-        ego_phi = state_gps['Heading']
-        ego_phi_rad = ego_phi * np.pi / 180.
-        ego_x, ego_y = state_gps['GaussX'], state_gps['GaussY']
-        v_in_y_coord, v_in_x_coord = -state_gps['EastVelocity'], state_gps['NorthVelocity']
-        if self.model_only_test:
-            ego_v_x, ego_v_y = state_gps['GpsSpeed'], 0
+    def _construct_ego_vector(self, state_gps, model_flag):
+        if model_flag:
+            v_x, v_y, r, x, y, phi = state_gps['v_x'], state_gps['v_y'], state_gps['r'],\
+                                     state_gps['x'],  state_gps['y'], state_gps['phi']
+            self.ego_info_dim = 6
+            ego_feature = [v_x, v_y, r, x, y, phi]
+            return np.array(ego_feature, dtype=np.float32)
         else:
+            ego_phi = state_gps['Heading']
+            ego_phi_rad = ego_phi * np.pi / 180.
+            ego_x, ego_y = state_gps['GaussX'], state_gps['GaussY']
+            v_in_y_coord, v_in_x_coord = -state_gps['EastVelocity'], state_gps['NorthVelocity']
             ego_v_x = v_in_y_coord * np.sin(ego_phi_rad) + v_in_x_coord * np.cos(ego_phi_rad)
             ego_v_y = v_in_y_coord * np.cos(ego_phi_rad) - v_in_x_coord * np.sin(ego_phi_rad)  # todo: check the sign
-            ego_v_y = - 4. * ego_v_y
-        ego_r = state_gps['YawRate']                      # rad/s
-        self.ego_info_dim = 6
-        ego_feature = [ego_v_x, ego_v_y, ego_r, ego_x, ego_y, ego_phi]
-        return np.array(ego_feature, dtype=np.float32)
+            ego_v_y = - ego_v_y
+            ego_r = state_gps['YawRate']                      # rad/s
+            self.ego_info_dim = 6
+            ego_feature = [ego_v_x, ego_v_y, ego_r, ego_x, ego_y, ego_phi]
+            return np.array(ego_feature, dtype=np.float32)
 
     def _construct_veh_vector(self, ego_x, ego_y, state_others):
         mode_list = list(TRAFFICSETTINGS[self.task][self.case]['others'].keys())
@@ -540,24 +544,28 @@ class Controller(object):
             vehs_vector.extend([veh_x, veh_y, veh_v, veh_phi])
         return np.array(vehs_vector, dtype=np.float32)
 
-    def convert_vehs_to_rela(self, obs_abso):
-        ego_infos, tracking_infos, veh_infos = obs_abso[:self.ego_info_dim], \
-                                               obs_abso[self.ego_info_dim:self.ego_info_dim + self.per_tracking_info_dim * (
-                                                         self.num_future_data + 1)], \
-                                               obs_abso[self.ego_info_dim + self.per_tracking_info_dim * (
-                                                           self.num_future_data + 1):]
-        _, _, _, ego_x, ego_y, _ = ego_infos
-        ego = np.array([ego_x, ego_y, 0, 0]*int(len(veh_infos)/self.per_veh_info_dim), dtype=np.float32)
-        vehs_rela = veh_infos - ego
-        out = np.concatenate((ego_infos, tracking_infos, vehs_rela), axis=0)
-        return out
+    # def convert_vehs_to_rela(self, obs_abso):
+    #     ego_infos, tracking_infos, veh_infos = obs_abso[:self.ego_info_dim], \
+    #                                            obs_abso[self.ego_info_dim:self.ego_info_dim + self.per_tracking_info_dim * (
+    #                                                      self.num_future_data + 1)], \
+    #                                            obs_abso[self.ego_info_dim + self.per_tracking_info_dim * (
+    #                                                        self.num_future_data + 1):]
+    #     _, _, _, ego_x, ego_y, _ = ego_infos
+    #     ego = np.array([ego_x, ego_y, 0, 0]*int(len(veh_infos)/self.per_veh_info_dim), dtype=np.float32)
+    #     vehs_rela = veh_infos - ego
+    #     out = np.concatenate((ego_infos, tracking_infos, vehs_rela), axis=0)
+    #     return out
 
-    def _get_obs(self, state_gps, state_others):
-        ego_x, ego_y = state_gps['GaussX'], state_gps['GaussY']
-        ego_phi = state_gps['Heading']
-        ego_v_x, ego_v_y = state_gps['GpsSpeed'], 0.
+    def _get_obs(self, state_gps, state_others, model_flag):
+        if model_flag:
+            ego_v_x, _, _, ego_x, ego_y, ego_phi = state_gps['v_x'], state_gps['v_y'], state_gps['r'],\
+                                                   state_gps['x'],  state_gps['y'], state_gps['phi']
+        else:
+            ego_x, ego_y = state_gps['GaussX'], state_gps['GaussY']
+            ego_phi = state_gps['Heading']
+            ego_v_x, ego_v_y = state_gps['GpsSpeed'], 0.
         vehs_vector = self._construct_veh_vector(ego_x, ego_y, state_others)
-        ego_vector = self._construct_ego_vector(state_gps)
+        ego_vector = self._construct_ego_vector(state_gps, model_flag)
         tracking_error = self.ref_path.tracking_error_vector(np.array([ego_x], dtype=np.float32),
                                                              np.array([ego_y], dtype=np.float32),
                                                              np.array([ego_phi], dtype=np.float32),
@@ -598,8 +606,8 @@ class Controller(object):
         self.last_steer_output = steer_output
         return steer_output
 
-    def _action_transformation_for_end2end(self, action, state_gps):  # [-1, 1]
-        ego_v_x = state_gps['GpsSpeed']
+    def _action_transformation_for_end2end(self, action, state_gps, model_flag):  # [-1, 1]
+        ego_v_x = state_gps['GpsSpeed'] if not model_flag else 0.
         torque_clip = 100. if ego_v_x > self.clipped_v else 250.         # todo: clipped v
         action = np.clip(action, -1.0, 1.0)
         front_wheel_norm_rad, a_x_norm = action[0], action[1]
@@ -646,17 +654,18 @@ class Controller(object):
                         state_other = self.shared_list[4].copy()
                         time_receive_radar = self.shared_list[5] if self.if_radar else 0.
 
-                    state_gps.update(GaussX=x, GaussY=y, Heading=phi, GpsSpeed=v_x, YawRate=r)
                     state_ego = OrderedDict()
+                    state_gps.update(dict(GaussX=x, GaussY=y, Heading=r))  # only for plot online
                     state_ego.update(state_gps)
                     state_ego.update(state_can)
 
+                    state_gps_modified_by_model = dict(v_x=v_x, v_y=v_y, r=r, x=x, y=y, phi=phi)
                     self.time_in = time.time()
-                    obs, obs_dict, veh_vec = self._get_obs(state_gps, state_other)
+                    obs, obs_dict, veh_vec = self._get_obs(state_gps_modified_by_model, state_other, model_flag=True)
                     all_obs.append(obs)
                     action = self.model.run(obs)
                     steer_wheel_deg, torque, decel, tor_flag, dec_flag, front_wheel_deg, a_x = \
-                        self._action_transformation_for_end2end(action, state_gps)
+                        self._action_transformation_for_end2end(action, state_gps_modified_by_model, model_flag=True)
                     action = np.array([[front_wheel_deg * np.pi / 180, a_x]], dtype=np.float32)
                     state_model_in_model_action = self.model_driven_by_model_action.model_step(state_gps, 1,
                                                                                                action,
@@ -717,10 +726,10 @@ class Controller(object):
                         state_ego.update(state_can)
 
                         self.time_in = time.time()
-                        obs, obs_dict, veh_vec = self._get_obs(state_gps, state_other)
+                        obs, obs_dict, veh_vec = self._get_obs(state_gps, state_other, model_flag=False)
                         action = self.model.run(obs)
                         steer_wheel_deg, torque, decel, tor_flag, dec_flag, front_wheel_deg, a_x = \
-                            self._action_transformation_for_end2end(action, state_gps)
+                            self._action_transformation_for_end2end(action, state_gps, model_flag=False)
                         # ==============================================================================================
                         # ------------------drive model in real action---------------------------------
                         realaction4model = np.array([[front_wheel_deg*np.pi/180, a_x]], dtype=np.float32)
@@ -733,12 +742,12 @@ class Controller(object):
                         state_driven_by_model_action = self.model_driven_by_model_action.get_states()[0]
                         v_x, v_y, r, x, y, phi = state_driven_by_model_action[0], state_driven_by_model_action[1], state_driven_by_model_action[2], \
                                                  state_driven_by_model_action[3], state_driven_by_model_action[4], state_driven_by_model_action[5]
-                        state_gps_modified_by_model = state_gps.copy()
-                        state_gps_modified_by_model.update(GaussX=x, GaussY=y, Heading=phi, GpsSpeed=v_x, YawRate=r)
-                        obs_model, obs_dict_model, veh_vec_model = self._get_obs(state_gps_modified_by_model, state_other)
+                        state_gps_modified_by_model = dict(v_x=v_x, v_y=v_y, r=r, x=x, y=y, phi=phi)
+                        obs_model, obs_dict_model, veh_vec_model = self._get_obs(state_gps_modified_by_model,
+                                                                                 state_other, model_flag=True)
                         action_model = self.model.run(obs_model)
                         _, _, _, _, _, front_wheel_deg_model, a_x_model = \
-                            self._action_transformation_for_end2end(action_model, state_gps)
+                            self._action_transformation_for_end2end(action_model, state_gps, model_flag=True)
                         modelaction4model = np.array([[front_wheel_deg_model*np.pi/180, a_x_model]], dtype=np.float32)
                         state_model_in_model_action = self.model_driven_by_model_action.model_step(state_gps, state_can['VehicleMode'],
                                                                                                    modelaction4model,
