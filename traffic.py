@@ -245,7 +245,7 @@ class Traffic(object):
             time.sleep(0.05)
             delta_time_in_this_step = time.time() - self.abso_time_in_this_step if self.is_triggered else 0.
             state_other = self.step(delta_time_in_this_step)
-            self.render()
+            # self.render()
             self.abso_time_in_this_step = time.time()
             time_receive_radar = self.abso_time_in_this_step
 

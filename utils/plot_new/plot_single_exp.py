@@ -134,13 +134,13 @@ def single_plot_other_vehicles(data_all, path, highlight=True):
 
 
 if __name__ == '__main__':
-    exp_index = 'case0/noise1/06_105425_real'
-    model_index = 'left/experiment-2021-01-06-00-47-39'
+    exp_index = 'case0/noise1/06_195738_real'
+    model_index = 'right/experiment-2021-01-05-01-05-43'
     data_all, keys_for_data = load_data(model_index, exp_index)
     print(keys_for_data)
     path = (exp_index, model_index)
 
-    single_plot_time_series(data_all, path, AutoMode=True) # if not switch into auto mode, add kwargs: VehicleMode=False
-    single_plot_other_series(data_all, path)
+    single_plot_time_series(data_all, path, AutoMode=False) # if not switch into auto mode, add kwargs: VehicleMode=False
+    # single_plot_other_series(data_all, path)
     # single_plot_other_vehicles(data_all, exp_index, highlight=False)
-    single_plot_compare_response(data_all, path, AutoMode=True)
+    # single_plot_compare_response(data_all, path, AutoMode=False)
