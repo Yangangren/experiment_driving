@@ -51,7 +51,7 @@ def load_data(model_dir, record_dir):
                         data_all_dict[keys_for_data[keys_class][i]].append(float(data))
 
     data_all_dict['accActual'] = []
-    for i in range(len(data_all_dict['GpsSpeed'])-1):
+    for i in range(len(data_all_dict['GpsSpeed'])-2):
         # print(data_all_dict['GpsSpeed'])
         data_all_dict['accActual'].append((float(data_all_dict['GpsSpeed'][i+1]) - float(data_all_dict['GpsSpeed'][i])) / (data_all_dict['Time'][i+1]-data_all_dict['Time'][i]))
     data_all_dict['accActual'].append(data_all_dict['accActual'][-1])
