@@ -71,14 +71,14 @@ def built_parser():
     parser.add_argument('--if_radar', type=bool, default=False)
     task = parser.parse_args().task
     case = parser.parse_args().case
-    parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-05-10-29-18'.format(task))
-    parser.add_argument('--load_ite', type=str, default=100000)
+    parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-06-00-47-39'.format(task))
+    parser.add_argument('--load_ite', type=str, default=65000)
     parser.add_argument('--noise_factor', type=float, default=1.)
-    parser.add_argument('--surr_flag', type=bool, default=False)
+    parser.add_argument('--surr_flag', type=bool, default=True)
     parser.add_argument('--model_only_test', type=bool, default=False)
     parser.add_argument('--clipped_v', type=float, default=30, help='m/s')
 
-    parser.add_argument('--backup', type=str, default='NO CLIP TORQUE 100 v>3, v<3 250: CANCEL inertia; vy*3.5')
+    parser.add_argument('--backup', type=str, default='NO CLIP TORQUE 250: CANCEL inertia; vy*3.5')
 
     load_dir = parser.parse_args().load_dir
     model_only_test = parser.parse_args().model_only_test
