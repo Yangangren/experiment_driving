@@ -382,7 +382,7 @@ class Controller(object):
         else:
             ego_v_x = v_in_y_coord * np.sin(ego_phi_rad) + v_in_x_coord * np.cos(ego_phi_rad)
             ego_v_y = v_in_y_coord * np.cos(ego_phi_rad) - v_in_x_coord * np.sin(ego_phi_rad)  # todo: check the sign
-            ego_v_y = - 3. * ego_v_y
+            ego_v_y = - 3.5 * ego_v_y
         ego_r = state_gps['YawRate']                      # rad/s
         self.ego_info_dim = 6
         ego_feature = [ego_v_x, ego_v_y, ego_r, ego_x, ego_y, ego_phi]

@@ -34,7 +34,7 @@ def single_plot(data_all, keys, **kwargs):
             ylim = axes.get_ylim()
             plt.plot([data_all['Time'][min_index], data_all['Time'][min_index]], ylim, c='red', linestyle='--')
             plt.plot([data_all['Time'][max_index], data_all['Time'][max_index]], ylim, c='red', linestyle='--')
-            out_index, _ = search_geq(data_all['GaussX'], 11.0)
+            out_index, _ = search_leq(data_all['GaussX'], -11.0)
             plt.plot([data_all['Time'][out_index], data_all['Time'][out_index]], ylim, c='coral', linestyle='--')
 
     plt.legend(labels=labels, loc='best')
@@ -104,8 +104,10 @@ def single_plot_compare_response(data_all, path, AutoMode=True):
                 title='Response-positionY', path=path, highlight=highlight)
     single_plot(data_all, ['Heading', 'model_phi_in_real_action', 'model_phi_in_model_action'],
                 title='Response-heading', path=path, highlight=highlight)
-    single_plot(data_all, ['GpsSpeed', 'model_vx_in_real_action', 'model_vx_in_model_action'],
-                title='Response-speed', path=path, highlight=highlight)
+    single_plot(data_all, ['ego_vx', 'model_vx_in_real_action', 'model_vx_in_model_action'],
+                title='Response-speedX', path=path, highlight=highlight)
+    single_plot(data_all, ['ego_vy', 'model_vy_in_real_action', 'model_vy_in_model_action'],
+                title='Response-speedY', path=path, highlight=highlight)
     single_plot(data_all, ['YawRate', 'model_r_in_real_action', 'model_r_in_model_action'],
                 title='Response-yawrate', path=path, highlight=highlight)
     single_plot(data_all, ['model_front_wheel_rad_in_real_action', 'model_front_wheel_rad_in_model_action'],
@@ -128,7 +130,7 @@ def single_plot_other_vehicles(data_all, path, highlight=True):
 
 
 if __name__ == '__main__':
-    exp_index = 'case0/noise1/06_095330_real'
+    exp_index = 'case0/noise1/06_100123_real'
     model_index = 'left/experiment-2021-01-05-10-29-18'
     data_all, keys_for_data = load_data(model_index, exp_index)
     print(keys_for_data)
