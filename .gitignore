@@ -219,6 +219,6 @@ fabric.properties
 /map/right_ref.npy
 /map/left_ref.npy
 .idea/
-/utils/models/left/experiment-2021-01-03-12-38-00/logs/
+/utils/models/left/0105/experiment-2021-01-03-12-38-00/logs/
 /utils/models/
-/utils/models/left/experiment-2021-01-03-12-38-00/
+/utils/models/left/0105/experiment-2021-01-03-12-38-00/

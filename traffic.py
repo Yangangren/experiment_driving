@@ -37,9 +37,9 @@ TRAFFICSETTINGS = dict(left=[dict(ego=dict(v_x=2., v_y=0., r=0., x=3.5/2, y=-29,
                                   ),
 
                              dict(ego=dict(v_x=2., v_y=0., r=0., x=3.5/2, y=-29, phi=90.,),
-                                  others=OrderedDict(dl=dict(x=3.5/2, y=-14, phi=90, l=4.8, w=2.0, v=0., route=('1o', '4i')),
-                                                     ud=dict(x=-3.5/2, y=11, phi=-90, l=4.8, w=2.0, v=3., route=('3o', '1i')),
-                                                     ul=dict(x=-3.5/2, y=40, phi=-90, l=4.8, w=2.0, v=5., route=('3o', '4i')),),
+                                  others=OrderedDict(dl=dict(x=3.5/2, y=-11, phi=90, l=4.8, w=2.0, v=3., route=('1o', '4i')),
+                                                     ud=dict(x=-3.5/2, y=14, phi=-90, l=4.8, w=2.0, v=3., route=('3o', '1i')),
+                                                     ul=dict(x=-3.5/2, y=45, phi=-90, l=4.8, w=2.0, v=5., route=('3o', '4i')),),
                                   v_light=0,
                                   ),
                              ],
@@ -151,7 +151,12 @@ class Traffic(object):
                         # veh_ul
                         ul_next_x, ul_next_y, ul_next_v, ul_next_phi = self.prediction('ul', veh_ul, 0., delta_time)
                     elif self.case == 2:
-                        pass
+                        # veh_dl
+                        dl_next_x, dl_next_y, dl_next_v, dl_next_phi = self.prediction('dl', veh_dl, 2.5, delta_time)
+                        # veh_ud
+                        ud_next_x, ud_next_y, ud_next_v, ud_next_phi = self.prediction('ud', veh_ud, 0, delta_time)
+                        # veh_ul
+                        ul_next_x, ul_next_y, ul_next_v, ul_next_phi = self.prediction('ul', veh_ul, 0., delta_time)
 
                 else:
                     veh_dl, veh_ud, veh_ul = self.others['dl'], self.others['ud'], self.others['ul']
@@ -240,7 +245,7 @@ class Traffic(object):
             time.sleep(0.05)
             delta_time_in_this_step = time.time() - self.abso_time_in_this_step if self.is_triggered else 0.
             state_other = self.step(delta_time_in_this_step)
-            # self.render()
+            self.render()
             self.abso_time_in_this_step = time.time()
             time_receive_radar = self.abso_time_in_this_step
 
@@ -382,5 +387,5 @@ class Traffic(object):
 
 if __name__ == '__main__':
     ego_list = [dict(GaussX=3.5 / 2, GaussY=-28.0), 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    traffic = Traffic(shared_list=ego_list, lock=mp.Lock(), task='straight', case=0)
+    traffic = Traffic(shared_list=ego_list, lock=mp.Lock(), task='left', case=1)
     traffic.run()
