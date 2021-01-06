@@ -76,9 +76,9 @@ def built_parser():
     parser.add_argument('--noise_factor', type=float, default=1.)
     parser.add_argument('--surr_flag', type=bool, default=True)
     parser.add_argument('--model_only_test', type=bool, default=False)
-    parser.add_argument('--clipped_v', type=float, default=300., help='m/s')
+    parser.add_argument('--clipped_v', type=float, default=3., help='m/s')
 
-    parser.add_argument('--backup', type=str, default='CLIP TORQUE 250: CANCEL inertia;')
+    parser.add_argument('--backup', type=str, default='CLIP TORQUE 250: CANCEL inertia;speed clip to 3')
 
     load_dir = parser.parse_args().load_dir
     model_only_test = parser.parse_args().model_only_test
