@@ -30,16 +30,20 @@ def single_plot(data_all, keys, **kwargs):
     else:
         plt.xlabel('time /s')
         labels = keys
-
-        if kwargs['highlight'] == True:
+        model_or_real = kwargs['path'][0].split('_')[-1]
+        if model_or_real == 'model':
+            pass
+        else:
             axes = plt.gca()
             ylim = axes.get_ylim()
             plt.plot([data_all['Time'][min_index], data_all['Time'][min_index]], ylim, c='red', linestyle='--')
             plt.plot([data_all['Time'][max_index], data_all['Time'][max_index]], ylim, c='red', linestyle='--')
-            out_index, _ = search_leq(data_all['GaussX'], -11.0)
-            plt.plot([data_all['Time'][out_index], data_all['Time'][out_index]], ylim, c='coral', linestyle='--')
             in_index, _ = search_geq(data_all['GaussY'], -14.0)
             plt.plot([data_all['Time'][in_index], data_all['Time'][in_index]], ylim, c='coral', linestyle='--')
+
+            out_index, _ = search_leq(data_all['GaussX'], -11.0)
+            plt.plot([data_all['Time'][out_index], data_all['Time'][out_index]], ylim, c='coral', linestyle='--')
+
 
     plt.legend(labels=labels, loc='best')
     plt.grid()
@@ -134,8 +138,8 @@ def single_plot_other_vehicles(data_all, path, highlight=True):
 
 
 if __name__ == '__main__':
-    exp_index = 'case0/noise1/06_105425_real'
     model_index = 'left/experiment-2021-01-06-00-47-39'
+    exp_index = 'case0/noise1/06_105425_real'
     data_all, keys_for_data = load_data(model_index, exp_index)
     print(keys_for_data)
     path = (exp_index, model_index)
