@@ -617,16 +617,16 @@ class Controller(object):
 
         steering_wheel = np.clip(steering_wheel, -360., 360)
         a_x = 2.25*a_x_norm - 0.75
-        if a_x > 0:
+        if a_x > -0.1:
             # torque = np.clip(a_x * 300., 0., 350.)
-            torque = np.clip((a_x-0.4)/0.4*50+150., 0., torque_clip)
+            torque = np.clip((a_x+0.1-0.4)/0.4*80+150., 0., torque_clip)
             decel = 0.
             tor_flag = 1
             dec_flag = 0
         else:
             torque = 0.
             # decel = np.clip(-a_x, 0., 4.)
-            decel = -np.clip(-a_x, 0., 3.)
+            decel = a_x-0.1
             tor_flag = 0
             dec_flag = 1
 
@@ -746,7 +746,7 @@ class Controller(object):
                         obs_model, obs_dict_model, veh_vec_model = self._get_obs(state_gps_modified_by_model,
                                                                                  state_other, model_flag=True)
                         action_model = self.model.run(obs_model)
-                        _, _, _, _, _, front_wheel_deg_model, a_x_model = \
+                        steer_wheel_deg_model, torque_model, decel_model, tor_flag_model, dec_flag_model, front_wheel_deg_model, a_x_model = \
                             self._action_transformation_for_end2end(action_model, state_gps, model_flag=True)
                         modelaction4model = np.array([[front_wheel_deg_model*np.pi/180, a_x_model]], dtype=np.float32)
                         state_model_in_model_action = self.model_driven_by_model_action.model_step(state_gps, state_can['VehicleMode'],
@@ -758,15 +758,24 @@ class Controller(object):
                         # ==============================================================================================
 
                         start_time = time.time()
+                        # control = {'Decision': {
+                        #     'Control': {#'VehicleSpeedAim': 20/3.6,
+                        #                 'Deceleration': decel,
+                        #                 'Torque': torque,
+                        #                 'Dec_flag': dec_flag,
+                        #                 'Tor_flag': tor_flag,
+                        #                 'SteerAngleAim': np.float64(steer_wheel_deg+1.7),
+                        #                 'VehicleGearAim': 1,
+                        #                 'IsValid': True}}}
                         control = {'Decision': {
-                            'Control': {#'VehicleSpeedAim': 20/3.6,
-                                        'Deceleration': decel,
-                                        'Torque': torque,
-                                        'Dec_flag': dec_flag,
-                                        'Tor_flag': tor_flag,
-                                        'SteerAngleAim': np.float64(steer_wheel_deg+1.7),
-                                        'VehicleGearAim': 1,
-                                        'IsValid': True}}}
+                            'Control': {  # 'VehicleSpeedAim': 20/3.6,
+                                'Deceleration': decel_model,
+                                'Torque': torque_model,
+                                'Dec_flag': dec_flag_model,
+                                'Tor_flag': tor_flag_model,
+                                'SteerAngleAim': np.float64(steer_wheel_deg_model + 1.7),
+                                'VehicleGearAim': 1,
+                                'IsValid': True}}}
                         # control = {'Decision': {
                         #     'Control': {  # 'VehicleSpeedAim': 20/3.6,
                         #         'Deceleration': -2.0,
@@ -787,13 +796,13 @@ class Controller(object):
                         time_decision = time.time() - self.time_in
                         run_time = time.time() - self.time_initial
 
-                        decision = OrderedDict({'Deceleration': decel,  # [m/s^2]
-                                                'Torque': torque,  # [N*m]
-                                                'Dec_flag': dec_flag,
-                                                'Tor_flag': tor_flag,
-                                                'SteerAngleAim': steer_wheel_deg,  # [deg]
-                                                'front_wheel_deg': front_wheel_deg,
-                                                'a_x': a_x})  # [m/s^2]
+                        decision = OrderedDict({'Deceleration': decel_model,  # [m/s^2]
+                                                'Torque': torque_model,  # [N*m]
+                                                'Dec_flag': dec_flag_model,
+                                                'Tor_flag': tor_flag_model,
+                                                'SteerAngleAim': steer_wheel_deg_model,  # [deg]
+                                                'front_wheel_deg': front_wheel_deg_model,
+                                                'a_x': a_x_model})  # [m/s^2]
 
                         with self.lock:
                             self.shared_list[6] = self.step
