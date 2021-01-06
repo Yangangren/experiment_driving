@@ -343,7 +343,7 @@ class Controller(object):
         self.num_future_data = 0
         self.noise_factor = noise_factor
         self.model = LoadPolicy(load_dir, load_ite)
-        self.steer_factor = 15
+        self.steer_factor = 20
         self.shared_list = shared_list
         self.read_index_old = 0
         self.receive_index_shared = receive_index
