@@ -78,7 +78,7 @@ def built_parser():
     parser.add_argument('--model_only_test', type=bool, default=False)
     parser.add_argument('--clipped_v', type=float, default=300., help='m/s')
 
-    parser.add_argument('--backup', type=str, default='CLIP TORQUE 250: CANCEL inertia; vy = -2 * vy')
+    parser.add_argument('--backup', type=str, default='CLIP TORQUE 250: CANCEL inertia;')
 
     load_dir = parser.parse_args().load_dir
     model_only_test = parser.parse_args().model_only_test

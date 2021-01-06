@@ -386,7 +386,7 @@ class Controller(object):
             v_in_y_coord, v_in_x_coord = -state_gps['EastVelocity'], state_gps['NorthVelocity']
             ego_v_x = v_in_y_coord * np.sin(ego_phi_rad) + v_in_x_coord * np.cos(ego_phi_rad)
             ego_v_y = v_in_y_coord * np.cos(ego_phi_rad) - v_in_x_coord * np.sin(ego_phi_rad)  # todo: check the sign
-            ego_v_y = - 2 * ego_v_y
+            ego_v_y = - ego_v_y
             ego_r = state_gps['YawRate']                      # rad/s
             self.ego_info_dim = 6
             ego_feature = [ego_v_x, ego_v_y, ego_r, ego_x, ego_y, ego_phi]
@@ -599,13 +599,6 @@ class Controller(object):
                              'other{}_phi'.format(i): vehs_vector[self.per_veh_info_dim*i+3]})
         return vector, obs_dict, vehs_vector  # todo: if output vector without noise
 
-    def _set_inertia(self, steer_from_policy, inertia_time=0.5, sampletime=0.1, k_G=1.): # todo: adjust the inertia time
-        steer_output = (1. - sampletime / inertia_time) * self.last_steer_output + \
-                       k_G * sampletime / inertia_time * steer_from_policy
-
-        self.last_steer_output = steer_output
-        return steer_output
-
     def _action_transformation_for_end2end(self, action, state_gps, model_flag):  # [-1, 1]
         ego_v_x = state_gps['GpsSpeed'] if not model_flag else 0.
         torque_clip = 100. if ego_v_x > self.clipped_v else 250.         # todo: clipped v
@@ -615,10 +608,8 @@ class Controller(object):
         steering_wheel = front_wheel_deg * self.steer_factor
 
         # steering_wheel = self._set_inertia(steering_wheel)             # todo:set inertia
-
         steering_wheel = np.clip(steering_wheel, -360., 360)
         a_x = 2.25*a_x_norm - 0.75
-        a_x = self._set_inertia(a_x)
         if a_x > -0.1:
             # torque = np.clip(a_x * 300., 0., 350.)
             torque = np.clip((a_x+0.1-0.4)/0.4*80+150., 0., torque_clip)
