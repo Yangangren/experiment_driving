@@ -739,6 +739,16 @@ class Controller(object):
                         # ------------------drive model in real action---------------------------------
 
                         # ------------------drive model in model action---------------------------------
+                        if self.step % 5 == 0:
+                            v_in_y_coord, v_in_x_coord = -state_gps['EastVelocity'], state_gps['NorthVelocity']
+                            ego_phi = state_gps['Heading']
+                            ego_phi_rad = ego_phi * np.pi / 180.
+                            ego_vx = v_in_y_coord * np.sin(ego_phi_rad) + v_in_x_coord * np.cos(ego_phi_rad)
+                            ego_vy = v_in_y_coord * np.cos(ego_phi_rad) - v_in_x_coord * np.sin(ego_phi_rad)
+                            ego_vy = -ego_vy
+                            ego_r, ego_x, ego_y, ego_phi = state_gps['YawRate'], state_gps['GaussX'], state_gps[
+                                'GaussY'], state_gps['Heading']
+                            self.model_driven_by_model_action.set_states(np.array([[ego_vx, ego_vy, ego_r, ego_x, ego_y, ego_phi]], dtype=np.float32))
                         state_driven_by_model_action = self.model_driven_by_model_action.get_states()[0]
                         v_x, v_y, r, x, y, phi = state_driven_by_model_action[0], state_driven_by_model_action[1], state_driven_by_model_action[2], \
                                                  state_driven_by_model_action[3], state_driven_by_model_action[4], state_driven_by_model_action[5]
