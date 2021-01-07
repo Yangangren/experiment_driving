@@ -35,16 +35,6 @@ def plot_others(data_all, exp_index):
 
 
 
-
-
-
-    # for i in range(len(data_all['Time'])):
-    #     for j in range(others_num):
-    #
-    # for i in range(others_num):
-
-
-
 if __name__ == '__main__':
     data_all, keys_for_data = load_data('left/case0_noise0_20210103_205805')
     plot_others(data_all, 'left/case0_noise0_20210103_205805')

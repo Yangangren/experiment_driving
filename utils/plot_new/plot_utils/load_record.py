@@ -1,6 +1,7 @@
 import re
 import os
 import numpy as np
+import sys
 
 
 # 获取文件的内容
@@ -19,7 +20,11 @@ def load_data(model_dir, record_dir):
     # get project root directory
     proj_root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
     path = proj_root_dir + '/utils/models/'+ model_dir + '/record/' + record_dir + '/record.txt'
-    contents, str_contents = get_contents(path)
+    try:
+        contents, str_contents = get_contents(path)
+    except:
+        print('FILE NOT FOUND! Check file path, e.g. case, noise, task')
+        sys.exit(1)
     data_all_dict = {}
     keys_for_data = {'Decision':[], 'State_ego':[],'State_other':[], 'Obs_dict':[], 'Time':[]} # 'Obs_dict':[],
     for row in contents[0:len(keys_for_data.keys()) + 2]:
