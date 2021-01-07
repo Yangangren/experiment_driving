@@ -10,8 +10,6 @@ import bezier
 import numpy as np
 import tensorflow as tf
 import zmq
-
-from traffic import TRAFFICSETTINGS
 from utils.load_policy import LoadPolicy
 
 VEHICLE_MODE_DICT = dict(left=OrderedDict(dl=1, du=1, dr=1, ud=2, ul=1), # dl=2, du=2, ud=2, ul=2
@@ -37,6 +35,10 @@ MODE2TASK = {'dr': 'right', 'du': 'straight', 'dl': 'left',
 
 EXPECTED_V = 3.
 START_OFFSET = 3.0
+TASKCASE2MODELIST = dict(left=[['dl', 'ud', 'ul'], ['dl', 'ud', 'ul'], ['dl', 'ud', 'ul']],
+                         straight=[['du', 'ur', 'ru'], ['du', 'ur', 'ru'], ['du', 'ur', 'ru']],
+                         right=[['dr', 'ur'], ['dr', 'ur'], ['dr', 'ur'],
+                                ['dr', 'lr'], ['dr', 'lr'], ['dr', 'lr']])
 
 
 def deal_with_phi_diff(phi_diff):
@@ -393,7 +395,7 @@ class Controller(object):
             return np.array(ego_feature, dtype=np.float32)
 
     def _construct_veh_vector(self, ego_x, ego_y, state_others):
-        mode_list = list(TRAFFICSETTINGS[self.task][self.case]['others'].keys())
+        mode_list = TASKCASE2MODELIST[self.task][self.case]
         all_vehicles = []
         v_light = state_others['v_light']
         xs, ys, vs, phis = state_others['x_other'], state_others['y_other'],\
@@ -544,18 +546,6 @@ class Controller(object):
             vehs_vector.extend([veh_x, veh_y, veh_v, veh_phi])
         return np.array(vehs_vector, dtype=np.float32)
 
-    # def convert_vehs_to_rela(self, obs_abso):
-    #     ego_infos, tracking_infos, veh_infos = obs_abso[:self.ego_info_dim], \
-    #                                            obs_abso[self.ego_info_dim:self.ego_info_dim + self.per_tracking_info_dim * (
-    #                                                      self.num_future_data + 1)], \
-    #                                            obs_abso[self.ego_info_dim + self.per_tracking_info_dim * (
-    #                                                        self.num_future_data + 1):]
-    #     _, _, _, ego_x, ego_y, _ = ego_infos
-    #     ego = np.array([ego_x, ego_y, 0, 0]*int(len(veh_infos)/self.per_veh_info_dim), dtype=np.float32)
-    #     vehs_rela = veh_infos - ego
-    #     out = np.concatenate((ego_infos, tracking_infos, vehs_rela), axis=0)
-    #     return out
-
     def _get_obs(self, state_gps, state_others, model_flag):
         if model_flag:
             ego_v_x, _, _, ego_x, ego_y, ego_phi = state_gps['v_x'], state_gps['v_y'], state_gps['r'],\
@@ -574,7 +564,6 @@ class Controller(object):
         self.per_tracking_info_dim = 3
         vector = np.concatenate((ego_vector, tracking_error, vehs_vector), axis=0)
         veh_idx_start = self.ego_info_dim + self.per_tracking_info_dim * (self.num_future_data + 1)
-        # vector = self.convert_vehs_to_rela(vector)
 
         noise = np.zeros_like(vector)
         nf = self.noise_factor
@@ -597,7 +586,7 @@ class Controller(object):
                              'other{}_y'.format(i): vehs_vector[self.per_veh_info_dim*i+1],
                              'other{}_v'.format(i): vehs_vector[self.per_veh_info_dim*i+2],
                              'other{}_phi'.format(i): vehs_vector[self.per_veh_info_dim*i+3]})
-        return vector, obs_dict, vehs_vector  # todo: if output vector without noise
+        return vector_with_noise, obs_dict, vehs_vector  # todo: if output vector without noise
 
     def _action_transformation_for_end2end(self, action, state_gps, model_flag):  # [-1, 1]
         ego_v_x = state_gps['GpsSpeed'] if not model_flag else state_gps['v_x']
@@ -846,29 +835,5 @@ class Controller(object):
                                           "time_receive_radar:"+str(time_receive_radar)+ ", " + '\n')
 
 
-def test_control():
-    task, case = 'left', 0
-    controller = Controller([], [0], [], [], [], [], [], task, case)
-    state_gps = dict(GaussX=3.5/2,
-                     GaussY=-2,
-                     GpsSpeed=3,
-                     Heading=90.,
-                     YawRate=0.,
-                     )
-    x_other, y_other, v_other, phi_other = [], [], [], []
-    for key, val in TRAFFICSETTINGS[task][case]['others'].items():
-        x_other.append(val['x'])
-        y_other.append(val['y'])
-        v_other.append(val['v'])
-        phi_other.append(val['phi'])
-    state_other = dict(x_other=x_other,
-                       y_other=y_other,
-                       v_other=v_other,
-                       phi_other=phi_other,
-                       v_light=0)
-    obs = controller._get_obs(state_gps, state_other)
-    # print(obs)
-
-
 if __name__ == "__main__":
-    test_control()
+    pass
