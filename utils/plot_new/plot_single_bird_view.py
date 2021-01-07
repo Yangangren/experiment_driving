@@ -3,8 +3,6 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 from utils.plot_new.plot_utils.load_record import load_data
 from utils.plot_new.plot_utils.search_index import search_geq, search_automode_time, search_leq
-from plot_online import Plot
-# from math import sin, cos, pi
 import math
 import os
 
@@ -108,15 +106,13 @@ class Single_bird_view_plot(object):
         start_offset = START_OFFSET
         extension = EXTENSION
         lane_width = LANE_WIDTH
-        light_line_width = 3
+        light_line_width = 1
         dotted_line_style = '--'
         solid_line_style = '-'
         self.ax = plt.axes(xlim=(-square_length / 2 - extension, square_length / 2 + extension),
                       ylim=(-square_length / 2 - extension, square_length / 2 + extension))
         plt.axis("equal")
         plt.axis('off')
-
-
 
         self.ax.add_patch(plt.Rectangle((-square_length / 2 - extension, -square_length / 2 - extension - start_offset),
                                    square_length + 2 * extension, square_length + 2 * extension + start_offset,
@@ -125,11 +121,11 @@ class Single_bird_view_plot(object):
         self.ax.set_title('Bird View')
 
         # ----------arrow--------------
-        # plt.arrow(lane_width / 2, -square_length / 2 - 10, 0, 5, color='b')
-        # plt.arrow(lane_width / 2, -square_length / 2 - 10 + 5, -0.5, 0, color='b', head_width=1)
-        # plt.arrow(lane_width / 2, -square_length / 2 - 10, 0, 5, color='b', head_width=1)
-        # plt.arrow(lane_width / 2, -square_length / 2 - 10, 0, 5, color='b')
-        # plt.arrow(lane_width / 2, -square_length / 2 - 10 + 5, 0.5, 0, color='b', head_width=1)
+        plt.arrow(lane_width / 2, -square_length / 2 - 10, 0, 5, color='b')
+        plt.arrow(lane_width / 2, -square_length / 2 - 10 + 5, -0.5, 0, color='b', head_width=1)
+        plt.arrow(lane_width / 2, -square_length / 2 - 10, 0, 5, color='b', head_width=1)
+        plt.arrow(lane_width / 2, -square_length / 2 - 10, 0, 5, color='b')
+        plt.arrow(lane_width / 2, -square_length / 2 - 10 + 5, 0.5, 0, color='b', head_width=1)
 
         # ----------horizon--------------
         plt.plot([-square_length / 2 - extension, -square_length / 2], [0, 0], color='black')
@@ -275,13 +271,12 @@ class Single_bird_view_plot(object):
 
 
 if __name__ == '__main__':
-    # exp_index = 'left/case0_noise1_20210104_221847'
-    exp_index = 'case0/noise1/06_185351_real'
-    model_index = 'left/experiment-2021-01-06-14-33-09'
+    exp_index = 'case0/noise1/05_211334_real'
+    model_index = 'right/experiment-2021-01-05-01-07-20'
     path = (exp_index, model_index)
     data_all, keys_for_data = load_data(model_index, exp_index)
-    bird_view_plot = Single_bird_view_plot(data_all, draw_other_veh='scatter',
-                                           path=path)  # rectangular, scatter
+    bird_view_plot = Single_bird_view_plot(data_all, draw_other_veh='scatter', # rectangular, scatter
+                                           path=path)
     try:
         automode_start_time, automode_stop_time = search_automode_time(data_all)
         print('Auto mode start: {:.2f}s, stop: {:.2f}s'.format(automode_start_time, automode_stop_time))
