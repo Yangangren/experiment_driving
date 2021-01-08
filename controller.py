@@ -11,6 +11,7 @@ import numpy as np
 import tensorflow as tf
 import zmq
 from utils.load_policy import LoadPolicy
+from utils.coordi_convert import convert_center_to_rear
 
 VEHICLE_MODE_DICT = dict(left=OrderedDict(dl=1, du=1, dr=1, ud=2, ul=1), # dl=2, du=2, ud=2, ul=2
                          straight=OrderedDict(dl=1, du=1, dr=1, ud=1, ru=2, ur=2), #vdl=1, du=2, ud=2, ru=2, ur=2
@@ -667,9 +668,13 @@ class Controller(object):
                     json_cotrol = json.dumps(control)
                     self.socket_pub.send(json_cotrol.encode('utf-8'))
 
-                    x, y, phi = state_ego['GaussX']+21277000., state_ego['GaussY']+3447700., \
-                                -state_ego['Heading'] + 90
-                    msg4radar = struct.pack('6d', 0., 0., 0., x, y, phi)
+                    x_center_in_radar_coordi, y_center_in_radar_coordi, phi_intersection = state_ego['GaussX']+21277000., state_ego['GaussY']+3447700.-0.3, \
+                                state_ego['Heading']
+
+                    x_rear_in_radar_coordi, y_rear_in_radar_coordi, phi_intersection = convert_center_to_rear(x_center_in_radar_coordi, y_center_in_radar_coordi, phi_intersection)
+                    phi_in_radar_coordi = -phi_intersection + 90
+
+                    msg4radar = struct.pack('6d', 0., 0., 0., x_rear_in_radar_coordi, y_rear_in_radar_coordi, phi_in_radar_coordi)
                     self.socket_pub_radar.send(msg4radar)
 
                     time_decision = time.time() - self.time_in
@@ -780,9 +785,18 @@ class Controller(object):
                         json_cotrol = json.dumps(control)
                         self.socket_pub.send(json_cotrol.encode('utf-8'))
 
-                        x, y, phi = state_ego['GaussX']+21277000., state_ego['GaussY']+3447700., \
-                                    -state_ego['Heading'] + 90
-                        msg4radar = struct.pack('6d', 0., 0., 0., x, y, phi)
+                        x_center_in_radar_coordi, y_center_in_radar_coordi, phi_intersection = state_ego[
+                                                                                                   'GaussX'] + 21277000., \
+                                                                                               state_ego[
+                                                                                                   'GaussY'] + 3447700. - 0.3, \
+                                                                                               state_ego['Heading']
+
+                        x_rear_in_radar_coordi, y_rear_in_radar_coordi, phi_intersection = convert_center_to_rear(
+                            x_center_in_radar_coordi, y_center_in_radar_coordi, phi_intersection)
+                        phi_in_radar_coordi = -phi_intersection + 90
+
+                        msg4radar = struct.pack('6d', 0., 0., 0., x_rear_in_radar_coordi, y_rear_in_radar_coordi,
+                                                phi_in_radar_coordi)
                         self.socket_pub_radar.send(msg4radar)
 
                         time_decision = time.time() - self.time_in

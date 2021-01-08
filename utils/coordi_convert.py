@@ -93,3 +93,16 @@ def vec_convert_gps_coordi_to_intersection_coordi(x, y, phi):
     return trans_x, trans_y, trans_phi
 
 
+def convert_rear_to_center(x_rear_axle, y_rear_axle, heading, bias=1.4):
+    """ RTK传来的自车位置不是在车辆正中心（车辆后轴）,需要换算到车辆的正中心"""
+    x_modified = x_rear_axle + bias * math.cos(heading * math.pi / 180)
+    y_modified = y_rear_axle + bias * math.sin(heading * math.pi / 180)
+    return x_modified, y_modified, heading
+
+
+def convert_center_to_rear(x_center, y_center, heading, bias=1.4):
+    "used before sending info to radar system"
+    x_rear = x_center - bias * math.cos(heading * math.pi / 180)
+    y_rear = y_center - bias * math.sin(heading * math.pi / 180)
+    return x_rear, y_rear, heading
+
