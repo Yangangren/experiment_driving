@@ -13,7 +13,7 @@ import zmq
 from utils.load_policy import LoadPolicy
 from utils.coordi_convert import convert_center_to_rear
 
-VEHICLE_MODE_DICT = dict(left=OrderedDict(dl=1, du=1, dr=1, ud=2, ul=1), # dl=2, du=2, ud=2, ul=2
+VEHICLE_MODE_DICT = dict(left=OrderedDict(dl=1, du=1, dr=1, ud=2, ul=2), # dl=2, du=2, ud=2, ul=2
                          straight=OrderedDict(dl=1, du=1, dr=1, ud=1, ru=2, ur=2), #vdl=1, du=2, ud=2, ru=2, ur=2
                          right=OrderedDict(dl=1, du=1, dr=1, ur=2, lr=2))
 
