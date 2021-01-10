@@ -57,6 +57,9 @@ def noise_box_plot(data, key, case, **kwargs):
 
 
 if __name__ == '__main__':
+    # IMPORTANT:
+    # support only one experiment in one noise directory, e.g., only exists 10_144620_real in noise0/.
+    # pls delete redundant experiment directory.
     model_index = 'left/experiment-2021-01-07-01-22-30'
     for case in [0,1,2]:
         for key in ['tracking_delta_phi','tracking_delta_y','SteerAngleAct','a_x']:
