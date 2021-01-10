@@ -17,13 +17,14 @@ class SubscriberRadar(object):
         context = zmq.Context()
         # radar
         self.socket_radar = context.socket(zmq.SUB)
-        self.socket_radar.connect("tcp://192.168.8.117:5555")  # "tcp://127.0.0.1:2323"
+        self.socket_radar.connect("tcp://10.10.21.151:5555")  # "tcp://127.0.0.1:2323"
+        # self.socket_radar.connect("tcp://10.10.21.151:5555")  # "tcp://127.0.0.1:2323"
         self.socket_radar.setsockopt(zmq.SUBSCRIBE, ''.encode('utf-8'))
 
     def parse_msg(self, msg):
         data = struct.unpack('64d', msg)
-        x_other = [data[i*8+1] - 21277000. for i in range(3)]
-        y_other = [data[i*8+2] - 3447700. for i in range(3)]
+        x_other = [data[i*8+1] for i in range(3)]
+        y_other = [data[i*8+2] for i in range(3)]
         v_lon = np.array([data[i*8+3] for i in range(3)])
         v_lat = np.array([data[i*8+4] for i in range(3)])
         v_other = np.sqrt(v_lon ** 2 + v_lat ** 2).tolist()
@@ -44,6 +45,7 @@ class SubscriberRadar(object):
                 state_other["v_light"] = 0  # todo add v light
                 time_receive_radar = time.time() - self.time_start
                 self.time_start = time.time()
+                # print(x_other, y_other, v_other, phi_other)
             except zmq.ZMQError:
                 pass
             with self.lock:
