@@ -68,10 +68,10 @@ def built_parser():
     parser.add_argument('--task', type=str, default='left')
     parser.add_argument('--case', type=int, default=0)
     parser.add_argument('--if_save', type=bool, default=True)
-    parser.add_argument('--if_radar', type=bool, default=False)
+    parser.add_argument('--if_radar', type=bool, default=True)
     task = parser.parse_args().task
     case = parser.parse_args().case
-    parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-08-14-46-32'.format(task))
+    parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-07-01-22-30'.format(task))
     parser.add_argument('--load_ite', type=str, default=75000)    # 55000
     parser.add_argument('--noise_factor', type=float, default=0.)
     parser.add_argument('--surr_flag', type=bool, default=True)

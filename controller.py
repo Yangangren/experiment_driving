@@ -37,7 +37,7 @@ MODE2TASK = {'dr': 'right', 'du': 'straight', 'dl': 'left',
 EXPECTED_V = 3.
 START_OFFSET = 3.0
 TASKCASE2MODELIST = dict(left=[['dl', 'ud', 'ul'], ['dl', 'ud', 'ul'], ['dl', 'ud', 'ul']],
-                         straight=[['du', 'ur', 'ru'], ['du', 'ur', 'ru'], ['du', 'ur', 'ru']],
+                         straight=[['du', 'ru', 'ur'], ['du', 'ru', 'ur'], ['du', 'ru', 'ur']],
                          right=[['dr', 'ur'], ['dr', 'ur'], ['dr', 'ur'],
                                 ['dr', 'lr'], ['dr', 'lr'], ['dr', 'lr']])
 
