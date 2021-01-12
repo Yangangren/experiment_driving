@@ -640,7 +640,6 @@ class Controller(object):
 
     def run(self):
         start_time = time.time()
-        all_obs = []
         with open(self.save_path + '/record.txt', 'a') as file_handle:
             file_handle.write(str("保存时间：" + datetime.now().strftime("%Y%m%d_%H%M%S")))
             file_handle.write('\n')
@@ -666,7 +665,6 @@ class Controller(object):
                     state_gps_modified_by_model = dict(v_x=v_x, v_y=v_y, r=r, x=x, y=y, phi=phi)
                     self.time_in = time.time()
                     obs, obs_dict, veh_vec = self._get_obs(state_gps_modified_by_model, state_other, model_flag=True)
-                    all_obs.append(obs)
                     action = self.model.run(obs)
                     steer_wheel_deg, torque, decel, tor_flag, dec_flag, front_wheel_deg, a_x = \
                         self._action_transformation_for_end2end(action, state_gps_modified_by_model, model_flag=True)
@@ -841,7 +839,6 @@ class Controller(object):
                         self.step += 1
 
                 if self.if_save:
-                    np.save('./all_obs.npy', all_obs)
                     if decision != {} and state_ego != {} and state_other != {}:
                         file_handle.write("Decision ")
                         for k1, v1 in decision.items():
