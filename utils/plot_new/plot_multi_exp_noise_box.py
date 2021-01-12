@@ -29,7 +29,9 @@ def noise_box_plot(data, key, case, **kwargs):
     df_list = []
     Noise=[0.0,1.0,2.0,3.0,4.0,5.0,6.0]
     for i in range(0, 7, 1):
-        min_index, max_index = search_automode_index(data[i])
+        # min_index, max_index = search_automode_index(data[i])
+        min_index, _ = search_geq(data[i]['ego_y'], -30)
+        max_index, _ = search_leq(data[i]['ego_x'], -30)
         PD = pd.DataFrame(dict(YawRate=np.array(data[i][key][min_index:max_index]).squeeze(), Noise=Noise[i], ))
         df_list.append(PD)
     YawRate_dataframe = df_list[0].append(df_list[1:], ignore_index=True, )
