@@ -184,7 +184,10 @@ class ReferencePath(object):
                     s_vals = np.linspace(0, 1.0, int(pi/2*(CROSSROAD_SIZE/2+LANE_WIDTH/2)) * meter_pointnum_ratio)
                     trj_data = curve.evaluate_multi(s_vals)
                     trj_data = trj_data.astype(np.float32)
-                    start_straight_line_x = (LANE_WIDTH/2-0.7) * np.ones(shape=(sl * meter_pointnum_ratio,), dtype=np.float32)[:-1]
+                    # rules: -0.7 for left case 0 and case 2, -0.4 for left case 1;
+                    # start_straight_line_x = (LANE_WIDTH/2-0.7) * np.ones(shape=(sl * meter_pointnum_ratio,),
+                    # dtype=np.float32)[:-1]
+                    start_straight_line_x = start_offsets * np.ones(shape=(sl * meter_pointnum_ratio,), dtype=np.float32)[:-1]
                     start_straight_line_y = np.linspace(-CROSSROAD_SIZE/2 - sl, -CROSSROAD_SIZE/2, sl * meter_pointnum_ratio, dtype=np.float32)[:-1]
                     end_straight_line_x = np.linspace(-CROSSROAD_SIZE/2, -CROSSROAD_SIZE/2 - sl, sl * meter_pointnum_ratio, dtype=np.float32)[1:]
                     end_straight_line_y = end_offset * np.ones(shape=(sl * meter_pointnum_ratio,), dtype=np.float32)[1:]
@@ -249,18 +252,16 @@ class ReferencePath(object):
                     curve = bezier.Curve(node, degree=3)
                     s_vals = np.linspace(0, 1.0, int(pi/2*(CROSSROAD_SIZE/2-LANE_WIDTH*(LANE_NUMBER-0.5))) * meter_pointnum_ratio)
                     trj_data = curve.evaluate_multi(s_vals)
-                    trj_data = trj_data.astype(np.float32)#np.array([1.75+(1200.-x)/600.*0.7 for x in range(1200)])
-                    # part1 = (1.75+1.2)*np.ones(shape=(1200-1,), dtype=np.float32)
-                    # part2 = (1.75)*np.ones(shape=(600-1,), dtype=np.float32)
-                    # start_straight_line_x = part1# np.concatenate([part1, part2])
+                    trj_data = trj_data.astype(np.float32)
+
                     def fn(i):
                         if i < 600:
                             return 1.2
                         else:
                             return 1.2-1.2/600*(i-600)
-
-                    start_straight_line_x = (start_offset) * np.ones(shape=(sl * meter_pointnum_ratio,), dtype=np.float32)[:-1]
-                    # start_straight_line_x = np.array([1.75+fn(x) for x in range(1199)], dtype=np.float32)# (start_offset+0.7) * np.ones(shape=(sl * meter_pointnum_ratio,), dtype=np.float32)[:-1]
+                    # rules: used for right case 0 and case 2
+                    # start_straight_line_x = np.array([1.75+fn(x) for x in range(1199)], dtype=np.float32)
+                    start_straight_line_x = start_offset * np.ones(shape=(sl * meter_pointnum_ratio,), dtype=np.float32)[:-1]
                     start_straight_line_y = np.linspace(-CROSSROAD_SIZE/2 - sl, -CROSSROAD_SIZE/2, sl * meter_pointnum_ratio, dtype=np.float32)[:-1]
                     end_straight_line_x = np.linspace(CROSSROAD_SIZE/2, CROSSROAD_SIZE/2 + sl, sl * meter_pointnum_ratio, dtype=np.float32)[1:]
                     end_straight_line_y = end_offset * np.ones(shape=(sl * meter_pointnum_ratio,), dtype=np.float32)[1:]
@@ -611,12 +612,14 @@ class Controller(object):
         front_wheel_deg = 0.4 / pi * 180 * front_wheel_norm_rad
         steering_wheel = front_wheel_deg * self.steer_factor
 
-        # steering_wheel = self._set_inertia(steering_wheel)             # todo:set inertia
-        ego_y = state_gps['GaussY'] if not model_flag else state_gps['y']
-        if ego_y < -10:
-            steering_wheel = np.clip(steering_wheel, -5., 5)
-        else:
-            steering_wheel = np.clip(steering_wheel, -360., 360)
+        # rule: used in right case 1
+        # ego_y = state_gps['GaussY'] if not model_flag else state_gps['y']
+        # if ego_y < -10:
+        #     steering_wheel = np.clip(steering_wheel, -5., 5)
+        # else:
+        #     steering_wheel = np.clip(steering_wheel, -360., 360)
+
+        steering_wheel = np.clip(steering_wheel, -360., 360)
         a_x = 2.25*a_x_norm - 0.75
         if a_x > -0.1:
             # torque = np.clip(a_x * 300., 0., 350.)

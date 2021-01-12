@@ -71,8 +71,19 @@ def built_parser():
     parser.add_argument('--if_radar', type=bool, default=True)
     task = parser.parse_args().task
     case = parser.parse_args().case
+    # left task + noise testing + robust testing
+    # parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-07-01-22-30'.format(task))
+    # parser.add_argument('--load_ite', type=str, default=80000)
+    # straight task
+    # parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-07-01-22-31'.format(task))
+    # parser.add_argument('--load_ite', type=str, default=60000)
+    # right task for case 0 and case 2
+    # parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-11-11-23-58'.format(task))
+    # parser.add_argument('--load_ite', type=str, default=100000)
+    # right task for case 1
     parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-11-01-12-47'.format(task))
-    parser.add_argument('--load_ite', type=str, default=65000)    # 55000
+    parser.add_argument('--load_ite', type=str, default=65000)
+
     parser.add_argument('--noise_factor', type=float, default=0.)
     parser.add_argument('--surr_flag', type=bool, default=False)
     parser.add_argument('--model_only_test', type=bool, default=False)
