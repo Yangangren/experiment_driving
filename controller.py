@@ -13,8 +13,8 @@ import zmq
 from utils.load_policy import LoadPolicy
 from utils.coordi_convert import convert_center_to_rear
 
-VEHICLE_MODE_DICT = dict(left=OrderedDict(dl=1, du=1, dr=1, ud=2, ul=2), # dl=2, du=2, ud=2, ul=2
-                         straight=OrderedDict(dl=1, du=1, dr=1, ud=1, ru=2, ur=2), #vdl=1, du=2, ud=2, ru=2, ur=2
+VEHICLE_MODE_DICT = dict(left=OrderedDict(dl=1, du=1, dr=1, ud=2, ul=1),           # dl=2, du=2, ud=2, ul=2
+                         straight=OrderedDict(dl=1, du=1, dr=1, ud=1, ru=2, ur=2), # dl=1, du=2, ud=2, ru=2, ur=2
                          right=OrderedDict(dl=1, du=1, dr=1, ur=2, lr=2))
 
 ROUTE2MODE = {('1o', '2i'): 'dr', ('1o', '3i'): 'du', ('1o', '4i'): 'dl',
@@ -36,10 +36,9 @@ MODE2TASK = {'dr': 'right', 'du': 'straight', 'dl': 'left',
 
 EXPECTED_V = 3.
 START_OFFSET = 3.0
-TASKCASE2MODELIST = dict(left=[['dl', 'ud', 'ul'], ['dl', 'ud', 'ul'], ['dl', 'ud', 'ul']],
+TASKCASE2MODELIST = dict(left=[['dl', 'ud', 'ul'], ['dl', 'ud', 'ul'], ['dl', 'ud', 'ul'], ['ud']],
                          straight=[['du', 'ru', 'ur'], ['du', 'ru', 'ur'], ['du', 'ru', 'ur']],
-                         right=[['dr', 'ur'], ['dr', 'ur'], ['dr', 'ur'],
-                                ['dr', 'lr'], ['dr', 'lr'], ['dr', 'lr']])
+                         right=[['dr', 'ur'], ['dr', 'ur'], ['dr', 'lr']])
 
 
 def deal_with_phi_diff(phi_diff):
@@ -185,7 +184,7 @@ class ReferencePath(object):
                     s_vals = np.linspace(0, 1.0, int(pi/2*(CROSSROAD_SIZE/2+LANE_WIDTH/2)) * meter_pointnum_ratio)
                     trj_data = curve.evaluate_multi(s_vals)
                     trj_data = trj_data.astype(np.float32)
-                    start_straight_line_x = LANE_WIDTH/2 * np.ones(shape=(sl * meter_pointnum_ratio,), dtype=np.float32)[:-1]
+                    start_straight_line_x = (LANE_WIDTH/2-0.7) * np.ones(shape=(sl * meter_pointnum_ratio,), dtype=np.float32)[:-1]
                     start_straight_line_y = np.linspace(-CROSSROAD_SIZE/2 - sl, -CROSSROAD_SIZE/2, sl * meter_pointnum_ratio, dtype=np.float32)[:-1]
                     end_straight_line_x = np.linspace(-CROSSROAD_SIZE/2, -CROSSROAD_SIZE/2 - sl, sl * meter_pointnum_ratio, dtype=np.float32)[1:]
                     end_straight_line_y = end_offset * np.ones(shape=(sl * meter_pointnum_ratio,), dtype=np.float32)[1:]
@@ -250,8 +249,18 @@ class ReferencePath(object):
                     curve = bezier.Curve(node, degree=3)
                     s_vals = np.linspace(0, 1.0, int(pi/2*(CROSSROAD_SIZE/2-LANE_WIDTH*(LANE_NUMBER-0.5))) * meter_pointnum_ratio)
                     trj_data = curve.evaluate_multi(s_vals)
-                    trj_data = trj_data.astype(np.float32)
-                    start_straight_line_x = start_offset * np.ones(shape=(sl * meter_pointnum_ratio,), dtype=np.float32)[:-1]
+                    trj_data = trj_data.astype(np.float32)#np.array([1.75+(1200.-x)/600.*0.7 for x in range(1200)])
+                    # part1 = (1.75+1.2)*np.ones(shape=(1200-1,), dtype=np.float32)
+                    # part2 = (1.75)*np.ones(shape=(600-1,), dtype=np.float32)
+                    # start_straight_line_x = part1# np.concatenate([part1, part2])
+                    def fn(i):
+                        if i < 600:
+                            return 1.2
+                        else:
+                            return 1.2-1.2/600*(i-600)
+
+                    start_straight_line_x = (start_offset) * np.ones(shape=(sl * meter_pointnum_ratio,), dtype=np.float32)[:-1]
+                    # start_straight_line_x = np.array([1.75+fn(x) for x in range(1199)], dtype=np.float32)# (start_offset+0.7) * np.ones(shape=(sl * meter_pointnum_ratio,), dtype=np.float32)[:-1]
                     start_straight_line_y = np.linspace(-CROSSROAD_SIZE/2 - sl, -CROSSROAD_SIZE/2, sl * meter_pointnum_ratio, dtype=np.float32)[:-1]
                     end_straight_line_x = np.linspace(CROSSROAD_SIZE/2, CROSSROAD_SIZE/2 + sl, sl * meter_pointnum_ratio, dtype=np.float32)[1:]
                     end_straight_line_y = end_offset * np.ones(shape=(sl * meter_pointnum_ratio,), dtype=np.float32)[1:]
@@ -375,6 +384,8 @@ class Controller(object):
         self.model_driven_by_model_action = VehicleDynamics()
         self.model_driven_by_real_action = VehicleDynamics()
 
+        self.run_time = 0.
+
     def _construct_ego_vector(self, state_gps, model_flag):
         if model_flag:
             v_x, v_y, r, x, y, phi = state_gps['v_x'], state_gps['v_y'], state_gps['r'],\
@@ -398,7 +409,10 @@ class Controller(object):
     def _construct_veh_vector(self, ego_x, ego_y, state_others):
         mode_list = TASKCASE2MODELIST[self.task][self.case]
         all_vehicles = []
-        v_light = state_others['v_light']
+        if self.case == 3:
+            v_light = 2 if self.run_time < 40. else 0
+        else:
+            v_light = state_others['v_light']
         xs, ys, vs, phis = state_others['x_other'], state_others['y_other'],\
                            state_others['v_other'], state_others['phi_other']
         if not xs:
@@ -598,7 +612,11 @@ class Controller(object):
         steering_wheel = front_wheel_deg * self.steer_factor
 
         # steering_wheel = self._set_inertia(steering_wheel)             # todo:set inertia
-        steering_wheel = np.clip(steering_wheel, -360., 360)
+        ego_y = state_gps['GaussY'] if not model_flag else state_gps['y']
+        if ego_y < -10:
+            steering_wheel = np.clip(steering_wheel, -5., 5)
+        else:
+            steering_wheel = np.clip(steering_wheel, -360., 360)
         a_x = 2.25*a_x_norm - 0.75
         if a_x > -0.1:
             # torque = np.clip(a_x * 300., 0., 350.)
@@ -678,7 +696,7 @@ class Controller(object):
                     self.socket_pub_radar.send(msg4radar)
 
                     time_decision = time.time() - self.time_in
-                    run_time = time.time() - self.time_initial
+                    self.run_time = time.time() - self.time_initial
 
                     decision = OrderedDict({'Deceleration': decel,  # [m/s^2]
                                             'Torque': torque,  # [N*m]
@@ -690,7 +708,7 @@ class Controller(object):
 
                     with self.lock:
                         self.shared_list[6] = self.step
-                        self.shared_list[7] = run_time
+                        self.shared_list[7] = self.run_time
                         self.shared_list[8] = decision.copy()
                         self.shared_list[9] = state_ego.copy()
                         self.shared_list[10] = list(veh_vec)
@@ -800,7 +818,7 @@ class Controller(object):
                         self.socket_pub_radar.send(msg4radar)
 
                         time_decision = time.time() - self.time_in
-                        run_time = time.time() - self.time_initial
+                        self.run_time = time.time() - self.time_initial
 
                         decision = OrderedDict({'Deceleration': decel_model,  # [m/s^2]
                                                 'Torque': torque_model,  # [N*m]
@@ -812,7 +830,7 @@ class Controller(object):
 
                         with self.lock:
                             self.shared_list[6] = self.step
-                            self.shared_list[7] = run_time
+                            self.shared_list[7] = self.run_time
                             self.shared_list[8] = decision.copy()
                             self.shared_list[9] = state_ego.copy()
                             self.shared_list[10] = list(veh_vec)
@@ -842,7 +860,7 @@ class Controller(object):
                             file_handle.write(k4 + ":" + str(v4) + ", ")
                         file_handle.write('\n')
 
-                        file_handle.write("Time Time:" + str(run_time)  + ", " +
+                        file_handle.write("Time Time:" + str(self.run_time) + ", " +
                                           "time_decision:"+str(time_decision) + ", " +
                                           "time_receive_gps:"+str(time_receive_gps) + ", " +
                                           "time_receive_can:"+str(time_receive_can) + ", " +
