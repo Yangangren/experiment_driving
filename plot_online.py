@@ -196,10 +196,10 @@ class Plot():
 
             state_other = self.shared_list[4].copy()
             # plot cars
-            for i in range(len(state_other['x_other'])): # TODO:
-                veh_x = state_other['x_other'][i]
-                veh_y = state_other['y_other'][i]
-                veh_phi = state_other['phi_other'][i]
+            for veh in state_other:
+                veh_x = veh['x']
+                veh_y = veh['y']
+                veh_phi = veh['phi']
                 veh_l = STATE_OTHER_LENGTH
                 veh_w = STATE_OTHER_WIDTH
                 if is_in_plot_area(veh_x, veh_y):

@@ -92,10 +92,6 @@ class SubscriberGps():
                 self.shared_list[1] = time_receive_gps
             self.receive_index_shared.value += 1
 
-            # check the time interval of gps
-            # if time_receive_gps > 0.1:
-            #     print("Subscriber of gps is more than 0.1s!", time_receive_gps)
-
 
 if __name__ == '__main__':
     pass

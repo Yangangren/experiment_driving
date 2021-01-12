@@ -7,10 +7,10 @@
 # @FileName: model.py
 # =====================================
 
-import numpy as np
 import tensorflow as tf
 from tensorflow.keras import Model, Sequential
 from tensorflow.keras.layers import Dense
+import numpy as np
 
 tf.config.experimental.set_visible_devices([], 'GPU')
 
@@ -40,6 +40,3 @@ class MLPNet(Model):
         x = self.outputs(x)
         return x
 
-
-if __name__ == '__main__':
-    pass

@@ -21,19 +21,20 @@ from controller import Controller
 from plot_online import Plot
 from subscriber_can import SubscriberCan
 from subscriber_gps import SubscriberGps
-from subscriber_radar import SubscriberRadar
-from traffic import Traffic
+from traffic_sumo import Traffic
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
+# gps,can->traffic->controller->plot
 
-def controller_agent(shared_list, receive_index, if_save, if_radar,
+
+def controller_agent(shared_list, receive_index, if_save,
                      lock, task, case, noise_factor, load_dir, load_ite,
                      result_dir, model_only_test, clipped_v):
-    publisher_ = Controller(shared_list, receive_index, if_save, if_radar,
+    publisher_ = Controller(shared_list, receive_index, if_save,
                             lock, task, case, noise_factor, load_dir, load_ite,
                             result_dir, model_only_test, clipped_v)
-    time.sleep(0.5)
+    time.sleep(6)
     publisher_.run()
 
 
@@ -47,46 +48,29 @@ def subscriber_gps_agent(shared_list, receive_index, lock):
     subscriber_.run()
 
 
-def traffic(shared_list, lock, task, case, surr_flag):
-    subscriber_ = Traffic(shared_list, lock, task, case, surr_flag)
+def traffic(shared_list, lock, step_length, mode, task):
+    subscriber_ = Traffic(shared_list, lock, step_length, mode, task)
     subscriber_.run()
-
-
-def subscriber_radar_agent(shared_list, lock):
-    subscriber_radar = SubscriberRadar(shared_list, lock)
-    subscriber_radar.run()
 
 
 def plot_agent(shared_list, lock, task, model_only_test):
     plot_ = Plot(shared_list, lock, task, model_only_test)
-    time.sleep(3)
+    time.sleep(10)
     plot_.run()
 
 
 def built_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--task', type=str, default='right')
-    parser.add_argument('--case', type=int, default=1)
     parser.add_argument('--if_save', type=bool, default=True)
-    parser.add_argument('--if_radar', type=bool, default=True)
     task = parser.parse_args().task
     case = parser.parse_args().case
-    # left task + noise testing + robust testing
-    # parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-07-01-22-30'.format(task))
-    # parser.add_argument('--load_ite', type=str, default=80000)
-    # straight task
-    # parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-07-01-22-31'.format(task))
-    # parser.add_argument('--load_ite', type=str, default=60000)
-    # right task for case 0 and case 2
-    # parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-11-11-23-58'.format(task))
-    # parser.add_argument('--load_ite', type=str, default=100000)
-    # right task for case 1
     parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-11-01-12-47'.format(task))
     parser.add_argument('--load_ite', type=str, default=65000)
 
     parser.add_argument('--noise_factor', type=float, default=0.)
-    parser.add_argument('--surr_flag', type=bool, default=False)
-    parser.add_argument('--model_only_test', type=bool, default=False)
+    parser.add_argument('--model_only_test', type=bool, default=True)
+    parser.add_argument('--traffic_step_length', type=float, default=100.)
     parser.add_argument('--clipped_v', type=float, default=300., help='m/s')
 
     parser.add_argument('--backup', type=str, default='exp1')
@@ -148,16 +132,13 @@ def main():
     receive_index = mp.Value('d', 0.0)
     lock = mp.Lock()
     procs = [Process(target=subscriber_gps_agent, args=(shared_list, receive_index, lock)),
-             Process(target=subscriber_can_agent, args=(shared_list, receive_index, lock))]
-
-    if args.if_radar:
-        procs.append(Process(target=subscriber_radar_agent, args=(shared_list, lock)))
-    else:
-        procs.append(Process(target=traffic, args=(shared_list, lock, args.task, args.case, args.surr_flag)))
-    procs.append(Process(target=controller_agent, args=(shared_list, receive_index, args.if_save, args.if_radar, lock,
-                                                        args.task, args.case, args.noise_factor, args.load_dir,
-                                                        args.load_ite, args.result_dir, args.model_only_test, args.clipped_v)))
-    procs.append(Process(target=plot_agent, args=(shared_list, lock, args.task, args.model_only_test)))
+             Process(target=subscriber_can_agent, args=(shared_list, receive_index, lock)),
+             Process(target=traffic, args=(shared_list, lock, args.traffic_step_length, 'training', args.task)),
+             Process(target=controller_agent, args=(shared_list, receive_index, args.if_save, lock,
+                                                    args.task, args.case, args.noise_factor, args.load_dir,
+                                                    args.load_ite, args.result_dir, args.model_only_test,
+                                                    args.clipped_v)),
+             Process(target=plot_agent, args=(shared_list, lock, args.task, args.model_only_test))]
 
     for p in procs:
         p.start()
