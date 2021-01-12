@@ -65,17 +65,28 @@ def plot_agent(shared_list, lock, task, model_only_test):
 
 def built_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--task', type=str, default='left')
-    parser.add_argument('--case', type=int, default=0)
+    parser.add_argument('--task', type=str, default='right')
+    parser.add_argument('--case', type=int, default=1)
     parser.add_argument('--if_save', type=bool, default=True)
     parser.add_argument('--if_radar', type=bool, default=True)
     task = parser.parse_args().task
     case = parser.parse_args().case
-    parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-07-01-22-30'.format(task))
-    parser.add_argument('--load_ite', type=str, default=75000)    # 55000
+    # left task + noise testing + robust testing
+    # parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-07-01-22-30'.format(task))
+    # parser.add_argument('--load_ite', type=str, default=80000)
+    # straight task
+    # parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-07-01-22-31'.format(task))
+    # parser.add_argument('--load_ite', type=str, default=60000)
+    # right task for case 0 and case 2
+    # parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-11-11-23-58'.format(task))
+    # parser.add_argument('--load_ite', type=str, default=100000)
+    # right task for case 1
+    parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-11-01-12-47'.format(task))
+    parser.add_argument('--load_ite', type=str, default=65000)
+
     parser.add_argument('--noise_factor', type=float, default=0.)
-    parser.add_argument('--surr_flag', type=bool, default=True)
-    parser.add_argument('--model_only_test', type=bool, default=True)
+    parser.add_argument('--surr_flag', type=bool, default=False)
+    parser.add_argument('--model_only_test', type=bool, default=False)
     parser.add_argument('--clipped_v', type=float, default=300., help='m/s')
 
     parser.add_argument('--backup', type=str, default='exp1')

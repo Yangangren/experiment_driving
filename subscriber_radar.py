@@ -17,7 +17,7 @@ class SubscriberRadar(object):
         context = zmq.Context()
         # radar
         self.socket_radar = context.socket(zmq.SUB)
-        self.socket_radar.connect("tcp://10.10.21.151:5555")  # "tcp://127.0.0.1:2323"
+        self.socket_radar.connect("tcp://192.168.8.117:5555")  # "tcp://127.0.0.1:2323"
         # self.socket_radar.connect("tcp://10.10.21.151:5555")  # "tcp://127.0.0.1:2323"
         self.socket_radar.setsockopt(zmq.SUBSCRIBE, ''.encode('utf-8'))
 
