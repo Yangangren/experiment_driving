@@ -11,7 +11,7 @@ EGO_LENGTH = 4.8
 EGO_WIDTH = 2.0
 STATE_OTHER_LENGTH = EGO_LENGTH
 STATE_OTHER_WIDTH = EGO_WIDTH
-SCALE = 60
+SCALE = 80
 SIZE = 1000
 
 def rotate_coordination(orig_x, orig_y, orig_d, coordi_rotate_d):
