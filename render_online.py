@@ -68,7 +68,7 @@ class Render():
         glutInit()
         glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH)
         glutInitContextProfile(GLUT_CORE_PROFILE)
-        glutInitWindowSize(1000, 1000)
+        glutInitWindowSize(800, 800)
         glutInitWindowPosition(460, 0)
         glutCreateWindow('Crossroad')
         glutDisplayFunc(self.render)
@@ -278,9 +278,7 @@ class Render():
             glutBitmapCharacter(GLUT_BITMAP_HELVETICA_24, ord(str[i]))
             # glutBitmapString()
 
-
-
-    def render(self, real_x=0, real_y=0, scale=50, **kwargs):
+    def render(self, real_x=0, real_y=0, scale=60, **kwargs):
         time_st = time.time()
         LOC_X = -real_x / scale
         LOC_Y = -real_y / scale
@@ -419,7 +417,7 @@ class Render():
         glDisable(GL_BLEND)
         glDisable(GL_LINE_SMOOTH)
         glDisable(GL_POLYGON_SMOOTH)
-        print(time.time()-time_st)
+        # print(time.time()-time_st)
 
 
     def _texture_light(self, img, loc, edge, scale, size=(8, 3)):

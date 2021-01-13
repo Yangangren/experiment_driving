@@ -38,6 +38,7 @@ class Traffic(object):
     def __init__(self, shared_list, lock, step_length, mode, model_only_test, training_task='left'):  # mode 'display' or 'training'
         self.shared_list = shared_list
         self.model_only_test = model_only_test
+        self.trigger = False
         self.lock = lock
         self.random_traffic = None
         self.sim_time = 0
@@ -286,35 +287,38 @@ class Traffic(object):
         self.n_ego_collision_flag = flag_dict
 
     def is_triggered(self, model_only_test, vehicle_mode):
-        return True if model_only_test or vehicle_mode == 1 else False
+        self.trigger = True if model_only_test or vehicle_mode == 1 else False
 
     def run(self):
         start_time = time.time()
+        state_other = dict()
+        v_light = 0
         while True:
             time.sleep(self.step_length/1000-0.01)
-            state_gps = self.shared_list[0]
-            state_can = self.shared_list[2]
-            ego_x = state_gps['GaussX']  # intersection coordinate [m]
-            ego_y = state_gps['GaussY']  # intersection coordinate [m]
-            ego_phi = state_gps['Heading']  # intersection coordinate [deg]
-            ego_v = state_gps['GpsSpeed']
-            out = dict(v_x=ego_v, v_y=0, r=0, x=ego_x, y=ego_y,
-                       phi=ego_phi, l=L, w=W, routeID=TASK2ROUTEID[self.training_task])
-            self.init_traffic(dict(ego=out))  # in case is_triggered is always true
-            if not self.is_triggered(self.model_only_test, state_can['VehicleMode']):
-                self.init_traffic(dict(ego=out))
-                self._get_vehicles()
-            else:
-                self.set_own_car(dict(ego=out))
-                self.sim_step()
-            state_other = self.n_ego_vehicles['ego']
+            state_ego = self.shared_list[9]
+            if isinstance(state_ego, dict):
+                ego_x = state_ego['GaussX']  # intersection coordinate [m]
+                ego_y = state_ego['GaussY']  # intersection coordinate [m]
+                ego_phi = state_ego['Heading']  # intersection coordinate [deg]
+                ego_v = state_ego['GpsSpeed']
+                out = dict(v_x=ego_v, v_y=0, r=0, x=ego_x, y=ego_y,
+                           phi=ego_phi, l=L, w=W, routeID=TASK2ROUTEID[self.training_task])
+                if not self.trigger:
+                    self.is_triggered(self.model_only_test, state_ego['VehicleMode'])
+                    self.init_traffic(dict(ego=out))
+                    self._get_vehicles()
+                    print('traffic is not triggered')
+                else:
+                    self.set_own_car(dict(ego=out))
+                    self.sim_step()
+                    v_light = self.v_light
+                state_other = self.n_ego_vehicles['ego']
             delta_time = time.time() - start_time
-            # print(delta_time)
             start_time = time.time()
 
             with self.lock:
                 self.shared_list[4] = state_other.copy()
                 self.shared_list[5] = delta_time
-                self.shared_list[13] = self.v_light
+                self.shared_list[13] = v_light
 
 
