@@ -10,6 +10,7 @@
 import math
 from collections import OrderedDict
 import os
+import numpy as np
 
 L, W = 4.8, 2.0
 LANE_WIDTH_UD, LANE_WIDTH_LR = 3.5, 3.2
@@ -70,6 +71,29 @@ MODE2ROUTE = {'dr': ('1o', '2i'), 'du': ('1o', '3i'), 'dl': ('1o', '4i'),
               'rd': ('2o', '1i'), 'ru': ('2o', '3i'), 'rl': ('2o', '4i'),
               'ud': ('3o', '1i'), 'ur': ('3o', '2i'), 'ul': ('3o', '4i'),
               'ld': ('4o', '1i'), 'lr': ('4o', '2i'), 'lu': ('4o', '3i')}
+T = 3.14928
+EGO_LENGTH = 4.8
+EGO_WIDTH = 2.0
+STATE_OTHER_LENGTH = EGO_LENGTH
+STATE_OTHER_WIDTH = EGO_WIDTH
+
+def find_closest_point(path, xs, ys, ratio=6):
+    path_len = len(path[0])
+    reduced_idx = np.arange(0, path_len, ratio)
+    reduced_len = len(reduced_idx)
+    reduced_path_x, reduced_path_y = path[0][reduced_idx], path[1][reduced_idx]
+    xs_tile = np.tile(np.reshape(xs, (-1, 1)), (1, reduced_len))
+    ys_tile = np.tile(np.reshape(ys, (-1, 1)), (1, reduced_len))
+    pathx_tile = np.tile(np.reshape(reduced_path_x, (1, -1)), (len(xs), 1))
+    pathy_tile = np.tile(np.reshape(reduced_path_y, (1, -1)), (len(xs), 1))
+
+    dist_array = np.square(xs_tile - pathx_tile) + np.square(ys_tile - pathy_tile)
+
+    indexes = np.argmin(dist_array, 1) * ratio
+    if len(indexes) > 1:
+        indexes = indexes[0]
+    points = path[0][indexes], path[1][indexes], path[2][indexes]
+    return indexes, points
 
 
 def judge_feasible(orig_x, orig_y, task):  # map dependant
@@ -201,16 +225,16 @@ def cal_ego_info_in_transform_coordination(ego_dynamics, x, y, rotate_d):
 def xy2_edgeID_lane(x, y): #TODO: temp
     if y < -CROSSROAD_D_HEIGHT:
         edgeID = '1o'
-        lane = int((LANE_NUMBER_UD-1)-int(x/LANE_WIDTH_UD))
+        lane = int(3-int(x/LANE_WIDTH_UD))
     elif x < -CROSSROAD_HALF_WIDTH:
         edgeID = '4i'
-        lane = int((LANE_NUMBER_LR-1)-int(y/LANE_WIDTH_LR))
+        lane = int(6-int(y/LANE_WIDTH_LR))
     elif y > CROSSROAD_U_HEIGHT:
         edgeID = '3i'
-        lane = int((LANE_NUMBER_UD-1)-int(x/LANE_WIDTH_UD))
+        lane = int(3-int(x/LANE_WIDTH_UD))
     elif x > CROSSROAD_HALF_WIDTH:
         edgeID = '2i'
-        lane = int((LANE_NUMBER_LR-1)-int(-y/LANE_WIDTH_LR))
+        lane = int(6-int(-y/LANE_WIDTH_LR))
     else:
         edgeID = '0'
         lane = 0

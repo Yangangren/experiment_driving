@@ -42,5 +42,6 @@ class LoadPolicy(object):
     @tf.function
     def values(self, obs):
         processed_obs = self.preprocessor.np_process_obses(obs)
-        values = self.policy.compute_vs(processed_obs[np.newaxis, :])
-        return values[0]
+        obj_v = self.policy.compute_obj_v(processed_obs[np.newaxis, :])
+        con_v = self.policy.compute_con_v(processed_obs[np.newaxis, :])
+        return obj_v[0], con_v[0]

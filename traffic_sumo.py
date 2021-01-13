@@ -61,7 +61,7 @@ class Traffic(object):
             traci.start(
                 [SUMO_BINARY, "-c", SUMOCFG_DIR,
                  "--step-length", self.step_time_str,
-                 "--lateral-resolution", "3.75",
+                 "--lateral-resolution", "3.5",
                  "--random",
                  # "--start",
                  # "--quit-on-end",
@@ -129,7 +129,7 @@ class Traffic(object):
                 pass
             traci.simulationStep()
             traci.vehicle.addLegacy(vehID=egoID, routeID=ego_dict['routeID'],
-                                    depart=0, pos=20, lane=0, speed=ego_dict['v_x'],
+                                    #depart=0, pos=20, lane=3, speed=ego_dict['v_x'],
                                     typeID='self_car')
             if random.random() > 0.5:  # todo: use for resolve other vehicles waiting ego, not always useful
                 traci.vehicle.setRouteID(egoID, 'dr')
@@ -316,8 +316,11 @@ class Traffic(object):
             self.set_own_car(dict(ego=out))
             self.sim_step()
             state_other = self.n_ego_vehicles['ego']
+            v_light = self.v_light
 
             with self.lock:
                 self.shared_list[4] = state_other.copy()
                 self.shared_list[5] = 0.1
+                self.shared_list[13] = v_light
+
 
