@@ -8,8 +8,9 @@ from utils.misc import TimerStat
 
 
 class Plot():
-    def __init__(self, shared_list, lock, task, model_only_test=False):
+    def __init__(self, shared_list, path_index, lock, task, model_only_test=False):
         self.shared_list = shared_list
+        self.path_index = path_index
         self.lock = lock
         self.task = task
         self.model_only_test = model_only_test
@@ -121,12 +122,20 @@ class Plot():
                      color='black')
 
             # ----------------------ref_path--------------------
-            plot_ref = ['left', 'straight', 'right']  # 'left','straight','right', 'left_ref','straight_ref','right_ref'
-            for ref in plot_ref:
-                ref_path = self.ref_path_all[ref][0]
-                ax.plot(ref_path[0], ref_path[1])
+            color = ['blue', 'coral', 'cyan', 'green']
+            for index, path in enumerate(self.ref_path_all[self.task]):
+                print('plot', self.path_index.value)
+                if index == self.path_index.value:
+                    ax.plot(path[0], path[1], color=color[index], alpha=1.0)
+                else:
+                    ax.plot(path[0], path[1], color=color[index], alpha=0.3)
 
-            ax.plot(self.ref_path[0], self.ref_path[1], color='g')  # todo:
+
+            # plot_ref = ['left', 'straight', 'right']  # 'left','straight','right', 'left_ref','straight_ref','right_ref'
+            # for ref in plot_ref:
+            #     ref_path = self.ref_path_all[ref][0]
+            #     ax.plot(ref_path[0], ref_path[1])
+            # ax.plot(self.ref_path[0], self.ref_path[1], color='g')  # todo:
 
             state_other = self.shared_list[4].copy()
             # plot cars
@@ -284,11 +293,22 @@ class Plot():
             plt.text(text_x, text_y_start - next(ge), r'acc: {:.2f}$m/s^2$'.format(acc))
             plt.text(text_x, text_y_start - next(ge), r'acc_actual: {:.2f}$m/s^2$'.format(self.acc_timer.mean))
 
+            # plot text of trajectroy
+            text_x, text_y_start = -40, -70
+            ge = iter(range(0, 1000, 6))
+            traj_return_value = self.shared_list[11]
+            for i, value in enumerate(traj_return_value):
+                if i == self.path_index.value:
+                    plt.text(text_x, text_y_start - next(ge), 'Path reward={:.4f}, Collision risk={:.4f}'.format(value[0], value[1]),
+                             fontsize=14, color=color[i], fontstyle='italic')
+                else:
+                    plt.text(text_x, text_y_start - next(ge), 'Path reward={:.4f}, Collision risk={:.4f}'.format(value[0], value[1]),
+                             fontsize=10, color=color[i], fontstyle='italic')
             plt.pause(0.01)
 
 
 def static_plot():
-    plot = Plot(None, None, 'left')
+    plot = Plot(None, 0, None, 'left')
     plot.run()
     plt.show()
 

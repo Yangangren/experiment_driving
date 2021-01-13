@@ -117,7 +117,6 @@ class VehicleDynamics(object):
 class ReferencePath(object):
     def __init__(self, task, mode=None, ref_index=None):
         self.mode = mode
-        self.traj_mode = None
         self.exp_v = EXPECTED_V #TODO: temp
         self.task = task
         self.path_list = []
@@ -126,13 +125,9 @@ class ReferencePath(object):
         self.ref_index = np.random.choice(len(self.path_list)) if ref_index is None else ref_index
         self.path = self.path_list[self.ref_index]
 
-    def set_path(self, traj_mode, path_index=None, path=None):
-        self.traj_mode = traj_mode
-        if traj_mode == 'dyna_traj':
-            self.path = path
-        elif traj_mode == 'static_traj':
-            self.ref_index = path_index
-            self.path = self.path_list[self.ref_index]
+    def set_path(self, path_index=None):
+        self.ref_index = path_index
+        self.path = self.path_list[self.ref_index]
 
     def _construct_ref_path(self, task):
         sl = 40  # straight length
@@ -274,7 +269,7 @@ class ReferencePath(object):
 
         return points[0], points[1], points[2]
 
-    def tracking_error_vector(self, ego_xs, ego_ys, ego_phis, ego_vs, n, func=None):
+    def tracking_error_vector(self, ego_xs, ego_ys, ego_phis, ego_vs, n):
         def two2one(ref_xs, ref_ys):
             if self.task == 'left':
                 delta_ = tf.sqrt(tf.square(ego_xs - (-CROSSROAD_HALF_WIDTH)) + tf.square(ego_ys - (-CROSSROAD_D_HEIGHT))) - \
@@ -293,52 +288,27 @@ class ReferencePath(object):
                 delta_ = tf.where(ego_xs > CROSSROAD_HALF_WIDTH, -(ego_ys - ref_ys), delta_)
                 return -delta_
 
-        if self.traj_mode == 'dyna_traj':
-            if func == 'tracking':
-                indexs = tf.constant([1], dtype=tf.int32)
-                current_points = self.indexs2points(indexs)
-                n_future_data = self.future_n_data(indexs, n)
-                all_ref = [current_points] + n_future_data
-                print(current_points)
+        indexs, current_points = self.find_closest_point(ego_xs, ego_ys)
+        # print('Index:', indexs.numpy(), 'points:', current_points[:])
+        n_future_data = self.future_n_data(indexs, n)
 
-                tracking_error = tf.concat([tf.stack([two2one(ref_point[0], ref_point[1]),
-                                                      deal_with_phi_diff(ego_phis - ref_point[2]),
-                                                      ego_vs - self.exp_v], 1)
-                                            for ref_point in all_ref], 1)
+        tracking_error = tf.stack([two2one(current_points[0], current_points[1]),
+                                           deal_with_phi_diff(ego_phis - current_points[2]),
+                                           ego_vs - self.exp_v], 1)
 
-            else:
-                indexs, current_points = self.find_closest_point(ego_xs, ego_ys)
-                # print('Index:', indexs.numpy(), 'points:', current_points[:])
-                n_future_data = self.future_n_data(indexs, n)
-                all_ref = [current_points] + n_future_data
-
-                tracking_error = tf.concat([tf.stack([two2one(ref_point[0], ref_point[1]),
-                                                      deal_with_phi_diff(ego_phis - ref_point[2]),
-                                                      ego_vs - self.exp_v], 1)
-                                            for ref_point in all_ref], 1)
-            final = None
-        else:
-            indexs, current_points = self.find_closest_point(ego_xs, ego_ys)
-            # print('Index:', indexs.numpy(), 'points:', current_points[:])
-            n_future_data = self.future_n_data(indexs, n)
-
-            tracking_error = tf.stack([two2one(current_points[0], current_points[1]),
-                                               deal_with_phi_diff(ego_phis - current_points[2]),
-                                               ego_vs - self.exp_v], 1)
-
-            final = tracking_error
-            if n > 0:
-                future_points = tf.concat([tf.stack([ref_point[0] - ego_xs,
-                                                     ref_point[1] - ego_ys,
-                                                     deal_with_phi_diff(ego_phis - ref_point[2])], 1)
-                                           for ref_point in n_future_data], 1)
-                final = tf.concat([final, future_points], 1)
+        final = tracking_error
+        if n > 0:
+            future_points = tf.concat([tf.stack([ref_point[0] - ego_xs,
+                                                 ref_point[1] - ego_ys,
+                                                 deal_with_phi_diff(ego_phis - ref_point[2])], 1)
+                                       for ref_point in n_future_data], 1)
+            final = tf.concat([final, future_points], 1)
 
         return final
 
 
 class Controller(object):
-    def __init__(self, shared_list, receive_index, if_save, lock, task,
+    def __init__(self, shared_list, receive_index, path_index, if_save, lock, task,
                  noise_factor, load_dir, load_ite, result_dir, model_only_test, clipped_v):
         self.time_out = 0
         self.task = task
@@ -350,6 +320,7 @@ class Controller(object):
         self.shared_list = shared_list
         self.read_index_old = 0
         self.receive_index_shared = receive_index
+        self.path_index = path_index
         self.model_only_test = model_only_test
         self.clipped_v = clipped_v
         # self.read_index_old = Info_List[0]
@@ -635,7 +606,20 @@ class Controller(object):
 
                     state_gps_modified_by_model = dict(v_x=v_x, v_y=v_y, r=r, x=x, y=y, phi=phi)
                     self.time_in = time.time()
+
+                    # path selection
+                    traj_return_value = []
+                    traj_num = LANE_NUMBER_LR if self.task == 'right' or 'left' else LANE_NUMBER_UD
+                    for traj_index in range(traj_num):
+                        self.ref_path.set_path(traj_index)
+                        obs, _, _ = self._get_obs(state_gps_modified_by_model, state_other, model_flag=True)
+                        obj_v, con_v = self.model.values(obs)
+                        traj_return_value.append([obj_v.numpy(), con_v.numpy()])
+                    traj_return_value = np.array(traj_return_value, dtype=np.float32)
+                    path_index = np.argmin(traj_return_value[:, 1])
+                    self.ref_path.set_path(path_index)
                     obs, obs_dict, veh_vec = self._get_obs(state_gps_modified_by_model, state_other, model_flag=True)
+
                     action = self.model.run(obs)
                     steer_wheel_deg, torque, decel, tor_flag, dec_flag, front_wheel_deg, a_x = \
                         self._action_transformation_for_end2end(action, state_gps_modified_by_model, model_flag=True)
@@ -675,7 +659,8 @@ class Controller(object):
                         self.shared_list[8] = decision.copy()
                         self.shared_list[9] = state_ego.copy()
                         self.shared_list[10] = list(veh_vec)
-
+                        self.shared_list[11] = traj_return_value
+                    self.path_index.value = path_index
                     self.step += 1
                 else:  # real test
                     shared_index = self.receive_index_shared.value
@@ -721,6 +706,19 @@ class Controller(object):
                         v_x, v_y, r, x, y, phi = state_driven_by_model_action[0], state_driven_by_model_action[1], state_driven_by_model_action[2], \
                                                  state_driven_by_model_action[3], state_driven_by_model_action[4], state_driven_by_model_action[5]
                         state_gps_modified_by_model = dict(v_x=v_x, v_y=v_y, r=r, x=x, y=y, phi=phi)
+
+                        # path selection
+                        traj_return_value = []
+                        traj_num = LANE_NUMBER_LR if self.task == 'right' or 'left' else LANE_NUMBER_UD
+                        for traj_index in range(traj_num):
+                            self.ref_path.set_path(traj_index)
+                            obs, _, _ = self._get_obs(state_gps_modified_by_model, state_other, model_flag=True)
+                            obj_v, con_v = self.model.values(obs)
+                            traj_return_value.append([obj_v.numpy(), con_v.numpy()])
+                        traj_return_value = np.array(traj_return_value, dtype=np.float32)
+                        path_index = np.argmin(traj_return_value[:, 1])
+                        self.ref_path.set_path(path_index)
+
                         obs_model, obs_dict_model, veh_vec_model = self._get_obs(state_gps_modified_by_model,
                                                                                  state_other, model_flag=True)
                         action_model = self.model.run(obs_model)
@@ -764,7 +762,8 @@ class Controller(object):
                             self.shared_list[8] = decision.copy()
                             self.shared_list[9] = state_ego.copy()
                             self.shared_list[10] = list(veh_vec)
-
+                            self.shared_list[11] = traj_return_value
+                        self.path_index.value = path_index
                         self.step += 1
 
                 if self.if_save:
@@ -797,4 +796,20 @@ class Controller(object):
 
 
 if __name__ == "__main__":
-    pass
+    from main import built_parser
+    import multiprocessing as mp
+    args = built_parser()
+    os.makedirs(args.result_dir)
+    shared_list = mp.Manager().list([0.] * 11)
+    receive_index = mp.Value('d', 0.0)
+    lock = mp.Lock()
+    publisher = Controller(shared_list, receive_index, args.if_save, lock,
+                                                    args.task, args.noise_factor, args.load_dir,
+                                                    args.load_ite, args.result_dir, args.model_only_test,
+                                                    args.clipped_v)
+    ref_path = ReferencePath('left')
+    for i in range(4):
+        ref_path.set_path(i)
+        print(ref_path.ref_index)
+        path = ref_path.path
+        print(ref_path.path)
