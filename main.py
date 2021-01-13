@@ -22,6 +22,7 @@ from plot_online import Plot
 from subscriber_can import SubscriberCan
 from subscriber_gps import SubscriberGps
 from traffic_sumo import Traffic
+from render_online import Render
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -54,10 +55,15 @@ def traffic(shared_list, lock, step_length, mode, task):
     subscriber_.run()
 
 
-def plot_agent(shared_list, lock, task, model_only_test):
-    plot_ = Plot(shared_list, lock, task, model_only_test)
-    time.sleep(13)
-    plot_.run()
+def plot_agent(shared_list, lock, task, model_only_test, visualization):
+    if visualization == 'plot':
+        plot_ = Plot(shared_list, lock, task, model_only_test)
+        time.sleep(13)
+        plot_.run()
+    else:
+        render_ = Render(shared_list, lock, task, model_only_test)
+        time.sleep(13)
+        render_.run()
 
 
 def built_parser():
@@ -67,6 +73,7 @@ def built_parser():
     task = parser.parse_args().task
     parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-13-00-03-26'.format(task))
     parser.add_argument('--load_ite', type=str, default=65000)
+    parser.add_argument('--visualization', type=str, default='plot') # plot or render
 
     parser.add_argument('--noise_factor', type=float, default=0.)
     parser.add_argument('--model_only_test', type=bool, default=True)
@@ -138,7 +145,7 @@ def main():
                                                     args.task, args.noise_factor, args.load_dir,
                                                     args.load_ite, args.result_dir, args.model_only_test,
                                                     args.clipped_v)),
-             Process(target=plot_agent, args=(shared_list, lock, args.task, args.model_only_test))]
+             Process(target=plot_agent, args=(shared_list, lock, args.task, args.model_only_test, args.visulization))]
 
     for p in procs:
         p.start()

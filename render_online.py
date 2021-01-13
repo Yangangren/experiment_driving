@@ -72,8 +72,8 @@ class Render():
         glutInitWindowPosition(460, 0)
         glutCreateWindow('Crossroad')
         glutDisplayFunc(self.render)
-        # glutIdleFunc(self.render)
-        glutTimerFunc(20,self.render, 0)
+        glutIdleFunc(self.render)
+        # glutTimerFunc(20,self.render, 0)
         glutMainLoop()
 
     def _load_xml(self, path="./utils/sumo_files/a.net.xml"):
@@ -97,11 +97,16 @@ class Render():
             return base
 
         for i in range(len(sub_element_edge)):
-            if sub_element_edge[i].getAttribute('function') != 'internal':
+            if sub_element_edge[i].getAttribute('function') == '':
                 sub_element_lane = sub_element_edge[i].getElementsByTagName("lane")
+                if sub_element_edge[i].getAttribute('id') in ['1i','1o','3i','3o']:
+                    vertical = True
+                else:
+                    vertical = False
                 for j in range(len(sub_element_lane)):
                     shape = sub_element_lane[j].getAttribute("shape")
                     type = str(sub_element_lane[j].getAttribute("allow"))
+                    type_2 = str(sub_element_lane[j].getAttribute("disallow"))
                     try:
                         width = float(sub_element_lane[j].getAttribute("width"))
                     except:
@@ -130,47 +135,59 @@ class Render():
                             if type == 'pedestrian':
                                 glColor3f(0.663, 0.663, 0.663)
                             elif type == 'bicycle':
-                                glColor3f(0.455, 0.721, 0.926)
+                                glColor3f(0.545, 0.279, 0.074)
+                            elif type_2 == 'all':
+                                glColor3f(0.1333, 0.545, 0.1333)
                             else:
                                 glColor3f(0.0, 0.0, 0.0)
+
                             glVertex2f(x1, y1)
                             glVertex2f(x2, y2)
                             glVertex2f(x3, y3)
                             glVertex2f(x4, y4)
                             glEnd()
 
-                            glLineWidth(1.0)
-                            glLineStipple(3, bit_pattern(
-                                0, 0, 0, 0,
-                                0, 0, 0, 0,
-                                1, 1, 1, 1,
-                                1, 1, 1, 1,
-                            ))
-                            glEnable(GL_LINE_STIPPLE)
-                            glBegin(GL_LINES)
-                            glColor3f(1.0, 1.0, 1.0)
-                            glVertex2f(x2, y2)
-                            glVertex2f(x3, y3)
-                            glVertex2f(x1, y1)
-                            glVertex2f(x4, y4)
-                            glEnd()
-                            glDisable(GL_LINE_STIPPLE)
-                            glLineWidth(10.0)
-                            glBegin(GL_LINES)
-                            glColor3f(1.0, 1.0, 1.0)
-                            glVertex2f(x3, y3)
-                            glVertex2f(x4, y4)
-                            glEnd()
-                            glLineWidth(2.0)
-                            glBegin(GL_LINES)
-                            glColor3f(0.8275, 0.8275, 0.8275)
-                            if j == sub_element_lane.length - 1:
-                                glVertex2f(x1, y1)
-                                glVertex2f(x4, y4)
-                            if j == 0:
+                            if type == '' and type_2 != 'all':
+                                glLineWidth(1.0)
+                                glLineStipple(3, bit_pattern(
+                                    0, 0, 0, 0,
+                                    0, 0, 0, 0,
+                                    1, 1, 1, 1,
+                                    1, 1, 1, 1,
+                                ))
+                                glEnable(GL_LINE_STIPPLE)
+                                glBegin(GL_LINES)
+                                glColor3f(1.0, 1.0, 1.0)
                                 glVertex2f(x2, y2)
                                 glVertex2f(x3, y3)
-                            glEnd()
+                                glVertex2f(x1, y1)
+                                glVertex2f(x4, y4)
+                                glEnd()
+                                glDisable(GL_LINE_STIPPLE)
+                                glLineWidth(10.0)
+                                glBegin(GL_LINES)
+                                glColor3f(1.0, 1.0, 1.0)
+                                glVertex2f(x3, y3)
+                                glVertex2f(x4, y4)
+                                glEnd()
+                                glLineWidth(2.0)
+                                glBegin(GL_LINES)
+                                glColor3f(0.8275, 0.8275, 0.8275)
+                                if j == sub_element_lane.length - 1:
+                                    glVertex2f(x1, y1)
+                                    glVertex2f(x4, y4)
+                                if not vertical:
+                                    if j == 3:
+                                        glVertex2f(x2, y2)
+                                        glVertex2f(x3, y3)
+                                if vertical:
+                                    if j == 2:
+                                        glVertex2f(x2, y2)
+                                        glVertex2f(x3, y3)
+                                glEnd()
+
+
+
 
         for i in range(len(sub_element_junction)):
             shape = sub_element_junction[i].getAttribute("shape")
@@ -184,7 +201,7 @@ class Render():
                 if shape_point[0] != '':
                     glVertex2f((float(shape_point[0]) / scale) * 1, (float(shape_point[1]) / scale) * 1)
             glEnd()
-            glutTimerFunc(20,self.render,0)
+            # glutTimerFunc(20,self.render,0) # todo
 
 
     def _draw_zebra(self, loc, width, length, scale, shape, single_height=0.8):
@@ -263,11 +280,11 @@ class Render():
 
 
 
-    def render(self, real_x=0, real_y=0, scale=60, **kwargs):
+    def render(self, real_x=0, real_y=0, scale=50, **kwargs):
         time_st = time.time()
         LOC_X = -real_x / scale
         LOC_Y = -real_y / scale
-        glClearColor(0.1333, 0.545, 0.1333, 1)
+        glClearColor(0.753, 0.753, 0.753, 1)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
@@ -281,17 +298,17 @@ class Render():
 
         # draw map
         self._draw_map(scale)
-        self._draw_zebra(-17, 6, 7, scale, 'vertical')
-        self._draw_zebra(17, 6, 7, scale, 'vertical')
-        self._draw_zebra(26, 6, 4, scale, 'horizontal')
-        self._draw_zebra(-22, 6, 4, scale, 'horizontal')
+        self._draw_zebra(-17, 6, 10, scale, 'vertical')
+        self._draw_zebra(17, 6, 10, scale, 'vertical')
+        self._draw_zebra(26, 6, 6, scale, 'horizontal')
+        self._draw_zebra(-22, 6, 6, scale, 'horizontal')
 
         # draw ref
         path_index = self.shared_list[12]
         self._plot_reference(self.task, path_index, scale)
 
         # draw vehicles
-        def draw_rotate_rec(x, y, a, l, w, scale, color='o'):
+        def draw_vehicle(x, y, a, l, w, scale, color='o'):
             RU_x, RU_y, _ = rotate_coordination(l / 2, w / 2, 0, -a)
             RD_x, RD_y, _ = rotate_coordination(l / 2, -w / 2, 0, -a)
             LU_x, LU_y, _ = rotate_coordination(-l / 2, w / 2, 0, -a)
@@ -306,6 +323,45 @@ class Render():
             glVertex2f((LD_x + x) / scale, (LD_y + y) / scale)
             glVertex2f((LU_x + x) / scale, (LU_y + y) / scale)
             glEnd()
+
+            RU1_x, RU1_y, _ = rotate_coordination(l / 4, w * 4 / 10, 0, -a)
+            RD1_x, RD1_y, _ = rotate_coordination(l / 4, - w * 4 / 10, 0, -a)
+            LU1_x, LU1_y, _ = rotate_coordination(l / 12, w * 3 / 10, 0, -a)
+            LD1_x, LD1_y, _ = rotate_coordination(l / 12, -w * 3 / 10, 0, -a)
+
+            glBegin(GL_POLYGON)
+            glColor3f(0.0,0.0,0.0)
+            glVertex2f((RU1_x + x) / scale, (RU1_y + y) / scale)
+            glVertex2f((RD1_x + x) / scale, (RD1_y + y) / scale)
+            glVertex2f((LD1_x + x) / scale, (LD1_y + y) / scale)
+            glVertex2f((LU1_x + x) / scale, (LU1_y + y) / scale)
+            glEnd()
+
+            RU1_x, RU1_y, _ = rotate_coordination(-l / 3, w * 4 / 10, 0, -a)
+            RD1_x, RD1_y, _ = rotate_coordination(-l / 3, - w * 4 / 10, 0, -a)
+            LU1_x, LU1_y, _ = rotate_coordination(-l / 6, w * 3 / 10, 0, -a)
+            LD1_x, LD1_y, _ = rotate_coordination(-l / 6, -w * 3 / 10, 0, -a)
+
+            glBegin(GL_POLYGON)
+            glColor3f(0.0, 0.0, 0.0)
+            glVertex2f((RU1_x + x) / scale, (RU1_y + y) / scale)
+            glVertex2f((RD1_x + x) / scale, (RD1_y + y) / scale)
+            glVertex2f((LD1_x + x) / scale, (LD1_y + y) / scale)
+            glVertex2f((LU1_x + x) / scale, (LU1_y + y) / scale)
+            glEnd()
+
+            # RU1_x, RU1_y, _ = rotate_coordination(l / 4, w * 4 / 10, 0, -a)
+            # RD1_x, RD1_y, _ = rotate_coordination(l / 4, - w * 4 / 10, 0, -a)
+            # LU1_x, LU1_y, _ = rotate_coordination(l / 12, w * 3 / 10, 0, -a)
+            # LD1_x, LD1_y, _ = rotate_coordination(l / 12, -w * 3 / 10, 0, -a)
+            #
+            # glBegin(GL_POLYGON)
+            # glColor3f(0.0, 0.0, 0.0)
+            # glVertex2f((RU1_x + x) / scale, (RU1_y + y) / scale)
+            # glVertex2f((RD1_x + x) / scale, (RD1_y + y) / scale)
+            # glVertex2f((LD1_x + x) / scale, (LD1_y + y) / scale)
+            # glVertex2f((LU1_x + x) / scale, (LU1_y + y) / scale)
+            # glEnd()
 
         def plot_phi_line(x, y, phi, color, scale):
             line_length = 5
@@ -323,15 +379,15 @@ class Render():
 
 
         # ego vehicle
-        # state_ego = self.shared_list[9].copy()
-        # ego_x = state_ego['GaussX']
-        # ego_y = state_ego['GaussY']
-        # ego_phi = state_ego['Heading']
-        # draw_rotate_rec(ego_x, ego_y, ego_phi, EGO_LENGTH, EGO_WIDTH, scale, color='o')
-        # plot_phi_line(ego_x,ego_y,ego_phi,'o',scale)
+        state_ego = self.shared_list[9].copy()
+        ego_x = state_ego['GaussX']
+        ego_y = state_ego['GaussY']
+        ego_phi = state_ego['Heading']
+        draw_vehicle(ego_x, ego_y, ego_phi, EGO_LENGTH, EGO_WIDTH, scale, color='o')
+        plot_phi_line(ego_x,ego_y,ego_phi,'o',scale)
 
         # state_other = self.shared_list[4].copy()
-        state_other = self.shared_list.copy()
+        state_other = self.shared_list[4].copy()
         # plot cars
         for veh in state_other:
             veh_x = veh['x']
@@ -340,14 +396,14 @@ class Render():
             veh_l = STATE_OTHER_LENGTH
             veh_w = STATE_OTHER_WIDTH
             plot_phi_line(veh_x, veh_y, veh_phi, 'y', scale)
-            draw_rotate_rec(veh_x, veh_y, veh_phi, veh_l, veh_w, scale, color='y')
+            draw_vehicle(veh_x, veh_y, veh_phi, veh_l, veh_w, scale, color='y')
 
         v_light = self.shared_list[13]
         if v_light == 0:
-            self._texture_light(self.green_img, (-8, 20), 'U', scale)
-            self._texture_light(self.green_img, (0, -18), 'D', scale)
-            self._texture_light(self.red_img, (-14, -12), 'L', scale)
-            self._texture_light(self.red_img, (11, 4), 'R', scale)
+            self._texture_light(self.green_img, (-15, 30), 'U', scale)
+            self._texture_light(self.green_img, (7, -29), 'D', scale)
+            self._texture_light(self.red_img, (-24.5, -21), 'L', scale)
+            self._texture_light(self.red_img, (21.5, 13), 'R', scale)
         elif v_light != 0:
             self._texture_light(self.red_img, (-8, 20), 'U', scale)
             self._texture_light(self.red_img, (0, -18), 'D', scale)
@@ -356,7 +412,7 @@ class Render():
 
         traj_value = self.shared_list[11]
         str = 'Trajectory 0 collision risk value'
-        self._text(str)
+        # self._text(str)
 
         glutSwapBuffers()
 
@@ -441,6 +497,6 @@ class Render():
 
 if __name__ == '__main__':
     path_index = 0
-    share_list = [{'x':0.0, 'y':10.0,'phi':135.0}]
-    render = Render(share_list, path_index, None, 'right')
+    shared_list = [[1],[1],[1],[1],[{'x':0.0, 'y':10.0,'phi':135.0}],[1],[1],[1],[1],{'GaussX':0.0, 'GaussY':50.0,'Heading':135.0},[],[],0,0]
+    render = Render(shared_list, None, 'right')
     render.run()
