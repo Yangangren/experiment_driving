@@ -43,7 +43,7 @@ class VehicleDynamics(object):
         F_zf, F_zr = b * mass * g / (a + b), a * mass * g / (a + b)
         self.vehicle_params.update(dict(F_zf=F_zf,
                                         F_zr=F_zr))
-        self.states = np.array([[0., 0., 0., 1.75, -40., 90.]], dtype=np.float32)
+        self.states = np.array([[0., 0., 0., 1.75, -40., 90.]], dtype=np.float32)  # need to be consistent with gps init
         self.states = tf.convert_to_tensor(self.states, dtype=tf.float32)
 
     def f_xu(self, actions, tau):  # states and actions are tensors, [[], [], ...]
@@ -777,10 +777,8 @@ class Controller(object):
                             file_handle.write(k2 + ":" + str(v2) + ", ")
                         file_handle.write('\n')
 
-                        # file_handle.write("State_other ")
-                        # for k3, v3 in state_other.items():
-                        #     file_handle.write(k3 + ":" + str(v3) + "| ")
-                        # file_handle.write('\n')
+                        file_handle.write("State_other ")
+                        file_handle.write('\n')
 
                         file_handle.write("Obs_dict ")
                         for k4, v4 in obs_dict.items():

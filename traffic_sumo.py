@@ -35,8 +35,10 @@ SIM_PERIOD = 1.0 / 10
 
 
 class Traffic(object):
-    def __init__(self, shared_list, lock, step_length, mode, training_task='left'):  # mode 'display' or 'training'
+    def __init__(self, shared_list, lock, step_length, mode, model_only_test, training_task='left'):  # mode 'display' or 'training'
         self.shared_list = shared_list
+        self.model_only_test = model_only_test
+        self.trigger = False
         self.lock = lock
         self.random_traffic = None
         self.sim_time = 0
@@ -56,7 +58,6 @@ class Traffic(object):
         if training_task == 'right':
             if random.random() > 0.5:
                 self.training_light_phase = 2
-
         try:
             traci.start(
                 [SUMO_BINARY, "-c", SUMOCFG_DIR,
@@ -100,14 +101,11 @@ class Traffic(object):
                                                 # traci.constants.VAR_ROUTE_INDEX
                                                 ],
                                        0, 2147483647)
-        while traci.simulation.getTime() < 100:
-            if traci.simulation.getTime() < 80:
+        while traci.simulation.getTime() < 100:  # related with step-length
+            if traci.simulation.getTime() < 80:  # related with step-length
                 traci.trafficlight.setPhase('0', 2)
             else:
                 traci.trafficlight.setPhase('0', 0)
-
-            # if self.mode == "training":
-            #     traci.trafficlight.setPhase('0', self.training_light_phase)
             traci.simulationStep()
 
     def __del__(self):
@@ -288,39 +286,39 @@ class Traffic(object):
 
         self.n_ego_collision_flag = flag_dict
 
-    def is_triggered(self):
-        pass
+    def is_triggered(self, model_only_test, vehicle_mode):
+        self.trigger = True if model_only_test or vehicle_mode == 1 else False
 
     def run(self):
-        ego_x, ego_y, ego_phi = self.shared_list[0]['GaussX'], self.shared_list[0]['GaussY'], self.shared_list[0]['Heading']
-        ego_v = self.shared_list[0]['GpsSpeed']
-        self.init_traffic(dict(ego=dict(v_x=ego_v,
-                                        v_y=0,
-                                        r=0,
-                                        x=ego_x,
-                                        y=ego_y,
-                                        phi=ego_phi,
-                                        l=L,
-                                        w=W,
-                                        routeID=TASK2ROUTEID[self.training_task],
-                                        )))
+        start_time = time.time()
         state_other = []
+        v_light = 0
         while True:
-            time.sleep(self.step_length/1000.)
-            state_gps = self.shared_list[0]
-            ego_x = state_gps['GaussX']  # intersection coordinate [m]
-            ego_y = state_gps['GaussY']  # intersection coordinate [m]
-            ego_phi = state_gps['Heading']  # intersection coordinate [deg]
-            ego_v = state_gps['GpsSpeed']
-            out = dict(v_x=ego_v, v_y=0, r=0, x=ego_x, y=ego_y, phi=ego_phi)
-            self.set_own_car(dict(ego=out))
-            self.sim_step()
-            state_other = self.n_ego_vehicles['ego']
-            v_light = self.v_light
+            time.sleep(self.step_length/1000-0.01)
+            state_ego = self.shared_list[9]
+            if isinstance(state_ego, dict):
+                ego_x = state_ego['GaussX']  # intersection coordinate [m]
+                ego_y = state_ego['GaussY']  # intersection coordinate [m]
+                ego_phi = state_ego['Heading']  # intersection coordinate [deg]
+                ego_v = state_ego['GpsSpeed']
+                out = dict(v_x=ego_v, v_y=0, r=0, x=ego_x, y=ego_y,
+                           phi=ego_phi, l=L, w=W, routeID=TASK2ROUTEID[self.training_task])
+                if not self.trigger:
+                    self.is_triggered(self.model_only_test, state_ego['VehicleMode'])
+                    self.init_traffic(dict(ego=out))
+                    self._get_vehicles()
+                    print('traffic is not triggered')
+                else:
+                    self.set_own_car(dict(ego=out))
+                    self.sim_step()
+                    v_light = self.v_light
+                state_other = self.n_ego_vehicles['ego']
+            delta_time = time.time() - start_time
+            start_time = time.time()
 
             with self.lock:
                 self.shared_list[4] = state_other.copy()
-                self.shared_list[5] = 0.1
+                self.shared_list[5] = delta_time
                 self.shared_list[13] = v_light
 
 

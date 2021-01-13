@@ -50,8 +50,8 @@ def subscriber_gps_agent(shared_list, receive_index, lock):
     subscriber_.run()
 
 
-def traffic(shared_list, lock, step_length, mode, task):
-    subscriber_ = Traffic(shared_list, lock, step_length, mode, task)
+def traffic(shared_list, lock, step_length, mode, model_only_test, task):
+    subscriber_ = Traffic(shared_list, lock, step_length, mode, model_only_test, task)
     subscriber_.run()
 
 
@@ -73,7 +73,7 @@ def built_parser():
     task = parser.parse_args().task
     parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-13-00-03-26'.format(task))
     parser.add_argument('--load_ite', type=str, default=65000)
-    parser.add_argument('--visualization', type=str, default='plot') # plot or render
+    parser.add_argument('--visualization', type=str, default='render') # plot or render
 
     parser.add_argument('--noise_factor', type=float, default=0.)
     parser.add_argument('--model_only_test', type=bool, default=True)
@@ -140,12 +140,12 @@ def main():
     lock = mp.Lock()
     procs = [Process(target=subscriber_gps_agent, args=(shared_list, receive_index, lock)),
              Process(target=subscriber_can_agent, args=(shared_list, receive_index, lock)),
-             Process(target=traffic, args=(shared_list, lock, args.traffic_step_length, 'training', args.task)),
+             Process(target=traffic, args=(shared_list, lock, args.traffic_step_length, 'training', args.model_only_test, args.task)),
              Process(target=controller_agent, args=(shared_list, receive_index, args.if_save, lock,
                                                     args.task, args.noise_factor, args.load_dir,
                                                     args.load_ite, args.result_dir, args.model_only_test,
                                                     args.clipped_v)),
-             Process(target=plot_agent, args=(shared_list, lock, args.task, args.model_only_test, args.visulization))]
+             Process(target=plot_agent, args=(shared_list, lock, args.task, args.model_only_test, args.visualization)),]
 
     for p in procs:
         p.start()
