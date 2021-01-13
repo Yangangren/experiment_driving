@@ -291,7 +291,7 @@ class Traffic(object):
 
     def run(self):
         start_time = time.time()
-        state_other = dict()
+        state_other = []
         v_light = 0
         while True:
             time.sleep(self.step_length/1000-0.01)
