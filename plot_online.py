@@ -294,17 +294,16 @@ class Plot():
             plt.text(text_x, text_y_start - next(ge), r'acc_actual: {:.2f}$m/s^2$'.format(self.acc_timer.mean))
 
             # plot text of trajectroy
-            text_x, text_y_start = -14, -70
+            text_x, text_y_start = -40, -70
             ge = iter(range(0, 1000, 6))
             traj_return_value = self.shared_list[11]
-            if traj_return_value is not None:
-                for i, value in enumerate(traj_return_value):
-                    if i == self.path_index.value:
-                        plt.text(text_x, text_y_start - next(ge), 'Path reward={:.4f}, Collision risk={:.4f}'.format(value[0], value[1]),
-                                 fontsize=14, color=color[i], fontstyle='italic')
-                    else:
-                        plt.text(text_x, text_y_start - next(ge), 'Path reward={:.4f}, Collision risk={:.4f}'.format(value[0], value[1]),
-                                 fontsize=12, color=color[i], fontstyle='italic')
+            for i, value in enumerate(traj_return_value):
+                if i == self.path_index.value:
+                    plt.text(text_x, text_y_start - next(ge), 'Path reward={:.4f}, Collision risk={:.4f}'.format(value[0], value[1]),
+                             fontsize=14, color=color[i], fontstyle='italic')
+                else:
+                    plt.text(text_x, text_y_start - next(ge), 'Path reward={:.4f}, Collision risk={:.4f}'.format(value[0], value[1]),
+                             fontsize=10, color=color[i], fontstyle='italic')
             plt.pause(0.01)
 
 
