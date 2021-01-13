@@ -308,7 +308,7 @@ class ReferencePath(object):
 
 
 class Controller(object):
-    def __init__(self, shared_list, receive_index, path_index, if_save, lock, task,
+    def __init__(self, shared_list, receive_index, if_save, lock, task,
                  noise_factor, load_dir, load_ite, result_dir, model_only_test, clipped_v):
         self.time_out = 0
         self.task = task
@@ -320,7 +320,6 @@ class Controller(object):
         self.shared_list = shared_list
         self.read_index_old = 0
         self.receive_index_shared = receive_index
-        self.path_index = path_index
         self.model_only_test = model_only_test
         self.clipped_v = clipped_v
         # self.read_index_old = Info_List[0]
@@ -365,7 +364,7 @@ class Controller(object):
 
     def _construct_veh_vector(self, ego_x, ego_y, state_others):
         all_vehicles = state_others
-        v_light = 0
+        v_light = int(self.shared_list[13])
         vehs_vector = []
         name_setting = dict(do='1o', di='1i', ro='2o', ri='2i', uo='3o', ui='3i', lo='4o', li='4i')
 
@@ -660,7 +659,7 @@ class Controller(object):
                         self.shared_list[9] = state_ego.copy()
                         self.shared_list[10] = list(veh_vec)
                         self.shared_list[11] = traj_return_value
-                    self.path_index.value = path_index
+                        self.shared_list[12] = path_index
                     self.step += 1
                 else:  # real test
                     shared_index = self.receive_index_shared.value
@@ -763,7 +762,7 @@ class Controller(object):
                             self.shared_list[9] = state_ego.copy()
                             self.shared_list[10] = list(veh_vec)
                             self.shared_list[11] = traj_return_value
-                        self.path_index.value = path_index
+                            self.shared_list[12] = path_index
                         self.step += 1
 
                 if self.if_save:
