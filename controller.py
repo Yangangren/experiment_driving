@@ -1,6 +1,5 @@
 import json
 import time
-from collections import OrderedDict
 from datetime import datetime
 from math import pi
 
@@ -310,8 +309,8 @@ class ReferencePath(object):
 
 
 class Controller(object):
-    def __init__(self, shared_list, receive_index, if_save, lock, task, noise_factor, load_dir, load_ite,
-                 result_dir, model_only_test, clipped_v):
+    def __init__(self, shared_list, receive_index, if_save, lock, task,
+                 noise_factor, load_dir, load_ite, result_dir, model_only_test, clipped_v):
         self.time_out = 0
         self.task = task
         self.ref_path = ReferencePath(self.task)
@@ -799,5 +798,4 @@ class Controller(object):
 
 
 if __name__ == "__main__":
-    from main import built_parser
-    args = built_parser()
+    pass
