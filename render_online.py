@@ -37,12 +37,11 @@ def rotate_coordination(orig_x, orig_y, orig_d, coordi_rotate_d):
     return transformed_x, transformed_y, transformed_d
 
 class Render():
-    def __init__(self, shared_list, path_index, lock, task, model_only_test=False):
+    def __init__(self, shared_list, lock, task, model_only_test=False):
         self.shared_list = shared_list
         self.lock = lock
         self.task = task
         self.model_only_test = model_only_test
-        self.path_index = path_index
         self.step_old = -1
         self.acc_timer = TimerStat()
         self._load_xml()
