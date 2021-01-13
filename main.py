@@ -73,7 +73,7 @@ def built_parser():
     task = parser.parse_args().task
     parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-13-00-03-26'.format(task))
     parser.add_argument('--load_ite', type=str, default=65000)
-    parser.add_argument('--visualization', type=str, default='plot') # plot or render
+    parser.add_argument('--visualization', type=str, default='render') # plot or render
 
     parser.add_argument('--noise_factor', type=float, default=0.)
     parser.add_argument('--model_only_test', type=bool, default=True)
@@ -145,7 +145,7 @@ def main():
                                                     args.task, args.noise_factor, args.load_dir,
                                                     args.load_ite, args.result_dir, args.model_only_test,
                                                     args.clipped_v)),
-             Process(target=plot_agent, args=(shared_list, lock, args.task, args.model_only_test, args.visulization))]
+             Process(target=plot_agent, args=(shared_list, lock, args.task, args.model_only_test, args.visualization)),]
 
     for p in procs:
         p.start()
