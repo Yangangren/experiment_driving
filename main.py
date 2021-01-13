@@ -22,6 +22,7 @@ from plot_online import Plot
 from subscriber_can import SubscriberCan
 from subscriber_gps import SubscriberGps
 from traffic_sumo import Traffic
+from render_online import Render
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -49,8 +50,8 @@ def subscriber_gps_agent(shared_list, receive_index, lock):
     subscriber_.run()
 
 
-def traffic(shared_list, lock, step_length, mode, task):
-    subscriber_ = Traffic(shared_list, lock, step_length, mode, task)
+def traffic(shared_list, lock, step_length, mode, model_only_test, task):
+    subscriber_ = Traffic(shared_list, lock, step_length, mode, model_only_test, task)
     subscriber_.run()
 
 
@@ -133,7 +134,7 @@ def main():
     lock = mp.Lock()
     procs = [Process(target=subscriber_gps_agent, args=(shared_list, receive_index, lock)),
              Process(target=subscriber_can_agent, args=(shared_list, receive_index, lock)),
-             Process(target=traffic, args=(shared_list, lock, args.traffic_step_length, 'training', args.task)),
+             Process(target=traffic, args=(shared_list, lock, args.traffic_step_length, 'training', args.model_only_test, args.task)),
              Process(target=controller_agent, args=(shared_list, receive_index, args.if_save, lock,
                                                     args.task, args.noise_factor, args.load_dir,
                                                     args.load_ite, args.result_dir, args.model_only_test,
