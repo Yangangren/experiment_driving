@@ -11,6 +11,8 @@ EGO_LENGTH = 4.8
 EGO_WIDTH = 2.0
 STATE_OTHER_LENGTH = EGO_LENGTH
 STATE_OTHER_WIDTH = EGO_WIDTH
+SCALE = 60
+SIZE = 1000
 
 def rotate_coordination(orig_x, orig_y, orig_d, coordi_rotate_d):
     """
@@ -68,7 +70,7 @@ class Render():
         glutInit()
         glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH)
         glutInitContextProfile(GLUT_CORE_PROFILE)
-        glutInitWindowSize(800, 800)
+        glutInitWindowSize(SIZE,SIZE)
         glutInitWindowPosition(460, 0)
         glutCreateWindow('Crossroad')
         glutDisplayFunc(self.render)
@@ -207,6 +209,7 @@ class Render():
     def _draw_zebra(self, loc, width, length, scale, shape, single_height=0.8):
         glLineWidth(1)
         glColor3f(0.8275, 0.8275, 0.8275)
+        # glColor3f(1.0,1.0,1.0)
         if shape == 'vertical':
             for i in range(int(length/single_height)):
                 glBegin(GL_POLYGON)
@@ -277,7 +280,7 @@ class Render():
         for i in range(n):
             glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, ord(str[i]))
 
-    def render(self, real_x=0, real_y=0, scale=60, **kwargs):
+    def render(self, real_x=0, real_y=0, scale=SCALE, **kwargs):
         time_st = time.time()
         LOC_X = -real_x / scale
         LOC_Y = -real_y / scale
@@ -359,6 +362,8 @@ class Render():
             glVertex2f((LU2_x + x) / scale, (LU2_y + y) / scale)
             glEnd()
 
+            return LU_x, LU_y, LD_x, LD_y
+
 
         def plot_phi_line(x, y, phi, color, scale):
             line_length = 5
@@ -380,8 +385,17 @@ class Render():
         ego_x = state_ego['GaussX']
         ego_y = state_ego['GaussY']
         ego_phi = state_ego['Heading']
-        draw_vehicle(ego_x, ego_y, ego_phi, EGO_LENGTH, EGO_WIDTH, scale, color='o')
+        decision = self.shared_list[8].copy()
+        acc = decision['a_x']
+        LU_x, LU_y, LD_x, LD_y = draw_vehicle(ego_x, ego_y, ego_phi, EGO_LENGTH, EGO_WIDTH, scale, color='o')
         plot_phi_line(ego_x,ego_y,ego_phi,'o',scale)
+        if acc < 0:
+            glPointSize(3.0)
+            glBegin(GL_POINTS)
+            glColor3f(1.0, 0.0, 0.0)
+            glVertex2f((LU_x + ego_x) / scale, (LU_y + ego_y) / scale)
+            glVertex2f((LD_x + ego_x) / scale, (LD_y + ego_y) / scale)
+            glEnd()
 
         # state_other = self.shared_list[4].copy()
         state_other = self.shared_list[4].copy()
@@ -393,9 +407,10 @@ class Render():
             veh_l = STATE_OTHER_LENGTH
             veh_w = STATE_OTHER_WIDTH
             plot_phi_line(veh_x, veh_y, veh_phi, 'y', scale)
-            draw_vehicle(veh_x, veh_y, veh_phi, veh_l, veh_w, scale, color='y')
+            _,_,_,_ = draw_vehicle(veh_x, veh_y, veh_phi, veh_l, veh_w, scale, color='y')
 
         traj_value = self.shared_list[11]
+        # print(traj_value)
         str1 = 'Trajectory 0 collision risk value: ' + str(traj_value[0][1])
         str2 = 'Trajectory 1 collision risk value: ' + str(traj_value[1][1])
         self._text(str1, 1)
