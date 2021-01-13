@@ -255,7 +255,12 @@ class Render():
                     glVertex2f(x, y)
         glEnd()
 
-
+    def _text(self, str):
+        n = len(str)
+        glRasterPos3f(-1, 0.95, 0.0)
+        for i in range(n):
+            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_24, ord(str[i]))
+            # glutBitmapString()
 
 
 
@@ -283,7 +288,8 @@ class Render():
         self._draw_zebra(-22, 6, 4, scale, 'horizontal')
 
         # draw ref
-        self._plot_reference(self.task, self.path_index, scale)
+        path_index = self.shared_list[12]
+        self._plot_reference(self.task, path_index, scale)
 
         # draw vehicles
         def draw_rotate_rec(x, y, a, l, w, scale, color='o'):
@@ -318,13 +324,15 @@ class Render():
 
 
         # ego vehicle
-        ego_x = 0
-        ego_y = 0
-        ego_phi = 0
-        draw_rotate_rec(ego_x, ego_y, ego_phi, EGO_LENGTH, EGO_WIDTH, scale, color='o')
-        plot_phi_line(ego_x,ego_y,ego_phi,'o',scale)
+        # state_ego = self.shared_list[9].copy()
+        # ego_x = state_ego['GaussX']
+        # ego_y = state_ego['GaussY']
+        # ego_phi = state_ego['Heading']
+        # draw_rotate_rec(ego_x, ego_y, ego_phi, EGO_LENGTH, EGO_WIDTH, scale, color='o')
+        # plot_phi_line(ego_x,ego_y,ego_phi,'o',scale)
 
-        state_other = self.shared_list[4].copy()
+        # state_other = self.shared_list[4].copy()
+        state_other = self.shared_list.copy()
         # plot cars
         for veh in state_other:
             veh_x = veh['x']
@@ -335,7 +343,7 @@ class Render():
             plot_phi_line(veh_x, veh_y, veh_phi, 'y', scale)
             draw_rotate_rec(veh_x, veh_y, veh_phi, veh_l, veh_w, scale, color='y')
 
-        v_light = 0 # todo
+        v_light = self.shared_list[13]
         if v_light == 0:
             self._texture_light(self.green_img, (-8, 20), 'U', scale)
             self._texture_light(self.green_img, (0, -18), 'D', scale)
@@ -346,6 +354,10 @@ class Render():
             self._texture_light(self.red_img, (0, -18), 'D', scale)
             self._texture_light(self.green_img, (-14, -12), 'L', scale)
             self._texture_light(self.green_img, (11, 4), 'R', scale)
+
+        traj_value = self.shared_list[11]
+        str = 'Trajectory 0 collision risk value'
+        self._text(str)
 
         glutSwapBuffers()
 
