@@ -37,11 +37,12 @@ def rotate_coordination(orig_x, orig_y, orig_d, coordi_rotate_d):
     return transformed_x, transformed_y, transformed_d
 
 class Render():
-    def __init__(self, shared_list, lock, task, model_only_test=False):
+    def __init__(self, shared_list, path_index, lock, task, model_only_test=False):
         self.shared_list = shared_list
         self.lock = lock
         self.task = task
         self.model_only_test = model_only_test
+        self.path_index = path_index
         self.step_old = -1
         self.acc_timer = TimerStat()
         self._load_xml()
@@ -54,14 +55,17 @@ class Render():
         right_construct_traj = np.load('./map/right_ref.npy')
         self.ref_path_all = {'left': left_construct_traj, 'straight': straight_construct_traj,
                              'right': right_construct_traj}
-        self._opengl_init()
+
+
+    def run(self):
+        self._opengl_start()
 
     def _read_png(self, path):
         im = open(path)
         ix, iy, image = im.size[0], im.size[1], im.tobytes("raw", "RGBA", 0, -1)
         return ix, iy, image
 
-    def _opengl_init(self):
+    def _opengl_start(self):
         glutInit()
         glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH)
         glutInitContextProfile(GLUT_CORE_PROFILE)
@@ -70,6 +74,7 @@ class Render():
         glutCreateWindow('Crossroad')
         glutDisplayFunc(self.render)
         # glutIdleFunc(self.render)
+        glutTimerFunc(20,self.render, 0)
         glutMainLoop()
 
     def _load_xml(self, path="./utils/sumo_files/a.net.xml"):
@@ -180,6 +185,7 @@ class Render():
                 if shape_point[0] != '':
                     glVertex2f((float(shape_point[0]) / scale) * 1, (float(shape_point[1]) / scale) * 1)
             glEnd()
+            glutTimerFunc(20,self.render,0)
 
 
     def _draw_zebra(self, loc, width, length, scale, shape, single_height=0.8):
@@ -253,7 +259,8 @@ class Render():
 
 
 
-    def render(self, real_x=0, real_y=0, scale=50):
+    def render(self, real_x=0, real_y=0, scale=60, **kwargs):
+        time_st = time.time()
         LOC_X = -real_x / scale
         LOC_Y = -real_y / scale
         glClearColor(0.1333, 0.545, 0.1333, 1)
@@ -276,8 +283,7 @@ class Render():
         self._draw_zebra(-22, 6, 4, scale, 'horizontal')
 
         # draw ref
-        ref_index = 0 # todo
-        self._plot_reference(self.task, ref_index, scale)
+        self._plot_reference(self.task, self.path_index, scale)
 
         # draw vehicles
         def draw_rotate_rec(x, y, a, l, w, scale, color='o'):
@@ -318,8 +324,7 @@ class Render():
         draw_rotate_rec(ego_x, ego_y, ego_phi, EGO_LENGTH, EGO_WIDTH, scale, color='o')
         plot_phi_line(ego_x,ego_y,ego_phi,'o',scale)
 
-        # state_other = self.shared_list[4].copy()
-        state_other = self.shared_list.copy() # todo
+        state_other = self.shared_list[4].copy()
         # plot cars
         for veh in state_other:
             veh_x = veh['x']
@@ -347,6 +352,7 @@ class Render():
         glDisable(GL_BLEND)
         glDisable(GL_LINE_SMOOTH)
         glDisable(GL_POLYGON_SMOOTH)
+        print(time.time()-time_st)
 
 
     def _texture_light(self, img, loc, edge, scale, size=(8, 3)):
@@ -423,5 +429,7 @@ class Render():
 
 
 if __name__ == '__main__':
+    path_index = 0
     share_list = [{'x':0.0, 'y':10.0,'phi':135.0}]
-    render = Render(share_list, None, 'right')
+    render = Render(share_list, path_index, None, 'right')
+    render.run()
