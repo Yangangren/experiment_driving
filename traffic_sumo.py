@@ -61,7 +61,7 @@ class Traffic(object):
             traci.start(
                 [SUMO_BINARY, "-c", SUMOCFG_DIR,
                  "--step-length", self.step_time_str,
-                 "--lateral-resolution", "3.75",
+                 "--lateral-resolution", "3.5",
                  "--random",
                  # "--start",
                  # "--quit-on-end",
