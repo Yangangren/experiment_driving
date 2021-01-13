@@ -8,9 +8,8 @@ from utils.misc import TimerStat
 
 
 class Plot():
-    def __init__(self, shared_list, path_index, lock, task, model_only_test=False):
+    def __init__(self, shared_list, lock, task, model_only_test=False):
         self.shared_list = shared_list
-        self.path_index = path_index
         self.lock = lock
         self.task = task
         self.model_only_test = model_only_test
@@ -124,8 +123,7 @@ class Plot():
             # ----------------------ref_path--------------------
             color = ['blue', 'coral', 'cyan', 'green']
             for index, path in enumerate(self.ref_path_all[self.task]):
-                print('plot', self.path_index.value)
-                if index == self.path_index.value:
+                if index == self.shared_list[12]:
                     ax.plot(path[0], path[1], color=color[index], alpha=1.0)
                 else:
                     ax.plot(path[0], path[1], color=color[index], alpha=0.3)
@@ -162,7 +160,7 @@ class Plot():
                     plot_phi_line(veh_x, veh_y, veh_phi, 'black')
                     draw_rotate_rec(veh_x, veh_y, veh_phi, veh_l, veh_w, 'b', linestyle='--')
 
-            v_light = 0  # todo
+            v_light = int(self.shared_list[13])  # todo
             if v_light == 0:
                 v_color, h_color = 'black', 'black'  # 'green', 'red'
             elif v_light == 1:
@@ -298,7 +296,7 @@ class Plot():
             ge = iter(range(0, 1000, 6))
             traj_return_value = self.shared_list[11]
             for i, value in enumerate(traj_return_value):
-                if i == self.path_index.value:
+                if i == self.shared_list[12]:
                     plt.text(text_x, text_y_start - next(ge), 'Path reward={:.4f}, Collision risk={:.4f}'.format(value[0], value[1]),
                              fontsize=14, color=color[i], fontstyle='italic')
                 else:

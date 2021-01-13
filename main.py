@@ -29,10 +29,10 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 # gps,can->traffic->controller->plot
 
 
-def controller_agent(shared_list, receive_index, path_index, if_save,
+def controller_agent(shared_list, receive_index, if_save,
                      lock, task, noise_factor, load_dir, load_ite,
                      result_dir, model_only_test, clipped_v):
-    publisher_ = Controller(shared_list, receive_index, path_index,if_save,
+    publisher_ = Controller(shared_list, receive_index,if_save,
                             lock, task, noise_factor, load_dir, load_ite,
                             result_dir, model_only_test, clipped_v)
     time.sleep(10)
@@ -54,8 +54,8 @@ def traffic(shared_list, lock, step_length, mode, task):
     subscriber_.run()
 
 
-def plot_agent(shared_list, path_index, lock, task, model_only_test):
-    plot_ = Plot(shared_list, path_index, lock, task, model_only_test)
+def plot_agent(shared_list, lock, task, model_only_test):
+    plot_ = Plot(shared_list, lock, task, model_only_test)
     time.sleep(13)
     plot_.run()
 
@@ -92,9 +92,9 @@ def main():
     os.makedirs(args.result_dir)
     with open(args.result_dir + '/config.json', 'w', encoding='utf-8') as f:
         json.dump(vars(args), f, ensure_ascii=False, indent=4)
-    shared_list = mp.Manager().list([0.] * 12)
+    shared_list = mp.Manager().list([0.] * 14)
     # [state_gps, time_gps, state_can, time_can, state_other, time_radar,
-    #  step, runtime, decision, state_ego, obs_vec]
+    #  step, runtime, decision, state_ego, obs_vec, traj_value, ref_index, v_light]
 
     # state_gps['GaussX'] = 0   # intersection coordinate [m]
     # state_gps['GaussY'] = 0   # intersection coordinate [m]
@@ -130,16 +130,15 @@ def main():
     #             'a_x': a_x})  # [m/s^2]
 
     receive_index = mp.Value('d', 0.0)
-    path_index = mp.Value('d', 0)
     lock = mp.Lock()
     procs = [Process(target=subscriber_gps_agent, args=(shared_list, receive_index, lock)),
              Process(target=subscriber_can_agent, args=(shared_list, receive_index, lock)),
              Process(target=traffic, args=(shared_list, lock, args.traffic_step_length, 'training', args.task)),
-             Process(target=controller_agent, args=(shared_list, receive_index, path_index, args.if_save, lock,
+             Process(target=controller_agent, args=(shared_list, receive_index, args.if_save, lock,
                                                     args.task, args.noise_factor, args.load_dir,
                                                     args.load_ite, args.result_dir, args.model_only_test,
                                                     args.clipped_v)),
-             Process(target=plot_agent, args=(shared_list, path_index, lock, args.task, args.model_only_test))]
+             Process(target=plot_agent, args=(shared_list, lock, args.task, args.model_only_test))]
 
     for p in procs:
         p.start()

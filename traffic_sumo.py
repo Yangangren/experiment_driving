@@ -316,8 +316,11 @@ class Traffic(object):
             self.set_own_car(dict(ego=out))
             self.sim_step()
             state_other = self.n_ego_vehicles['ego']
+            v_light = self.v_light
 
             with self.lock:
                 self.shared_list[4] = state_other.copy()
                 self.shared_list[5] = 0.1
+                self.shared_list[13] = v_light
+
 
