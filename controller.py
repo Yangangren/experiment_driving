@@ -10,7 +10,6 @@ import zmq
 
 from utils.endtoend_env_utils import *
 from utils.load_policy import LoadPolicy
-T = 3.14928
 
 
 def deal_with_phi_diff(phi_diff):
@@ -309,7 +308,7 @@ class ReferencePath(object):
 
 
 class Controller(object):
-    def __init__(self, shared_list, receive_index, if_save, lock, task,
+    def __init__(self, shared_list, receive_index, path_index, if_save, lock, task,
                  noise_factor, load_dir, load_ite, result_dir, model_only_test, clipped_v):
         self.time_out = 0
         self.task = task
@@ -321,6 +320,7 @@ class Controller(object):
         self.shared_list = shared_list
         self.read_index_old = 0
         self.receive_index_shared = receive_index
+        self.path_index = path_index
         self.model_only_test = model_only_test
         self.clipped_v = clipped_v
         # self.read_index_old = Info_List[0]
@@ -610,15 +610,13 @@ class Controller(object):
                     # path selection
                     traj_return_value = []
                     traj_num = LANE_NUMBER_LR if self.task == 'right' or 'left' else LANE_NUMBER_UD
-                    for i in range(traj_num):
-                        self.ref_path.set_path(i)
+                    for traj_index in range(traj_num):
+                        self.ref_path.set_path(traj_index)
                         obs, _, _ = self._get_obs(state_gps_modified_by_model, state_other, model_flag=True)
-                        traj_value = self.model.values(obs)
-                        traj_return_value.append(traj_value.numpy().squeeze().tolist())
-
+                        obj_v, con_v = self.model.values(obs)
+                        traj_return_value.append([obj_v.numpy(), con_v.numpy()])
                     traj_return_value = np.array(traj_return_value, dtype=np.float32)
-                    path_index = np.argmax(traj_return_value[:, 0])
-
+                    path_index = np.argmin(traj_return_value[:, 1])
                     self.ref_path.set_path(path_index)
                     obs, obs_dict, veh_vec = self._get_obs(state_gps_modified_by_model, state_other, model_flag=True)
 
@@ -661,7 +659,8 @@ class Controller(object):
                         self.shared_list[8] = decision.copy()
                         self.shared_list[9] = state_ego.copy()
                         self.shared_list[10] = list(veh_vec)
-
+                        self.shared_list[11] = traj_return_value
+                    self.path_index.value = path_index
                     self.step += 1
                 else:  # real test
                     shared_index = self.receive_index_shared.value
@@ -711,15 +710,13 @@ class Controller(object):
                         # path selection
                         traj_return_value = []
                         traj_num = LANE_NUMBER_LR if self.task == 'right' or 'left' else LANE_NUMBER_UD
-                        for i in range(traj_num):
-                            self.ref_path.set_path(i)
+                        for traj_index in range(traj_num):
+                            self.ref_path.set_path(traj_index)
                             obs, _, _ = self._get_obs(state_gps_modified_by_model, state_other, model_flag=True)
-                            traj_value = self.model.values(obs)
-                            traj_return_value.append(traj_value.numpy().squeeze().tolist())
-
+                            obj_v, con_v = self.model.values(obs)
+                            traj_return_value.append([obj_v.numpy(), con_v.numpy()])
                         traj_return_value = np.array(traj_return_value, dtype=np.float32)
-                        path_index = np.argmax(traj_return_value[:, 0])
-
+                        path_index = np.argmin(traj_return_value[:, 1])
                         self.ref_path.set_path(path_index)
 
                         obs_model, obs_dict_model, veh_vec_model = self._get_obs(state_gps_modified_by_model,
@@ -765,7 +762,8 @@ class Controller(object):
                             self.shared_list[8] = decision.copy()
                             self.shared_list[9] = state_ego.copy()
                             self.shared_list[10] = list(veh_vec)
-
+                            self.shared_list[11] = traj_return_value
+                        self.path_index.value = path_index
                         self.step += 1
 
                 if self.if_save:
@@ -798,4 +796,20 @@ class Controller(object):
 
 
 if __name__ == "__main__":
-    pass
+    from main import built_parser
+    import multiprocessing as mp
+    args = built_parser()
+    os.makedirs(args.result_dir)
+    shared_list = mp.Manager().list([0.] * 11)
+    receive_index = mp.Value('d', 0.0)
+    lock = mp.Lock()
+    publisher = Controller(shared_list, receive_index, args.if_save, lock,
+                                                    args.task, args.noise_factor, args.load_dir,
+                                                    args.load_ite, args.result_dir, args.model_only_test,
+                                                    args.clipped_v)
+    ref_path = ReferencePath('left')
+    for i in range(4):
+        ref_path.set_path(i)
+        print(ref_path.ref_index)
+        path = ref_path.path
+        print(ref_path.path)
