@@ -1,13 +1,9 @@
 import math
 import time
-from math import cos, sin, pi
-
-import matplotlib.pyplot as plt
 import numpy as np
-
+from math import cos,sin,pi
 from utils.misc import TimerStat
 from OpenGL.GL import *
-from OpenGL.GLU import *
 from OpenGL.GLUT import *
 from PIL.Image import open
 import xml.dom.minidom
@@ -53,6 +49,11 @@ class Render():
         self.green_img = self._read_png('utils/Rendering/green.png')
         self.GL_TEXTURE_RED = glGenTextures(1)
         self.GL_TEXTURE_GREEN = glGenTextures(1)
+        left_construct_traj = np.load('./map/left_ref.npy')
+        straight_construct_traj = np.load('./map/straight_ref.npy')
+        right_construct_traj = np.load('./map/right_ref.npy')
+        self.ref_path_all = {'left': left_construct_traj, 'straight': straight_construct_traj,
+                             'right': right_construct_traj}
         self._opengl_init()
 
     def _read_png(self, path):
@@ -67,7 +68,8 @@ class Render():
         glutInitWindowSize(1000, 1000)
         glutInitWindowPosition(460, 0)
         glutCreateWindow('Crossroad')
-        glutDisplayFunc(self.render_map)
+        glutDisplayFunc(self.render)
+        # glutIdleFunc(self.render)
         glutMainLoop()
 
     def _load_xml(self, path="./utils/sumo_files/a.net.xml"):
@@ -228,7 +230,30 @@ class Render():
                 glVertex2f(x4, y4)
                 glEnd()
 
-    def render_map(self, real_x=0, real_y=0, scale=50):
+    def _plot_reference(self, task, highlight_index, scale):
+        glPointSize(2.0)
+        glBegin(GL_POINTS)
+        for i in range(self.ref_path_all[task].shape[0]):
+            if i != highlight_index:
+                glColor3f(0.0, 0.4, 0.0)
+                for j in range(self.ref_path_all[task].shape[2]):
+                    x = self.ref_path_all[task][i][0][j] / scale
+                    y =  self.ref_path_all[task][i][1][j] / scale
+                    glVertex2f(x, y)
+        for i in range(self.ref_path_all[task].shape[0]):
+            if i == highlight_index:
+                glColor3f(0.486, 0.99, 0.0)
+                for j in range(self.ref_path_all[task].shape[2]):
+                    x = self.ref_path_all[task][i][0][j] / scale
+                    y =  self.ref_path_all[task][i][1][j] / scale
+                    glVertex2f(x, y)
+        glEnd()
+
+
+
+
+
+    def render(self, real_x=0, real_y=0, scale=50):
         LOC_X = -real_x / scale
         LOC_Y = -real_y / scale
         glClearColor(0.1333, 0.545, 0.1333, 1)
@@ -240,14 +265,21 @@ class Render():
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         glEnable(GL_POLYGON_SMOOTH)
         glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST)
+        glEnable(GL_LINE_SMOOTH)
+        glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
 
+        # draw map
         self._draw_map(scale)
         self._draw_zebra(-17, 6, 7, scale, 'vertical')
         self._draw_zebra(17, 6, 7, scale, 'vertical')
         self._draw_zebra(26, 6, 4, scale, 'horizontal')
         self._draw_zebra(-22, 6, 4, scale, 'horizontal')
 
+        # draw ref
+        ref_index = 0 # todo
+        self._plot_reference(self.task, ref_index, scale)
 
+        # draw vehicles
         def draw_rotate_rec(x, y, a, l, w, scale, color='o'):
             RU_x, RU_y, _ = rotate_coordination(l / 2, w / 2, 0, -a)
             RD_x, RD_y, _ = rotate_coordination(l / 2, -w / 2, 0, -a)
@@ -256,14 +288,38 @@ class Render():
             glBegin(GL_POLYGON)
             if color == 'o':
                 glColor3f(1.0, 0.647, 0.0)
+            elif color == 'y':
+                glColor3f(1.0, 1.0, 0.878)
             glVertex2f((RU_x + x) / scale, (RU_y + y) / scale)
             glVertex2f((RD_x + x) / scale, (RD_y + y) / scale)
             glVertex2f((LD_x + x) / scale, (LD_y + y) / scale)
             glVertex2f((LU_x + x) / scale, (LU_y + y) / scale)
             glEnd()
 
+        def plot_phi_line(x, y, phi, color, scale):
+            line_length = 5
+            x_forw, y_forw = x + line_length * cos(phi * pi / 180.), \
+                             y + line_length * sin(phi * pi / 180.)
+            glLineWidth(1.0)
+            glBegin(GL_LINES)
+            if color == 'o':
+                glColor3f(1.0, 0.647, 0.0)
+            elif color == 'y':
+                glColor3f(1.0, 1.0, 0.878)
+            glVertex2f(x / scale,y / scale)
+            glVertex2f(x_forw / scale,y_forw / scale)
+            glEnd()
+
+
+        # ego vehicle
+        ego_x = 0
+        ego_y = 0
+        ego_phi = 0
+        draw_rotate_rec(ego_x, ego_y, ego_phi, EGO_LENGTH, EGO_WIDTH, scale, color='o')
+        plot_phi_line(ego_x,ego_y,ego_phi,'o',scale)
+
         # state_other = self.shared_list[4].copy()
-        state_other = self.shared_list.copy()
+        state_other = self.shared_list.copy() # todo
         # plot cars
         for veh in state_other:
             veh_x = veh['x']
@@ -271,10 +327,10 @@ class Render():
             veh_phi = veh['phi']
             veh_l = STATE_OTHER_LENGTH
             veh_w = STATE_OTHER_WIDTH
-            # plot_phi_line(veh_x, veh_y, veh_phi, 'black')
-            draw_rotate_rec(veh_x, veh_y, veh_phi, veh_l, veh_w, scale)
+            plot_phi_line(veh_x, veh_y, veh_phi, 'y', scale)
+            draw_rotate_rec(veh_x, veh_y, veh_phi, veh_l, veh_w, scale, color='y')
 
-        v_light = 0
+        v_light = 0 # todo
         if v_light == 0:
             self._texture_light(self.green_img, (-8, 20), 'U', scale)
             self._texture_light(self.green_img, (0, -18), 'D', scale)
@@ -291,6 +347,7 @@ class Render():
         glDisable(GL_BLEND)
         glDisable(GL_LINE_SMOOTH)
         glDisable(GL_POLYGON_SMOOTH)
+
 
     def _texture_light(self, img, loc, edge, scale, size=(8, 3)):
         glEnable(GL_TEXTURE_2D)
@@ -367,4 +424,4 @@ class Render():
 
 if __name__ == '__main__':
     share_list = [{'x':0.0, 'y':10.0,'phi':135.0}]
-    render = Render(share_list, None, None)
+    render = Render(share_list, None, 'right')
