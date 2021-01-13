@@ -61,7 +61,6 @@ class Plot():
             plt.plot([x, x_forw], [y, y_forw], color=color, linewidth=0.5)
 
         while True:
-            # start_time = time.time()
             plt.cla()
             plt.axis('off')
             ax.add_patch(plt.Rectangle((-CROSSROAD_HALF_WIDTH - extension, -CROSSROAD_D_HEIGHT - extension),
@@ -302,7 +301,8 @@ class Plot():
                 else:
                     plt.text(text_x, text_y_start - next(ge), 'Path reward={:.4f}, Collision risk={:.4f}'.format(value[0], value[1]),
                              fontsize=10, color=color[i], fontstyle='italic')
-            plt.pause(0.01)
+            plt.pause(0.00001)
+
 
 
 def static_plot():

@@ -44,7 +44,7 @@ class SubscriberGps():
         state_gps = OrderedDict()
         state_gps['GaussX'] = 1.75   # intersection coordinate [m]
         state_gps['GaussY'] = -40   # intersection coordinate [m]
-        state_gps['Heading'] = 0  # intersection coordinate [deg]
+        state_gps['Heading'] = 90.  # intersection coordinate [deg]
 
         state_gps['GpsSpeed'] = 0          # [m/s]
         state_gps['NorthVelocity'] = 0     # [m/s]
