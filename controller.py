@@ -608,14 +608,20 @@ class Controller(object):
 
                     # path selection
                     traj_return_value = []
-                    traj_num = LANE_NUMBER_LR if self.task == 'right' or 'left' else LANE_NUMBER_UD
+                    if self.task == 'right' or self.task == 'left':
+                        traj_num = LANE_NUMBER_LR
+                    elif self.task == 'straight':
+                        traj_num = LANE_NUMBER_UD
                     for traj_index in range(traj_num):
                         self.ref_path.set_path(traj_index)
                         obs, _, _ = self._get_obs(state_gps_modified_by_model, state_other, model_flag=True)
                         obj_v, con_v = self.model.values(obs)
                         traj_return_value.append([obj_v.numpy(), con_v.numpy()])
                     traj_return_value = np.array(traj_return_value, dtype=np.float32)
-                    path_index = np.argmin(traj_return_value[:, 1])
+                    if np.max(traj_return_value[:, 1]) - np.min(traj_return_value[:, 1]) > 1.:
+                        path_index = np.argmin(traj_return_value[:, 1])
+                    else:
+                        path_index = np.argmax(traj_return_value[:, 0])
                     self.ref_path.set_path(path_index)
                     obs, obs_dict, veh_vec = self._get_obs(state_gps_modified_by_model, state_other, model_flag=True)
 
