@@ -215,11 +215,8 @@ fabric.properties
 /record/
 /map/roadMap.txt
 /map/roadMap_2.txt
-/map/straight_ref.npy
-/map/right_ref.npy
-/map/left_ref.npy
 .idea/
 /utils/models/left/0105/experiment-2021-01-03-12-38-00/logs/
 /utils/models/
 /utils/models/left/0105/experiment-2021-01-03-12-38-00/
-/map/ref/
+

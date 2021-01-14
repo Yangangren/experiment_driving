@@ -44,7 +44,7 @@ class SubscriberGps():
         state_gps = OrderedDict()
         state_gps['GaussX'] = 1.75   # intersection coordinate [m]
         state_gps['GaussY'] = -40   # intersection coordinate [m]
-        state_gps['Heading'] = 0  # intersection coordinate [deg]
+        state_gps['Heading'] = 90.  # intersection coordinate [deg]
 
         state_gps['GpsSpeed'] = 0          # [m/s]
         state_gps['NorthVelocity'] = 0     # [m/s]
@@ -91,10 +91,6 @@ class SubscriberGps():
                 self.shared_list[0] = state_gps.copy()
                 self.shared_list[1] = time_receive_gps
             self.receive_index_shared.value += 1
-
-            # check the time interval of gps
-            # if time_receive_gps > 0.1:
-            #     print("Subscriber of gps is more than 0.1s!", time_receive_gps)
 
 
 if __name__ == '__main__':

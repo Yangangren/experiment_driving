@@ -1,62 +1,10 @@
-import math
 import time
 from math import cos, sin, pi
 
 import matplotlib.pyplot as plt
-import numpy as np
 
+from utils.endtoend_env_utils import *
 from utils.misc import TimerStat
-
-CROSSROAD_SIZE = 22
-LANE_WIDTH = 3.5
-START_OFFSET = 3
-LANE_NUMBER = 1
-EGO_LENGTH = 4.8
-EGO_WIDTH = 2.0
-STATE_OTHER_LENGTH = EGO_LENGTH
-STATE_OTHER_WIDTH = EGO_WIDTH
-
-def rotate_coordination(orig_x, orig_y, orig_d, coordi_rotate_d):
-    """
-    :param orig_x: original x
-    :param orig_y: original y
-    :param orig_d: original degree
-    :param coordi_rotate_d: coordination rotation d, positive if anti-clockwise, unit: deg
-    :return:
-    transformed_x, transformed_y, transformed_d(range:(-180 deg, 180 deg])
-    """
-
-    coordi_rotate_d_in_rad = coordi_rotate_d * math.pi / 180
-    transformed_x = orig_x * math.cos(coordi_rotate_d_in_rad) + orig_y * math.sin(coordi_rotate_d_in_rad)
-    transformed_y = -orig_x * math.sin(coordi_rotate_d_in_rad) + orig_y * math.cos(coordi_rotate_d_in_rad)
-    transformed_d = orig_d - coordi_rotate_d
-    if transformed_d > 180:
-        while transformed_d > 180:
-            transformed_d = transformed_d - 360
-    elif transformed_d <= -180:
-        while transformed_d <= -180:
-            transformed_d = transformed_d + 360
-    else:
-        transformed_d = transformed_d
-    return transformed_x, transformed_y, transformed_d
-
-def find_closest_point(path, xs, ys, ratio=6):
-    path_len = len(path[0])
-    reduced_idx = np.arange(0, path_len, ratio)
-    reduced_len = len(reduced_idx)
-    reduced_path_x, reduced_path_y = path[0][reduced_idx], path[1][reduced_idx]
-    xs_tile = np.tile(np.reshape(xs, (-1, 1)), (1, reduced_len))
-    ys_tile = np.tile(np.reshape(ys, (-1, 1)), (1, reduced_len))
-    pathx_tile = np.tile(np.reshape(reduced_path_x, (1, -1)), (len(xs), 1))
-    pathy_tile = np.tile(np.reshape(reduced_path_y, (1, -1)), (len(xs), 1))
-
-    dist_array = np.square(xs_tile - pathx_tile) + np.square(ys_tile - pathy_tile)
-
-    indexes = np.argmin(dist_array, 1) * ratio
-    if len(indexes) > 1:
-        indexes = indexes[0]
-    points = path[0][indexes], path[1][indexes], path[2][indexes]
-    return indexes, points
 
 
 class Plot():
@@ -67,41 +15,31 @@ class Plot():
         self.model_only_test = model_only_test
         self.step_old = -1
         self.acc_timer = TimerStat()
-        left_construct_traj = np.load('./map/left_construct.npy')
-        straight_construct_traj = np.load('./map/straight_construct.npy')
-        right_construct_traj = np.load('./map/right_construct.npy')
-        left_gps = np.load('./map/left_ref_cut.npy')
-        straight_gps = np.load('./map/straight_ref_cut.npy')
-        right_gps = np.load('./map/right_ref_cut.npy')
-        self.ref_path_all = {'left':left_construct_traj, 'straight': straight_construct_traj, 'right':right_construct_traj,
-                    'left_ref':left_gps, 'straight_ref':straight_gps, 'right_ref':right_gps}
-        self.ref_path = self.ref_path_all[task]
+        left_construct_traj = np.load('./map/left_ref.npy')
+        straight_construct_traj = np.load('./map/straight_ref.npy')
+        right_construct_traj = np.load('./map/right_ref.npy')
+        self.ref_path_all = {'left': left_construct_traj, 'straight': straight_construct_traj,
+                             'right': right_construct_traj,
+                             }
+        self.ref_path = self.ref_path_all[task][0]  # todo
 
     def run(self):
-        square_length = CROSSROAD_SIZE
-        start_offset = START_OFFSET
         extension = 40
-        lane_width = LANE_WIDTH
         light_line_width = 3
         dotted_line_style = '--'
         solid_line_style = '-'
         start_time = 0
         v_old = 0.
-        # plt.figure(0)
-        # plt.ion()
-        # plt.cla()
         plt.title("Crossroad")
-        ax = plt.axes(xlim=(-square_length / 2 - extension, square_length / 2 + extension),
-                      ylim=(-square_length / 2 - extension, square_length / 2 + extension))
+        ax = plt.axes(xlim=(-CROSSROAD_HALF_WIDTH - extension, CROSSROAD_HALF_WIDTH + extension),
+                      ylim=(-CROSSROAD_D_HEIGHT - extension, CROSSROAD_U_HEIGHT + extension))
+
         plt.axis("equal")
         plt.axis('off')
 
-        # ax.add_patch(plt.Rectangle((-square_length / 2, -square_length / 2),
-        #                            square_length, square_length, edgecolor='black', facecolor='none'))
-
         def is_in_plot_area(x, y, tolerance=5):
-            if -square_length / 2 - extension + tolerance < x < square_length / 2 + extension - tolerance and \
-                    -square_length / 2 - extension + tolerance < y < square_length / 2 + extension - tolerance:
+            if -CROSSROAD_HALF_WIDTH - extension + tolerance < x < CROSSROAD_HALF_WIDTH + extension - tolerance and \
+                    -CROSSROAD_D_HEIGHT - extension + tolerance < y < CROSSROAD_U_HEIGHT + extension - tolerance:
                 return True
             else:
                 return False
@@ -123,83 +61,85 @@ class Plot():
             plt.plot([x, x_forw], [y, y_forw], color=color, linewidth=0.5)
 
         while True:
-            # start_time = time.time()
             plt.cla()
             plt.axis('off')
-            ax.add_patch(plt.Rectangle((-square_length / 2 - extension, -square_length / 2 - extension - start_offset),
-                                       square_length + 2 * extension, square_length + 2 * extension + start_offset,
-                                       edgecolor='black',
+            ax.add_patch(plt.Rectangle((-CROSSROAD_HALF_WIDTH - extension, -CROSSROAD_D_HEIGHT - extension),
+                                       2 * CROSSROAD_HALF_WIDTH + 2 * extension,
+                                       CROSSROAD_D_HEIGHT + CROSSROAD_U_HEIGHT + 2 * extension, edgecolor='black',
                                        facecolor='none'))
 
-            # ----------arrow--------------
-            plt.arrow(lane_width / 2, -square_length / 2 - 10, 0, 5, color='b')
-            plt.arrow(lane_width / 2, -square_length / 2 - 10 + 5, -0.5, 0, color='b', head_width=1)
-            plt.arrow(lane_width / 2, -square_length / 2 - 10, 0, 5, color='b', head_width=1)
-            plt.arrow(lane_width / 2, -square_length / 2 - 10, 0, 5, color='b')
-            plt.arrow(lane_width / 2, -square_length / 2 - 10 + 5, 0.5, 0, color='b', head_width=1)
-
             # ----------horizon--------------
-            plt.plot([-square_length / 2 - extension, -square_length / 2], [0, 0], color='black')
-            plt.plot([square_length / 2 + extension, square_length / 2], [0, 0], color='black')
+            plt.plot([-CROSSROAD_HALF_WIDTH - extension, -CROSSROAD_HALF_WIDTH], [0, 0], color='black')
+            plt.plot([CROSSROAD_HALF_WIDTH + extension, CROSSROAD_HALF_WIDTH], [0, 0], color='black')
 
             #
-            for i in range(1, LANE_NUMBER + 1):
-                linestyle = dotted_line_style if i < LANE_NUMBER else solid_line_style
-                plt.plot([-square_length / 2 - extension, -square_length / 2], [i * lane_width, i * lane_width],
+            for i in range(1, LANE_NUMBER_LR + 1):
+                linestyle = dotted_line_style if i < LANE_NUMBER_LR else solid_line_style
+                plt.plot([-CROSSROAD_HALF_WIDTH - extension, -CROSSROAD_HALF_WIDTH],
+                         [i * LANE_WIDTH_LR, i * LANE_WIDTH_LR],
                          linestyle=linestyle, color='black')
-                plt.plot([square_length / 2 + extension, square_length / 2], [i * lane_width, i * lane_width],
+                plt.plot([CROSSROAD_HALF_WIDTH + extension, CROSSROAD_HALF_WIDTH],
+                         [i * LANE_WIDTH_LR, i * LANE_WIDTH_LR],
                          linestyle=linestyle, color='black')
-                plt.plot([-square_length / 2 - extension, -square_length / 2], [-i * lane_width, -i * lane_width],
+                plt.plot([-CROSSROAD_HALF_WIDTH - extension, -CROSSROAD_HALF_WIDTH],
+                         [-i * LANE_WIDTH_LR, -i * LANE_WIDTH_LR],
                          linestyle=linestyle, color='black')
-                plt.plot([square_length / 2 + extension, square_length / 2], [-i * lane_width, -i * lane_width],
+                plt.plot([CROSSROAD_HALF_WIDTH + extension, CROSSROAD_HALF_WIDTH],
+                         [-i * LANE_WIDTH_LR, -i * LANE_WIDTH_LR],
                          linestyle=linestyle, color='black')
 
             # ----------vertical----------------
-            plt.plot([0, 0], [-square_length / 2 - extension - start_offset, -square_length / 2 - start_offset],
-                     color='black')
-            plt.plot([0, 0], [square_length / 2 + extension, square_length / 2], color='black')
+            plt.plot([0, 0], [-CROSSROAD_D_HEIGHT - extension, -CROSSROAD_D_HEIGHT], color='black')
+            plt.plot([0, 0], [CROSSROAD_U_HEIGHT + extension, CROSSROAD_U_HEIGHT], color='black')
 
             #
-            for i in range(1, LANE_NUMBER + 1):
-                linestyle = dotted_line_style if i < LANE_NUMBER else solid_line_style
-                plt.plot([i * lane_width, i * lane_width],
-                         [-square_length / 2 - extension - start_offset, -square_length / 2 - start_offset],
+            for i in range(1, LANE_NUMBER_UD + 1):
+                linestyle = dotted_line_style if i < LANE_NUMBER_UD else solid_line_style
+                plt.plot([i * LANE_WIDTH_UD, i * LANE_WIDTH_UD], [-CROSSROAD_D_HEIGHT - extension, -CROSSROAD_D_HEIGHT],
                          linestyle=linestyle, color='black')
-                plt.plot([i * lane_width, i * lane_width], [square_length / 2 + extension, square_length / 2],
+                plt.plot([i * LANE_WIDTH_UD, i * LANE_WIDTH_UD], [CROSSROAD_U_HEIGHT + extension, CROSSROAD_U_HEIGHT],
                          linestyle=linestyle, color='black')
-                plt.plot([-i * lane_width, -i * lane_width],
-                         [-square_length / 2 - extension - start_offset, -square_length / 2 - start_offset],
+                plt.plot([-i * LANE_WIDTH_UD, -i * LANE_WIDTH_UD],
+                         [-CROSSROAD_D_HEIGHT - extension, -CROSSROAD_D_HEIGHT],
                          linestyle=linestyle, color='black')
-                plt.plot([-i * lane_width, -i * lane_width], [square_length / 2 + extension, square_length / 2],
+                plt.plot([-i * LANE_WIDTH_UD, -i * LANE_WIDTH_UD], [CROSSROAD_U_HEIGHT + extension, CROSSROAD_U_HEIGHT],
                          linestyle=linestyle, color='black')
 
             # ----------Oblique--------------
-            plt.plot([LANE_NUMBER * lane_width, square_length / 2],
-                     [-square_length / 2 - start_offset, -LANE_NUMBER * lane_width],
+            plt.plot([LANE_NUMBER_UD * LANE_WIDTH_UD, CROSSROAD_HALF_WIDTH],
+                     [-CROSSROAD_D_HEIGHT, -LANE_NUMBER_LR * LANE_WIDTH_LR],
                      color='black')
-            plt.plot([LANE_NUMBER * lane_width, square_length / 2], [square_length / 2, LANE_NUMBER * lane_width],
+            plt.plot([LANE_NUMBER_UD * LANE_WIDTH_UD, CROSSROAD_HALF_WIDTH],
+                     [CROSSROAD_U_HEIGHT, LANE_NUMBER_LR * LANE_WIDTH_LR],
                      color='black')
-            plt.plot([-LANE_NUMBER * lane_width, -square_length / 2],
-                     [-square_length / 2 - start_offset, -LANE_NUMBER * lane_width],
+            plt.plot([-LANE_NUMBER_UD * LANE_WIDTH_UD, -CROSSROAD_HALF_WIDTH],
+                     [-CROSSROAD_D_HEIGHT, -LANE_NUMBER_LR * LANE_WIDTH_LR],
                      color='black')
-            plt.plot([-LANE_NUMBER * lane_width, -square_length / 2], [square_length / 2, LANE_NUMBER * lane_width],
+            plt.plot([-LANE_NUMBER_UD * LANE_WIDTH_UD, -CROSSROAD_HALF_WIDTH],
+                     [CROSSROAD_U_HEIGHT, LANE_NUMBER_LR * LANE_WIDTH_LR],
                      color='black')
 
             # ----------------------ref_path--------------------
+            color = ['blue', 'coral', 'cyan', 'green']
+            for index, path in enumerate(self.ref_path_all[self.task]):
+                if index == self.shared_list[12]:
+                    ax.plot(path[0], path[1], color=color[index], alpha=1.0)
+                else:
+                    ax.plot(path[0], path[1], color=color[index], alpha=0.3)
 
-            plot_ref = ['left','straight','right', 'left_ref','straight_ref','right_ref']  # 'left','straight','right', 'left_ref','straight_ref','right_ref'
-            for ref in plot_ref:
-                ref_path = self.ref_path_all[ref]
-                ax.plot(ref_path[0], ref_path[1])
 
-            ax.plot(self.ref_path[0], self.ref_path[1], color='g')  # todo:
+            # plot_ref = ['left', 'straight', 'right']  # 'left','straight','right', 'left_ref','straight_ref','right_ref'
+            # for ref in plot_ref:
+            #     ref_path = self.ref_path_all[ref][0]
+            #     ax.plot(ref_path[0], ref_path[1])
+            # ax.plot(self.ref_path[0], self.ref_path[1], color='g')  # todo:
 
             state_other = self.shared_list[4].copy()
             # plot cars
-            for i in range(len(state_other['x_other'])): # TODO:
-                veh_x = state_other['x_other'][i]
-                veh_y = state_other['y_other'][i]
-                veh_phi = state_other['phi_other'][i]
+            for veh in state_other:
+                veh_x = veh['x']
+                veh_y = veh['y']
+                veh_phi = veh['phi']
                 veh_l = STATE_OTHER_LENGTH
                 veh_w = STATE_OTHER_WIDTH
                 if is_in_plot_area(veh_x, veh_y):
@@ -208,21 +148,20 @@ class Plot():
 
             interested_vehs = self.shared_list[10].copy()
 
-            for i in range(int(len(interested_vehs)/4)): # TODO:
-
+            for i in range(int(len(interested_vehs) / 4)):  # TODO:
                 veh_x = interested_vehs[4 * i + 0]
                 veh_y = interested_vehs[4 * i + 1]
-                plt.text(veh_x, veh_y,i, fontsize=12)
+                # plt.text(veh_x, veh_y, i, fontsize=12)
                 veh_phi = interested_vehs[4 * i + 3]
                 veh_l = STATE_OTHER_LENGTH
                 veh_w = STATE_OTHER_WIDTH
                 if is_in_plot_area(veh_x, veh_y):
                     plot_phi_line(veh_x, veh_y, veh_phi, 'black')
-                    draw_rotate_rec(veh_x, veh_y, veh_phi, veh_l, veh_w,'b', linestyle='--')
+                    draw_rotate_rec(veh_x, veh_y, veh_phi, veh_l, veh_w, 'b', linestyle='--')
 
-            v_light = state_other['v_light']
+            v_light = int(self.shared_list[13])  # todo
             if v_light == 0:
-                v_color, h_color = 'black', 'black'     #  'green', 'red'
+                v_color, h_color = 'black', 'black'  # 'green', 'red'
             elif v_light == 1:
                 v_color, h_color = 'black', 'black'
             elif v_light == 2:
@@ -230,17 +169,16 @@ class Plot():
             else:
                 v_color, h_color = 'black', 'black'
 
-            plt.plot([0, lane_width], [-square_length / 2 - start_offset, -square_length / 2 - start_offset],
+            plt.plot([(LANE_NUMBER_UD - 1) * LANE_WIDTH_UD, LANE_NUMBER_UD * LANE_WIDTH_UD],
+                     [-CROSSROAD_D_HEIGHT, -CROSSROAD_D_HEIGHT],
                      color=v_color, linewidth=light_line_width)
-
-            plt.plot([-lane_width, 0], [square_length / 2, square_length / 2],
+            plt.plot([-LANE_NUMBER_UD * LANE_WIDTH_UD, -(LANE_NUMBER_UD - 1) * LANE_WIDTH_UD],
+                     [CROSSROAD_U_HEIGHT, CROSSROAD_U_HEIGHT],
                      color=v_color, linewidth=light_line_width)
-
-            plt.plot([-square_length / 2, -square_length / 2], [0, -lane_width],
-                     color=h_color, linewidth=light_line_width)
-
-            plt.plot([square_length / 2, square_length / 2], [lane_width, 0],
-                     color=h_color, linewidth=light_line_width)
+            plt.plot([0, (LANE_NUMBER_UD - 1) * LANE_WIDTH_UD], [-CROSSROAD_D_HEIGHT, -CROSSROAD_D_HEIGHT],
+                     color=v_color, linewidth=light_line_width)
+            plt.plot([0, -(LANE_NUMBER_UD - 1) * LANE_WIDTH_UD], [CROSSROAD_U_HEIGHT, CROSSROAD_U_HEIGHT],
+                     color=v_color, linewidth=light_line_width)
 
             state_ego = self.shared_list[9].copy()
             ego_v = state_ego['VehicleSPeedAct']
@@ -285,14 +223,14 @@ class Plot():
             # draw_rotate_rec(model_x, model_y, model_phi, ego_l, ego_w, 'blue')
 
             time1 = time.time()
-            delta_time = time1-start_time
-            acc_actual = (ego_v-v_old)/delta_time
+            delta_time = time1 - start_time
+            acc_actual = (ego_v - v_old) / delta_time
             self.acc_timer.push(acc_actual)
             start_time = time.time()
             v_old = ego_v
 
             indexs, points = find_closest_point(self.ref_path, np.array([ego_x], np.float32),
-                                                              np.array([ego_y], np.float32))
+                                                np.array([ego_y], np.float32))
             path_x, path_y, path_phi = points[0][0], points[1][0], points[2][0]
             plt.plot(path_x, path_y, 'g.')
             delta_x, delta_y, delta_phi = ego_x - path_x, ego_y - path_y, ego_phi - path_phi
@@ -352,16 +290,26 @@ class Plot():
             plt.text(text_x, text_y_start - next(ge), r'acc: {:.2f}$m/s^2$'.format(acc))
             plt.text(text_x, text_y_start - next(ge), r'acc_actual: {:.2f}$m/s^2$'.format(self.acc_timer.mean))
 
-            plt.pause(0.01)
+            # plot text of trajectroy
+            text_x, text_y_start = -40, -70
+            ge = iter(range(0, 1000, 6))
+            traj_return_value = self.shared_list[11]
+            for i, value in enumerate(traj_return_value):
+                if i == self.shared_list[12]:
+                    plt.text(text_x, text_y_start - next(ge), 'Path reward={:.4f}, Collision risk={:.4f}'.format(value[0], value[1]),
+                             fontsize=14, color=color[i], fontstyle='italic')
+                else:
+                    plt.text(text_x, text_y_start - next(ge), 'Path reward={:.4f}, Collision risk={:.4f}'.format(value[0], value[1]),
+                             fontsize=10, color=color[i], fontstyle='italic')
+            plt.pause(0.00001)
+
 
 
 def static_plot():
-    plot = Plot(None,None,'left')
+    plot = Plot(None, 0, None, 'left')
     plot.run()
     plt.show()
 
 
 if __name__ == '__main__':
     static_plot()
-
-

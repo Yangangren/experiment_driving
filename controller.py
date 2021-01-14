@@ -1,8 +1,5 @@
 import json
-import os
-import struct
 import time
-from collections import OrderedDict
 from datetime import datetime
 from math import pi
 
@@ -10,35 +7,9 @@ import bezier
 import numpy as np
 import tensorflow as tf
 import zmq
+
+from utils.endtoend_env_utils import *
 from utils.load_policy import LoadPolicy
-from utils.coordi_convert import convert_center_to_rear
-
-VEHICLE_MODE_DICT = dict(left=OrderedDict(dl=1, du=1, dr=1, ud=2, ul=1),           # dl=2, du=2, ud=2, ul=2
-                         straight=OrderedDict(dl=1, du=1, dr=1, ud=1, ru=2, ur=2), # dl=1, du=2, ud=2, ru=2, ur=2
-                         right=OrderedDict(dl=1, du=1, dr=1, ur=2, lr=2))
-
-ROUTE2MODE = {('1o', '2i'): 'dr', ('1o', '3i'): 'du', ('1o', '4i'): 'dl',
-              ('2o', '1i'): 'rd', ('2o', '3i'): 'ru', ('2o', '4i'): 'rl',
-              ('3o', '1i'): 'ud', ('3o', '2i'): 'ur', ('3o', '4i'): 'ul',
-              ('4o', '1i'): 'ld', ('4o', '2i'): 'lr', ('4o', '3i'): 'lu'}
-LANE_WIDTH = 3.5
-CROSSROAD_SIZE = 22
-LANE_NUMBER = 1
-MODE2ROUTE = {'dr': ('1o', '2i'), 'du': ('1o', '3i'), 'dl': ('1o', '4i'),
-              'rd': ('2o', '1i'), 'ru': ('2o', '3i'), 'rl': ('2o', '4i'),
-              'ud': ('3o', '1i'), 'ur': ('3o', '2i'), 'ul': ('3o', '4i'),
-              'ld': ('4o', '1i'), 'lr': ('4o', '2i'), 'lu': ('4o', '3i')}
-
-MODE2TASK = {'dr': 'right', 'du': 'straight', 'dl': 'left',
-             'rd': 'left', 'ru': 'right', 'rl': ' straight',
-             'ud': 'straight', 'ur': 'left', 'ul': 'right',
-             'ld': 'right', 'lr': 'straight', 'lu': 'left'}
-
-EXPECTED_V = 3.
-START_OFFSET = 3.0
-TASKCASE2MODELIST = dict(left=[['dl', 'ud', 'ul'], ['dl', 'ud', 'ul'], ['dl', 'ud', 'ul'], ['ud']],
-                         straight=[['du', 'ru', 'ur'], ['du', 'ru', 'ur'], ['du', 'ru', 'ur']],
-                         right=[['dr', 'ur'], ['dr', 'ur'], ['dr', 'lr']])
 
 
 def deal_with_phi_diff(phi_diff):
@@ -72,7 +43,7 @@ class VehicleDynamics(object):
         F_zf, F_zr = b * mass * g / (a + b), a * mass * g / (a + b)
         self.vehicle_params.update(dict(F_zf=F_zf,
                                         F_zr=F_zr))
-        self.states = np.array([[0., 0., 0., 1.75, -40., 90.]], dtype=np.float32)
+        self.states = np.array([[0., 0., 0., 1.75, -40., 90.]], dtype=np.float32)  # need to be consistent with gps init
         self.states = tf.convert_to_tensor(self.states, dtype=tf.float32)
 
     def f_xu(self, actions, tau):  # states and actions are tensors, [[], [], ...]
@@ -146,8 +117,7 @@ class VehicleDynamics(object):
 class ReferencePath(object):
     def __init__(self, task, mode=None, ref_index=None):
         self.mode = mode
-        self.traj_mode = None
-        self.exp_v = EXPECTED_V
+        self.exp_v = EXPECTED_V #TODO: temp
         self.task = task
         self.path_list = []
         self.path_len_list = []
@@ -155,41 +125,37 @@ class ReferencePath(object):
         self.ref_index = np.random.choice(len(self.path_list)) if ref_index is None else ref_index
         self.path = self.path_list[self.ref_index]
 
-    def set_path(self, traj_mode, path_index=None, path=None):
-        self.traj_mode = traj_mode
-        if traj_mode == 'dyna_traj':
-            self.path = path
-        elif traj_mode == 'static_traj':
-            self.ref_index = path_index
-            self.path = self.path_list[self.ref_index]
+    def set_path(self, path_index=None):
+        self.ref_index = path_index
+        self.path = self.path_list[self.ref_index]
 
     def _construct_ref_path(self, task):
         sl = 40  # straight length
         meter_pointnum_ratio = 30
-        control_ext = CROSSROAD_SIZE/3.
+        control_ext_x = 2 * CROSSROAD_HALF_WIDTH / 3. + 5.
+        control_ext_y = 2 * CROSSROAD_D_HEIGHT / 3. + 3.
         if task == 'left':
-            end_offsets = [LANE_WIDTH*(i+0.5) for i in range(LANE_NUMBER)]
-            start_offsets = [LANE_WIDTH*0.5]
+            end_offsets = [LANE_WIDTH_LR*(i+0.5) for i in range(LANE_NUMBER_LR)] #TODO: temp
+            start_offsets = [LANE_WIDTH_UD*0.5] #TODO: temp
             for start_offset in start_offsets:
-                for end_offset in end_offsets:
-                    control_point1 = start_offset, -CROSSROAD_SIZE/2
-                    control_point2 = start_offset, -CROSSROAD_SIZE/2 + control_ext
-                    control_point3 = -CROSSROAD_SIZE/2 + control_ext, end_offset
-                    control_point4 = -CROSSROAD_SIZE/2, end_offset
+                for i, end_offset in enumerate(end_offsets):
+                    if i == 0:
+                        end_offset += 0.2
+                    control_point1 = start_offset, -CROSSROAD_D_HEIGHT
+                    control_point2 = start_offset, -CROSSROAD_D_HEIGHT + control_ext_y
+                    control_point3 = -CROSSROAD_HALF_WIDTH + control_ext_x, end_offset
+                    control_point4 = -CROSSROAD_HALF_WIDTH, end_offset
 
                     node = np.asfortranarray([[control_point1[0], control_point2[0], control_point3[0], control_point4[0]],
                                               [control_point1[1], control_point2[1], control_point3[1], control_point4[1]]],
                                              dtype=np.float32)
                     curve = bezier.Curve(node, degree=3)
-                    s_vals = np.linspace(0, 1.0, int(pi/2*(CROSSROAD_SIZE/2+LANE_WIDTH/2)) * meter_pointnum_ratio)
+                    s_vals = np.linspace(0, 1.0, int(T * 2 * (control_ext_x + control_ext_y) / 4) * meter_pointnum_ratio)
                     trj_data = curve.evaluate_multi(s_vals)
                     trj_data = trj_data.astype(np.float32)
-                    # rules: -0.7 for left case 0 and case 2, -0.4 for left case 1;
-                    # start_straight_line_x = (LANE_WIDTH/2-0.7) * np.ones(shape=(sl * meter_pointnum_ratio,),
-                    # dtype=np.float32)[:-1]
-                    start_straight_line_x = start_offsets * np.ones(shape=(sl * meter_pointnum_ratio,), dtype=np.float32)[:-1]
-                    start_straight_line_y = np.linspace(-CROSSROAD_SIZE/2 - sl, -CROSSROAD_SIZE/2, sl * meter_pointnum_ratio, dtype=np.float32)[:-1]
-                    end_straight_line_x = np.linspace(-CROSSROAD_SIZE/2, -CROSSROAD_SIZE/2 - sl, sl * meter_pointnum_ratio, dtype=np.float32)[1:]
+                    start_straight_line_x = LANE_WIDTH_UD/2 * np.ones(shape=(sl * meter_pointnum_ratio,), dtype=np.float32)[:-1]
+                    start_straight_line_y = np.linspace(-CROSSROAD_D_HEIGHT - sl, -CROSSROAD_D_HEIGHT, sl * meter_pointnum_ratio, dtype=np.float32)[:-1]
+                    end_straight_line_x = np.linspace(-CROSSROAD_HALF_WIDTH, -CROSSROAD_HALF_WIDTH - sl, sl * meter_pointnum_ratio, dtype=np.float32)[1:]
                     end_straight_line_y = end_offset * np.ones(shape=(sl * meter_pointnum_ratio,), dtype=np.float32)[1:]
                     planed_trj = np.append(np.append(start_straight_line_x, trj_data[0]), end_straight_line_x), \
                                  np.append(np.append(start_straight_line_y, trj_data[1]), end_straight_line_y)
@@ -203,26 +169,26 @@ class ReferencePath(object):
                     self.path_len_list.append((sl * meter_pointnum_ratio, len(trj_data[0]), len(xs_1)))
 
         elif task == 'straight':
-            end_offsets = [LANE_WIDTH*(i+0.5) for i in range(LANE_NUMBER)]
-            start_offsets = [LANE_WIDTH*0.5]
+            end_offsets = [LANE_WIDTH_UD*(i+0.5)-0.2 for i in range(LANE_NUMBER_UD)]
+            start_offsets = [LANE_WIDTH_UD*0.5]
             for start_offset in start_offsets:
                 for end_offset in end_offsets:
-                    control_point1 = start_offset, -CROSSROAD_SIZE/2
-                    control_point2 = start_offset, -CROSSROAD_SIZE/2 + control_ext
-                    control_point3 = end_offset, CROSSROAD_SIZE/2 - control_ext
-                    control_point4 = end_offset, CROSSROAD_SIZE/2
+                    control_point1 = start_offset, -CROSSROAD_D_HEIGHT
+                    control_point2 = start_offset, -CROSSROAD_D_HEIGHT + control_ext_y
+                    control_point3 = end_offset, CROSSROAD_U_HEIGHT - control_ext_y
+                    control_point4 = end_offset, CROSSROAD_U_HEIGHT
 
                     node = np.asfortranarray([[control_point1[0], control_point2[0], control_point3[0], control_point4[0]],
                                               [control_point1[1], control_point2[1], control_point3[1], control_point4[1]]]
                                              , dtype=np.float32)
                     curve = bezier.Curve(node, degree=3)
-                    s_vals = np.linspace(0, 1.0, CROSSROAD_SIZE * meter_pointnum_ratio)
+                    s_vals = np.linspace(0, 1.0, int(CROSSROAD_U_HEIGHT + CROSSROAD_D_HEIGHT) * meter_pointnum_ratio)
                     trj_data = curve.evaluate_multi(s_vals)
                     trj_data = trj_data.astype(np.float32)
                     start_straight_line_x = start_offset * np.ones(shape=(sl * meter_pointnum_ratio,), dtype=np.float32)[:-1]
-                    start_straight_line_y = np.linspace(-CROSSROAD_SIZE/2 - sl, -CROSSROAD_SIZE/2, sl * meter_pointnum_ratio, dtype=np.float32)[:-1]
+                    start_straight_line_y = np.linspace(-CROSSROAD_D_HEIGHT - sl, -CROSSROAD_D_HEIGHT, sl * meter_pointnum_ratio, dtype=np.float32)[:-1]
                     end_straight_line_x = end_offset * np.ones(shape=(sl * meter_pointnum_ratio,), dtype=np.float32)[1:]
-                    end_straight_line_y = np.linspace(CROSSROAD_SIZE/2, CROSSROAD_SIZE/2 + sl, sl * meter_pointnum_ratio, dtype=np.float32)[1:]
+                    end_straight_line_y = np.linspace(CROSSROAD_U_HEIGHT, CROSSROAD_U_HEIGHT + sl, sl * meter_pointnum_ratio, dtype=np.float32)[1:]
                     planed_trj = np.append(np.append(start_straight_line_x, trj_data[0]), end_straight_line_x), \
                                  np.append(np.append(start_straight_line_y, trj_data[1]), end_straight_line_y)
                     xs_1, ys_1 = planed_trj[0][:-1], planed_trj[1][:-1]
@@ -235,35 +201,30 @@ class ReferencePath(object):
 
         else:
             assert task == 'right'
-            control_ext = CROSSROAD_SIZE/5. + 3.
-            end_offsets = [-LANE_WIDTH * 0.5]
-            start_offsets = [LANE_WIDTH*(LANE_NUMBER-0.5)]
+            control_ext_y = 2 * CROSSROAD_D_HEIGHT / 5.+ 3.
+            control_ext_x = 2 * CROSSROAD_HALF_WIDTH / 5.+ 3.
+            end_offsets = [-LANE_WIDTH_LR * (i + 0.5) for i in range(LANE_NUMBER_LR)]
+            start_offsets = [LANE_WIDTH_UD*(LANE_NUMBER_UD-0.5)]
 
             for start_offset in start_offsets:
-                for end_offset in end_offsets:
-                    control_point1 = start_offset, -CROSSROAD_SIZE/2
-                    control_point2 = start_offset, -CROSSROAD_SIZE/2 + control_ext
-                    control_point3 = CROSSROAD_SIZE/2 - control_ext, end_offset
-                    control_point4 = CROSSROAD_SIZE/2, end_offset
+                for i, end_offset in enumerate(end_offsets):
+                    if i == 0:
+                        end_offset -= 0.2
+                    control_point1 = start_offset, -CROSSROAD_D_HEIGHT
+                    control_point2 = start_offset, -CROSSROAD_D_HEIGHT + control_ext_y
+                    control_point3 = CROSSROAD_HALF_WIDTH - control_ext_x, end_offset
+                    control_point4 = CROSSROAD_HALF_WIDTH, end_offset
 
                     node = np.asfortranarray([[control_point1[0], control_point2[0], control_point3[0], control_point4[0]],
                                               [control_point1[1], control_point2[1], control_point3[1], control_point4[1]]],
                                              dtype=np.float32)
                     curve = bezier.Curve(node, degree=3)
-                    s_vals = np.linspace(0, 1.0, int(pi/2*(CROSSROAD_SIZE/2-LANE_WIDTH*(LANE_NUMBER-0.5))) * meter_pointnum_ratio)
+                    s_vals = np.linspace(0, 1.0, int(pi/2*(CROSSROAD_D_HEIGHT-LANE_WIDTH_LR*(LANE_NUMBER_LR/2-0.5))) * meter_pointnum_ratio)
                     trj_data = curve.evaluate_multi(s_vals)
                     trj_data = trj_data.astype(np.float32)
-
-                    def fn(i):
-                        if i < 600:
-                            return 1.2
-                        else:
-                            return 1.2-1.2/600*(i-600)
-                    # rules: used for right case 0 and case 2
-                    # start_straight_line_x = np.array([1.75+fn(x) for x in range(1199)], dtype=np.float32)
                     start_straight_line_x = start_offset * np.ones(shape=(sl * meter_pointnum_ratio,), dtype=np.float32)[:-1]
-                    start_straight_line_y = np.linspace(-CROSSROAD_SIZE/2 - sl, -CROSSROAD_SIZE/2, sl * meter_pointnum_ratio, dtype=np.float32)[:-1]
-                    end_straight_line_x = np.linspace(CROSSROAD_SIZE/2, CROSSROAD_SIZE/2 + sl, sl * meter_pointnum_ratio, dtype=np.float32)[1:]
+                    start_straight_line_y = np.linspace(-CROSSROAD_D_HEIGHT - sl, -CROSSROAD_D_HEIGHT, sl * meter_pointnum_ratio, dtype=np.float32)[:-1]
+                    end_straight_line_x = np.linspace(CROSSROAD_HALF_WIDTH, CROSSROAD_HALF_WIDTH + sl, sl * meter_pointnum_ratio, dtype=np.float32)[1:]
                     end_straight_line_y = end_offset * np.ones(shape=(sl * meter_pointnum_ratio,), dtype=np.float32)[1:]
                     planed_trj = np.append(np.append(start_straight_line_x, trj_data[0]), end_straight_line_x), \
                                  np.append(np.append(start_straight_line_y, trj_data[1]), end_straight_line_y)
@@ -275,7 +236,7 @@ class ReferencePath(object):
                     self.path_list.append(planed_trj)
                     self.path_len_list.append((sl * meter_pointnum_ratio, len(trj_data[0]), len(xs_1)))
 
-    def find_closest_point(self, xs, ys, ratio=6):
+    def find_closest_point(self, xs, ys, ratio=10):
         path_len = len(self.path[0])
         reduced_idx = np.arange(0, path_len, ratio)
         reduced_len = len(reduced_idx)
@@ -308,23 +269,23 @@ class ReferencePath(object):
 
         return points[0], points[1], points[2]
 
-    def tracking_error_vector(self, ego_xs, ego_ys, ego_phis, ego_vs, n, func=None):
+    def tracking_error_vector(self, ego_xs, ego_ys, ego_phis, ego_vs, n):
         def two2one(ref_xs, ref_ys):
             if self.task == 'left':
-                delta_ = tf.sqrt(tf.square(ego_xs - (-CROSSROAD_SIZE/2)) + tf.square(ego_ys - (-CROSSROAD_SIZE/2))) - \
-                         tf.sqrt(tf.square(ref_xs - (-CROSSROAD_SIZE/2)) + tf.square(ref_ys - (-CROSSROAD_SIZE/2)))
-                delta_ = tf.where(ego_ys < -CROSSROAD_SIZE/2, ego_xs - ref_xs, delta_)
-                delta_ = tf.where(ego_xs < -CROSSROAD_SIZE/2, ego_ys - ref_ys, delta_)
+                delta_ = tf.sqrt(tf.square(ego_xs - (-CROSSROAD_HALF_WIDTH)) + tf.square(ego_ys - (-CROSSROAD_D_HEIGHT))) - \
+                         tf.sqrt(tf.square(ref_xs - (-CROSSROAD_HALF_WIDTH)) + tf.square(ref_ys - (-CROSSROAD_D_HEIGHT)))
+                delta_ = tf.where(ego_ys < -CROSSROAD_D_HEIGHT, ego_xs - ref_xs, delta_)
+                delta_ = tf.where(ego_xs < -CROSSROAD_HALF_WIDTH, ego_ys - ref_ys, delta_)
                 return -delta_
             elif self.task == 'straight':
                 delta_ = ego_xs - ref_xs
                 return -delta_
             else:
                 assert self.task == 'right'
-                delta_ = -(tf.sqrt(tf.square(ego_xs - CROSSROAD_SIZE/2) + tf.square(ego_ys - (-CROSSROAD_SIZE/2))) -
-                           tf.sqrt(tf.square(ref_xs - CROSSROAD_SIZE/2) + tf.square(ref_ys - (-CROSSROAD_SIZE/2))))
-                delta_ = tf.where(ego_ys < -CROSSROAD_SIZE/2, ego_xs - ref_xs, delta_)
-                delta_ = tf.where(ego_xs > CROSSROAD_SIZE/2, -(ego_ys - ref_ys), delta_)
+                delta_ = -(tf.sqrt(tf.square(ego_xs - CROSSROAD_HALF_WIDTH) + tf.square(ego_ys - (-CROSSROAD_D_HEIGHT))) -
+                           tf.sqrt(tf.square(ref_xs - CROSSROAD_HALF_WIDTH) + tf.square(ref_ys - (-CROSSROAD_D_HEIGHT))))
+                delta_ = tf.where(ego_ys < -CROSSROAD_D_HEIGHT, ego_xs - ref_xs, delta_)
+                delta_ = tf.where(ego_xs > CROSSROAD_HALF_WIDTH, -(ego_ys - ref_ys), delta_)
                 return -delta_
 
         indexs, current_points = self.find_closest_point(ego_xs, ego_ys)
@@ -347,11 +308,10 @@ class ReferencePath(object):
 
 
 class Controller(object):
-    def __init__(self, shared_list, receive_index, if_save, if_radar, lock, task, case,
+    def __init__(self, shared_list, receive_index, if_save, lock, task,
                  noise_factor, load_dir, load_ite, result_dir, model_only_test, clipped_v):
         self.time_out = 0
         self.task = task
-        self.case = case
         self.ref_path = ReferencePath(self.task)
         self.num_future_data = 0
         self.noise_factor = noise_factor
@@ -368,14 +328,9 @@ class Controller(object):
         context = zmq.Context()
         self.socket_pub = context.socket(zmq.PUB)
         self.socket_pub.bind("tcp://*:6970")
-
-        context = zmq.Context()
-        self.socket_pub_radar = context.socket(zmq.PUB)
-        self.socket_pub_radar.bind("tcp://*:5555")
         self.time_initial = time.time()
         self.step = 0
         self.if_save = if_save
-        self.if_radar = if_radar
         self.save_path = result_dir
         self.t_interval = 0
         self.time_decision = 0
@@ -408,18 +363,8 @@ class Controller(object):
             return np.array(ego_feature, dtype=np.float32)
 
     def _construct_veh_vector(self, ego_x, ego_y, state_others):
-        mode_list = TASKCASE2MODELIST[self.task][self.case]
-        all_vehicles = []
-        if self.case == 3:
-            v_light = 2 if self.run_time < 40. else 0
-        else:
-            v_light = state_others['v_light']
-        xs, ys, vs, phis = state_others['x_other'], state_others['y_other'],\
-                           state_others['v_other'], state_others['phi_other']
-        if not xs:
-            mode_list = []
-        for i, veh_mode in enumerate(mode_list):
-            all_vehicles.append(dict(x=xs[i], y=ys[i], v=vs[i], phi=phis[i], l=5., w=2., route=MODE2ROUTE[veh_mode]))
+        all_vehicles = state_others
+        v_light = int(self.shared_list[13])
         vehs_vector = []
         name_setting = dict(do='1o', di='1i', ro='2o', ri='2i', uo='3o', ui='3i', lo='4o', li='4i')
 
@@ -456,39 +401,39 @@ class Controller(object):
                     lr.append(v)
                 elif start == name_setting['lo'] and end == name_setting['di']:
                     ld.append(v)
-            if v_light != 0 and ego_y < -CROSSROAD_SIZE/2 - START_OFFSET:
-                dl.append(dict(x=LANE_WIDTH/2, y=-CROSSROAD_SIZE/2, v=0., phi=90, l=5, w=2.5, route=None))
-                dl.append(dict(x=LANE_WIDTH/2, y=-CROSSROAD_SIZE/2+2.5, v=0., phi=90, l=5, w=2.5, route=None))
-                du.append(dict(x=LANE_WIDTH*1.5, y=-CROSSROAD_SIZE/2, v=0., phi=90, l=5, w=2.5, route=None))
-                du.append(dict(x=LANE_WIDTH*1.5, y=-CROSSROAD_SIZE/2+2.5, v=0., phi=90, l=5, w=2.5, route=None))
+            if self.task != 'right':
+                if v_light != 0 and ego_y < -CROSSROAD_D_HEIGHT:
+                    dl.append(dict(x=LANE_WIDTH_UD/2, y=-CROSSROAD_D_HEIGHT + 2.5, v=0., phi=90, l=5, w=2.5, route=None))
+                    du.append(dict(x=LANE_WIDTH_UD/2, y=-CROSSROAD_D_HEIGHT + 2.5, v=0., phi=90, l=5, w=2.5, route=None))
+            # todo: whether add dr for left and straight; right task has no virtual front car
 
             # fetch veh in range
             if task == 'left':
-                dl = list(filter(lambda v: v['x'] > -CROSSROAD_SIZE/2-10 and v['y'] > ego_y-2, dl))
-                du = list(filter(lambda v: ego_y-2 < v['y'] < CROSSROAD_SIZE/2+10 and v['x'] < ego_x+2, du))
+                dl = list(filter(lambda v: v['x'] > -CROSSROAD_HALF_WIDTH-10 and v['y'] > ego_y-2, dl))
+                du = list(filter(lambda v: ego_y-2 < v['y'] < CROSSROAD_U_HEIGHT+10 and v['x'] < ego_x+2, du))
                 dr = list(filter(lambda v: v['x'] < ego_x+2 and v['y'] > ego_y-2, dr))
             elif task == 'straight':
                 dl = list(filter(lambda v: v['x'] > ego_x-2 and v['y'] > ego_y - 2, dl))
-                du = list(filter(lambda v: ego_y - 2 < v['y'] < CROSSROAD_SIZE / 2 + 10, du))
+                du = list(filter(lambda v: ego_y - 2 < v['y'] < CROSSROAD_U_HEIGHT + 10, du))
                 dr = list(filter(lambda v: v['x'] < ego_x+2 and v['y'] > ego_y-2, dr))
             else:
                 assert task == 'right'
                 dl = list(filter(lambda v: v['x'] > ego_x - 2 and v['y'] > ego_y - 2, dl))
                 du = list(filter(lambda v: v['x'] > ego_x - 2 and v['y'] > ego_y - 2, du))
-                dr = list(filter(lambda v: v['x'] < CROSSROAD_SIZE/2+10 and v['y'] > ego_y-2, dr))
+                dr = list(filter(lambda v: v['x'] < CROSSROAD_HALF_WIDTH + 10 and v['y'] > ego_y-2, dr))
 
             rd = rd  # not interest in case of traffic light
             rl = rl  # not interest in case of traffic light
-            ru = list(filter(lambda v: v['x'] < CROSSROAD_SIZE/2+10 and v['y'] < CROSSROAD_SIZE/2+10, ru))
+            ru = list(filter(lambda v: v['x'] < CROSSROAD_HALF_WIDTH + 10 and v['y'] < CROSSROAD_U_HEIGHT + 10, ru))
 
-            ur_straight = list(filter(lambda v: v['x'] < ego_x + 2 and ego_y < v['y'] < CROSSROAD_SIZE/2+10, ur))
-            ur_right = list(filter(lambda v: v['x'] < CROSSROAD_SIZE/2+10 and v['y'] < CROSSROAD_SIZE/2, ur))
-            ud = list(filter(lambda v: max(ego_y-2, -CROSSROAD_SIZE/2) < v['y'] < CROSSROAD_SIZE/2
-                                       and ego_x > v['x'] and ego_y > -CROSSROAD_SIZE/2-START_OFFSET, ud))
-            ul = list(filter(lambda v: -CROSSROAD_SIZE/2-10 < v['x'] < ego_x and v['y'] < CROSSROAD_SIZE/2, ul))
+            ur_straight = list(filter(lambda v: v['x'] < ego_x + 2 and ego_y < v['y'] < CROSSROAD_U_HEIGHT + 10, ur))
+            ur_right = list(filter(lambda v: v['x'] < CROSSROAD_HALF_WIDTH+10 and v['y'] < CROSSROAD_U_HEIGHT, ur))
+            ud = list(filter(lambda v: max(ego_y-2, -CROSSROAD_D_HEIGHT) < v['y'] < CROSSROAD_U_HEIGHT
+                                       and ego_x > v['x'] and ego_y > -CROSSROAD_D_HEIGHT, ud))
+            ul = list(filter(lambda v: -CROSSROAD_HALF_WIDTH-10 < v['x'] < ego_x and v['y'] < CROSSROAD_U_HEIGHT, ul))
 
             lu = lu  # not interest in case of traffic light
-            lr = list(filter(lambda v: -CROSSROAD_SIZE/2-10 < v['x'] < CROSSROAD_SIZE/2+10, lr))  # interest of right
+            lr = list(filter(lambda v: -CROSSROAD_HALF_WIDTH-10 < v['x'] < CROSSROAD_HALF_WIDTH+10, lr))  # interest of right
             ld = ld  # not interest in case of traffic light
 
             # sort
@@ -515,37 +460,33 @@ class Controller(object):
                         sorted_list.append(fill_value)
                     return sorted_list
 
-            fill_value_for_dl = dict(x=LANE_WIDTH/2, y=-(CROSSROAD_SIZE/2+30), v=0, phi=90, w=2.5, l=5, route=('1o', '4i'))
-            fill_value_for_du = dict(x=LANE_WIDTH*0.5, y=-(CROSSROAD_SIZE/2+30), v=0, phi=90, w=2.5, l=5, route=('1o', '3i'))
-            fill_value_for_dr = dict(x=LANE_WIDTH*(LANE_NUMBER-0.5), y=-(CROSSROAD_SIZE/2+30), v=0, phi=90, w=2.5, l=5, route=('1o', '2i'))
+            fill_value_for_dl = dict(x=LANE_WIDTH_UD/2, y=-(CROSSROAD_D_HEIGHT+30), v=0, phi=90, w=2.5, l=5, route=('1o', '4i'))
+            fill_value_for_du = dict(x=LANE_WIDTH_UD/2, y=-(CROSSROAD_D_HEIGHT+30), v=0, phi=90, w=2.5, l=5, route=('1o', '3i'))
+            fill_value_for_dr = dict(x=LANE_WIDTH_UD*(LANE_NUMBER_UD-0.5), y=-(CROSSROAD_D_HEIGHT+30), v=0, phi=90, w=2.5, l=5, route=('1o', '2i'))
 
-            fill_value_for_ru = dict(x=(CROSSROAD_SIZE/2+15), y=LANE_WIDTH*(LANE_NUMBER-0.5), v=0, phi=180, w=2.5, l=5, route=('2o', '3i'))
+            fill_value_for_ru = dict(x=(CROSSROAD_HALF_WIDTH+15), y=LANE_WIDTH_LR*(LANE_NUMBER_LR-0.5), v=0, phi=180, w=2.5, l=5, route=('2o', '3i'))
 
-            fill_value_for_ur_straight = dict(x=-LANE_WIDTH/2, y=(CROSSROAD_SIZE/2+20), v=0, phi=-90, w=2.5, l=5, route=('3o', '2i'))
-            fill_value_for_ur_right = dict(x=-LANE_WIDTH/2, y=(CROSSROAD_SIZE/2+20), v=0, phi=-90, w=2.5, l=5, route=('3o', '2i'))
+            fill_value_for_ur_straight = dict(x=-LANE_WIDTH_UD/2, y=(CROSSROAD_U_HEIGHT+20), v=0, phi=-90, w=2.5, l=5, route=('3o', '2i'))
+            fill_value_for_ur_right = dict(x=-LANE_WIDTH_UD/2, y=(CROSSROAD_U_HEIGHT+20), v=0, phi=-90, w=2.5, l=5, route=('3o', '2i'))
 
-            fill_value_for_ud = dict(x=-LANE_WIDTH*0.5, y=(CROSSROAD_SIZE/2+20), v=0, phi=-90, w=2.5, l=5, route=('3o', '1i'))
-            fill_value_for_ul = dict(x=-LANE_WIDTH*(LANE_NUMBER-0.5), y=(CROSSROAD_SIZE/2+20), v=0, phi=-90, w=2.5, l=5, route=('3o', '4i'))
+            fill_value_for_ud = dict(x=-LANE_WIDTH_UD*0.5, y=(CROSSROAD_U_HEIGHT+20), v=0, phi=-90, w=2.5, l=5, route=('3o', '1i'))
+            fill_value_for_ul = dict(x=-LANE_WIDTH_UD*(LANE_NUMBER_UD-0.5), y=(CROSSROAD_U_HEIGHT+20), v=0, phi=-90, w=2.5, l=5, route=('3o', '4i'))
 
-            fill_value_for_lr = dict(x=-(CROSSROAD_SIZE/2+20), y=-LANE_WIDTH*0.5, v=0, phi=0, w=2.5, l=5, route=('4o', '2i'))
+            fill_value_for_lr = dict(x=-(CROSSROAD_HALF_WIDTH+20), y=-LANE_WIDTH_LR*1.5, v=0, phi=0, w=2.5, l=5, route=('4o', '2i'))
 
             tmp = OrderedDict()
             if task == 'left':
                 tmp['dl'] = slice_or_fill(dl, fill_value_for_dl, VEHICLE_MODE_DICT['left']['dl'])
                 tmp['du'] = slice_or_fill(du, fill_value_for_du, VEHICLE_MODE_DICT['left']['du'])
-                tmp['dr'] = slice_or_fill(dr, fill_value_for_dr, VEHICLE_MODE_DICT['left']['dr'])
                 tmp['ud'] = slice_or_fill(ud, fill_value_for_ud, VEHICLE_MODE_DICT['left']['ud'])
                 tmp['ul'] = slice_or_fill(ul, fill_value_for_ul, VEHICLE_MODE_DICT['left']['ul'])
             elif task == 'straight':
                 tmp['dl'] = slice_or_fill(dl, fill_value_for_dl, VEHICLE_MODE_DICT['straight']['dl'])
                 tmp['du'] = slice_or_fill(du, fill_value_for_du, VEHICLE_MODE_DICT['straight']['du'])
-                tmp['dr'] = slice_or_fill(dr, fill_value_for_dr, VEHICLE_MODE_DICT['straight']['dr'])
                 tmp['ud'] = slice_or_fill(ud, fill_value_for_ud, VEHICLE_MODE_DICT['straight']['ud'])
                 tmp['ru'] = slice_or_fill(ru, fill_value_for_ru, VEHICLE_MODE_DICT['straight']['ru'])
                 tmp['ur'] = slice_or_fill(ur_straight, fill_value_for_ur_straight, VEHICLE_MODE_DICT['straight']['ur'])
             elif task == 'right':
-                tmp['dl'] = slice_or_fill(dl, fill_value_for_dl, VEHICLE_MODE_DICT['right']['dl'])
-                tmp['du'] = slice_or_fill(du, fill_value_for_du, VEHICLE_MODE_DICT['right']['du'])
                 tmp['dr'] = slice_or_fill(dr, fill_value_for_dr, VEHICLE_MODE_DICT['right']['dr'])
                 tmp['ur'] = slice_or_fill(ur_right, fill_value_for_ur_right, VEHICLE_MODE_DICT['right']['ur'])
                 tmp['lr'] = slice_or_fill(lr, fill_value_for_lr, VEHICLE_MODE_DICT['right']['lr'])
@@ -655,7 +596,7 @@ class Controller(object):
                         state_can = self.shared_list[2].copy()
                         time_receive_can = self.shared_list[3]
                         state_other = self.shared_list[4].copy()
-                        time_receive_radar = self.shared_list[5] if self.if_radar else 0.
+                        time_receive_radar = 0.
 
                     state_ego = OrderedDict()
                     state_gps.update(dict(GaussX=x, GaussY=y, Heading=phi, GpsSpeed=v_x))  # only for plot online
@@ -664,7 +605,26 @@ class Controller(object):
 
                     state_gps_modified_by_model = dict(v_x=v_x, v_y=v_y, r=r, x=x, y=y, phi=phi)
                     self.time_in = time.time()
+
+                    # path selection
+                    traj_return_value = []
+                    if self.task == 'right' or self.task == 'left':
+                        traj_num = LANE_NUMBER_LR
+                    elif self.task == 'straight':
+                        traj_num = LANE_NUMBER_UD
+                    for traj_index in range(traj_num):
+                        self.ref_path.set_path(traj_index)
+                        obs, _, _ = self._get_obs(state_gps_modified_by_model, state_other, model_flag=True)
+                        obj_v, con_v = self.model.values(obs)
+                        traj_return_value.append([obj_v.numpy(), con_v.numpy()])
+                    traj_return_value = np.array(traj_return_value, dtype=np.float32)
+                    if np.max(traj_return_value[:, 1]) - np.min(traj_return_value[:, 1]) > 1.:
+                        path_index = np.argmin(traj_return_value[:, 1])
+                    else:
+                        path_index = np.argmax(traj_return_value[:, 0])
+                    self.ref_path.set_path(path_index)
                     obs, obs_dict, veh_vec = self._get_obs(state_gps_modified_by_model, state_other, model_flag=True)
+
                     action = self.model.run(obs)
                     steer_wheel_deg, torque, decel, tor_flag, dec_flag, front_wheel_deg, a_x = \
                         self._action_transformation_for_end2end(action, state_gps_modified_by_model, model_flag=True)
@@ -687,15 +647,6 @@ class Controller(object):
                     json_cotrol = json.dumps(control)
                     self.socket_pub.send(json_cotrol.encode('utf-8'))
 
-                    x_center_in_radar_coordi, y_center_in_radar_coordi, phi_intersection = state_ego['GaussX']+21277000., state_ego['GaussY']+3447700.-0.3, \
-                                state_ego['Heading']
-
-                    x_rear_in_radar_coordi, y_rear_in_radar_coordi, phi_intersection = convert_center_to_rear(x_center_in_radar_coordi, y_center_in_radar_coordi, phi_intersection)
-                    phi_in_radar_coordi = -phi_intersection + 90
-
-                    msg4radar = struct.pack('6d', 0., 0., 0., x_rear_in_radar_coordi, y_rear_in_radar_coordi, phi_in_radar_coordi)
-                    self.socket_pub_radar.send(msg4radar)
-
                     time_decision = time.time() - self.time_in
                     self.run_time = time.time() - self.time_initial
 
@@ -713,7 +664,8 @@ class Controller(object):
                         self.shared_list[8] = decision.copy()
                         self.shared_list[9] = state_ego.copy()
                         self.shared_list[10] = list(veh_vec)
-
+                        self.shared_list[11] = traj_return_value
+                        self.shared_list[12] = path_index
                     self.step += 1
                 else:  # real test
                     shared_index = self.receive_index_shared.value
@@ -725,7 +677,7 @@ class Controller(object):
                             state_can = self.shared_list[2].copy()
                             time_receive_can = self.shared_list[3]
                             state_other = self.shared_list[4].copy()
-                            time_receive_radar = self.shared_list[5] if self.if_radar else 0.
+                            time_receive_radar = 0.
 
                         state_ego = OrderedDict()
                         state_ego.update(state_gps)
@@ -759,6 +711,19 @@ class Controller(object):
                         v_x, v_y, r, x, y, phi = state_driven_by_model_action[0], state_driven_by_model_action[1], state_driven_by_model_action[2], \
                                                  state_driven_by_model_action[3], state_driven_by_model_action[4], state_driven_by_model_action[5]
                         state_gps_modified_by_model = dict(v_x=v_x, v_y=v_y, r=r, x=x, y=y, phi=phi)
+
+                        # path selection
+                        traj_return_value = []
+                        traj_num = LANE_NUMBER_LR if self.task == 'right' or 'left' else LANE_NUMBER_UD
+                        for traj_index in range(traj_num):
+                            self.ref_path.set_path(traj_index)
+                            obs, _, _ = self._get_obs(state_gps_modified_by_model, state_other, model_flag=True)
+                            obj_v, con_v = self.model.values(obs)
+                            traj_return_value.append([obj_v.numpy(), con_v.numpy()])
+                        traj_return_value = np.array(traj_return_value, dtype=np.float32)
+                        path_index = np.argmin(traj_return_value[:, 1])
+                        self.ref_path.set_path(path_index)
+
                         obs_model, obs_dict_model, veh_vec_model = self._get_obs(state_gps_modified_by_model,
                                                                                  state_other, model_flag=True)
                         action_model = self.model.run(obs_model)
@@ -774,15 +739,6 @@ class Controller(object):
                         # ==============================================================================================
 
                         start_time = time.time()
-                        # control = {'Decision': {
-                        #     'Control': {#'VehicleSpeedAim': 20/3.6,
-                        #                 'Deceleration': decel,
-                        #                 'Torque': torque,
-                        #                 'Dec_flag': dec_flag,
-                        #                 'Tor_flag': tor_flag,
-                        #                 'SteerAngleAim': np.float64(steer_wheel_deg+1.7),
-                        #                 'VehicleGearAim': 1,
-                        #                 'IsValid': True}}}
                         control = {'Decision': {
                             'Control': {  # 'VehicleSpeedAim': 20/3.6,
                                 'Deceleration': decel_model,
@@ -792,32 +748,8 @@ class Controller(object):
                                 'SteerAngleAim': np.float64(steer_wheel_deg_model + 1.7),
                                 'VehicleGearAim': 1,
                                 'IsValid': True}}}
-                        # control = {'Decision': {
-                        #     'Control': {  # 'VehicleSpeedAim': 20/3.6,
-                        #         'Deceleration': -2.0,
-                        #         'Torque': 0,
-                        #         'Dec_flag': 1,
-                        #         'Tor_flag': 0,
-                        #         'SteerAngleAim': np.float64(0. + 1.7),
-                        #         'VehicleGearAim': 1,
-                        #         'IsValid': True}}}
                         json_cotrol = json.dumps(control)
                         self.socket_pub.send(json_cotrol.encode('utf-8'))
-
-                        x_center_in_radar_coordi, y_center_in_radar_coordi, phi_intersection = state_ego[
-                                                                                                   'GaussX'] + 21277000., \
-                                                                                               state_ego[
-                                                                                                   'GaussY'] + 3447700. - 0.3, \
-                                                                                               state_ego['Heading']
-
-                        x_rear_in_radar_coordi, y_rear_in_radar_coordi, phi_intersection = convert_center_to_rear(
-                            x_center_in_radar_coordi, y_center_in_radar_coordi, phi_intersection)
-                        phi_in_radar_coordi = -phi_intersection + 90
-
-                        msg4radar = struct.pack('6d', 0., 0., 0., x_rear_in_radar_coordi, y_rear_in_radar_coordi,
-                                                phi_in_radar_coordi)
-                        self.socket_pub_radar.send(msg4radar)
-
                         time_decision = time.time() - self.time_in
                         self.run_time = time.time() - self.time_initial
 
@@ -835,7 +767,8 @@ class Controller(object):
                             self.shared_list[8] = decision.copy()
                             self.shared_list[9] = state_ego.copy()
                             self.shared_list[10] = list(veh_vec)
-
+                            self.shared_list[11] = traj_return_value
+                            self.shared_list[12] = path_index
                         self.step += 1
 
                 if self.if_save:
@@ -851,8 +784,6 @@ class Controller(object):
                         file_handle.write('\n')
 
                         file_handle.write("State_other ")
-                        for k3, v3 in state_other.items():
-                            file_handle.write(k3 + ":" + str(v3) + "| ")
                         file_handle.write('\n')
 
                         file_handle.write("Obs_dict ")
@@ -868,4 +799,20 @@ class Controller(object):
 
 
 if __name__ == "__main__":
-    pass
+    from main import built_parser
+    import multiprocessing as mp
+    args = built_parser()
+    os.makedirs(args.result_dir)
+    shared_list = mp.Manager().list([0.] * 11)
+    receive_index = mp.Value('d', 0.0)
+    lock = mp.Lock()
+    publisher = Controller(shared_list, receive_index, args.if_save, lock,
+                                                    args.task, args.noise_factor, args.load_dir,
+                                                    args.load_ite, args.result_dir, args.model_only_test,
+                                                    args.clipped_v)
+    ref_path = ReferencePath('left')
+    for i in range(4):
+        ref_path.set_path(i)
+        print(ref_path.ref_index)
+        path = ref_path.path
+        print(ref_path.path)

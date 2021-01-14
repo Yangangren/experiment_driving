@@ -63,9 +63,6 @@ class SubscriberCan():
                 self.shared_list[3] = time_receive_can
 
             self.receive_index_shared.value += 1
-            # check the time interval of gps
-            # if time_receive_can > 0.1:
-            #     print("Subscriber of can is more than 0.1s!", time_receive_can)
 
 
 if __name__ == '__main__':
