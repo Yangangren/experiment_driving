@@ -12,6 +12,7 @@ import numpy as np
 
 from utils.coordi_convert import vec_convert_gps_coordi_to_intersection_coordi, convert_gps_coordi_to_intersection_coordi
 from utils.truncate_gps_ref import truncate_gps_ref
+import os
 
 LANE_WIDTH_VERTICAL = 3.2
 LANE_WIDTH_HORIZONTAL = 3.5
@@ -82,11 +83,12 @@ def plot_raw_map():
 
 
 
-    plt.plot(DL1_x, DL1_y, 'r')
+    plt.figure(dpi=200)
+    plt.plot(DL1_x, DL1_y, 'g')
     plt.plot(DL2_x, DL2_y, 'g')
-    plt.plot(DU_x, DU_y, 'b')
-    plt.plot(DR1_x, DR1_y, 'b')
-    plt.plot(DR2_x, DR2_y, 'b')
+    plt.plot(DU_x, DU_y, 'g')
+    plt.plot(DR1_x, DR1_y, 'g')
+    plt.plot(DR2_x, DR2_y, 'g')
     plt.plot([-100, 100], [0., 0.], linewidth=1)
     plt.plot([-100, 100], [-LANE_WIDTH_VERTICAL, -LANE_WIDTH_VERTICAL], linewidth=1, linestyle='--')
     plt.plot([-100, 100], [LANE_WIDTH_VERTICAL, LANE_WIDTH_VERTICAL], linewidth=1, linestyle='--')
@@ -107,8 +109,7 @@ def plot_raw_map():
 
     plt.plot([-1/2 * LANE_WIDTH_HORIZONTAL, -1/2 * LANE_WIDTH_HORIZONTAL], [-100., 100.], linewidth=1, linestyle='--')
 
-    plt.xlim([-50, 50])
-    plt.ylim([-50, 50])
+
 
     ax = plt.axes()
     ax.add_patch(plt.Rectangle((-WIDTH / 2, -HEIGHT / 2),
@@ -122,12 +123,22 @@ def plot_raw_map():
                          y + line_length * np.sin(phi * np.pi / 180.)
         plt.scatter(x, y,  s=40, marker='D')
         plt.plot([x, x_forw], [y, y_forw], color=color, linewidth=3)
+
     plot_phi_line(stop_R_x, stop_R_y, stop_R_phi)
     plot_phi_line(stop_D_x, stop_D_y, stop_D_phi)
     plot_phi_line(stop_L_x, stop_L_y, stop_L_phi)
     plot_phi_line(stop_U_x, stop_U_y, stop_U_phi)
 
+    for task in ['left','straight','right']:
+        proj_root_dir = os.path.dirname(os.path.dirname(__file__))
+        name = proj_root_dir + '/map/ref/' + task + '_ref.npy'
+        ref_path = np.load(name)
+        for i in range(ref_path.shape[0]):
+            plt.plot(ref_path[i][0],ref_path[i][1], color='blue')
+
     plt.axis('equal')
+    plt.xlim([-50, 50])
+    plt.ylim([-50, 50])
     plt.show()
 
 
