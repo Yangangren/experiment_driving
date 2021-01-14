@@ -43,7 +43,7 @@ class VehicleDynamics(object):
         F_zf, F_zr = b * mass * g / (a + b), a * mass * g / (a + b)
         self.vehicle_params.update(dict(F_zf=F_zf,
                                         F_zr=F_zr))
-        self.states = np.array([[0., 0., 0., 1.75, -40., 90.]], dtype=np.float32)  # need to be consistent with gps init
+        self.states = np.array([[0., 0., 0., 1.75, -40., 90.]], dtype=np.float32)
         self.states = tf.convert_to_tensor(self.states, dtype=tf.float32)
 
     def f_xu(self, actions, tau):  # states and actions are tensors, [[], [], ...]
@@ -169,7 +169,7 @@ class ReferencePath(object):
                     self.path_len_list.append((sl * meter_pointnum_ratio, len(trj_data[0]), len(xs_1)))
 
         elif task == 'straight':
-            end_offsets = [LANE_WIDTH_UD*(i+0.5)-0.2 for i in range(LANE_NUMBER_UD)]
+            end_offsets = [LANE_WIDTH_UD*(i+0.5)-0.2 for i in range(LANE_NUMBER_UD)]  # todo ch
             start_offsets = [LANE_WIDTH_UD*0.5]
             for start_offset in start_offsets:
                 for end_offset in end_offsets:
@@ -618,10 +618,11 @@ class Controller(object):
                         obj_v, con_v = self.model.values(obs)
                         traj_return_value.append([obj_v.numpy(), con_v.numpy()])
                     traj_return_value = np.array(traj_return_value, dtype=np.float32)
-                    if np.max(traj_return_value[:, 1]) - np.min(traj_return_value[:, 1]) > 1.:
-                        path_index = np.argmin(traj_return_value[:, 1])
-                    else:
-                        path_index = np.argmax(traj_return_value[:, 0])
+                    path_index = np.argmax(traj_return_value[:, 0])
+                    # if np.max(traj_return_value[:, 1]) - np.min(traj_return_value[:, 1]) > 1.:
+                    #     path_index = np.argmin(traj_return_value[:, 1])
+                    # else:
+                    #     path_index = np.argmax(traj_return_value[:, 0])
                     self.ref_path.set_path(path_index)
                     obs, obs_dict, veh_vec = self._get_obs(state_gps_modified_by_model, state_other, model_flag=True)
 
