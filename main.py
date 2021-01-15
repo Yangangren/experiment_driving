@@ -75,7 +75,7 @@ def built_parser():
     parser.add_argument('--model_only_test', type=bool, default=True)
     parser.add_argument('--traffic_step_length', type=float, default=100.)
     parser.add_argument('--clipped_v', type=float, default=300., help='m/s')
-    parser.add_argument('--true_ss', type=bool, default=False)
+    parser.add_argument('--true_ss', type=bool, default=True)
 
     parser.add_argument('--backup', type=str, default='exp1')
 

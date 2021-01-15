@@ -597,7 +597,8 @@ class Controller(object):
         obs, action = tf.convert_to_tensor(obs[np.newaxis, :]), tf.convert_to_tensor(action[np.newaxis, :])
         action, ss_flag = self._safety_sheild(obs, action, con_vs[path_index])
 
-        path_dict = OrderedDict({'value': traj_return_value.tolist(),
+        path_dict = OrderedDict({'obj_value': traj_return_value[:, 0].tolist(),
+                                 'con_value': traj_return_value[:, 1].tolist(),
                                  'index': [path_index, path_selection],
                                  'ss_flag': [ss_flag.numpy()]
                                  })

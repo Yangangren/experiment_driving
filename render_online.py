@@ -411,13 +411,13 @@ class Render():
 
         traj_value = self.shared_list[11]
         # print(traj_value)
-        str1 = 'Trajectory 0 path reward: ' + str(traj_value[0][1])[:7]
-        str2 = 'Trajectory 1 path reward: ' + str(traj_value[1][1])[:7]
+        str1 = 'Trajectory 0 path reward: ' + str(traj_value[0][0])[:7]
+        str2 = 'Trajectory 1 path reward: ' + str(traj_value[1][0])[:7]
         self._text(str1, 1)
         self._text(str2, 2)
         if self.task != 'straight':
-            str3 = 'Trajectory 2 path reward: ' + str(traj_value[2][1])[:7]
-            str4 = 'Trajectory 3 path reward: ' + str(traj_value[3][1])[:7]
+            str3 = 'Trajectory 2 path reward: ' + str(traj_value[2][0])[:7]
+            str4 = 'Trajectory 3 path reward: ' + str(traj_value[3][0])[:7]
             self._text(str3, 3)
             self._text(str4, 4)
 
