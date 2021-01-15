@@ -3,7 +3,7 @@ import os
 import numpy as np
 import sys
 
-
+list_data = ['State_other','Path']
 # 获取文件的内容
 def get_contents(path):
     with open(path,'r', encoding='UTF-8') as file_object:
@@ -26,11 +26,11 @@ def load_data(model_dir, record_dir):
         print('FILE NOT FOUND! Check file path, e.g. case, noise, task')
         sys.exit(1)
     data_all_dict = {}
-    keys_for_data = {'Decision':[], 'State_ego':[],'State_other':[], 'Obs_dict':[], 'Time':[]} # 'Obs_dict':[],
+    keys_for_data = {'Decision':[], 'State_ego':[],'State_other':[], 'Obs_dict':[], 'Path':[], 'Time':[]} # 'Obs_dict':[],
     for row in contents[0:len(keys_for_data.keys()) + 2]:
         for keys_class in keys_for_data.keys(): #
             if keys_class in row:
-                if keys_class == 'State_other':
+                if keys_class in list_data:
                     for i, d in enumerate(row.split('|')[:-1]):
                         data_key = d.split(':')[0]
                         data_key = data_key.split(' ')[1]
@@ -46,7 +46,7 @@ def load_data(model_dir, record_dir):
     for row in contents:
         for keys_class in keys_for_data.keys(): #
             if keys_class in row:
-                if keys_class == 'State_other':
+                if keys_class in list_data:
                     for i, d in enumerate(row.split('|')[:-1]):
                         data = d.split(':')[1]
                         data_all_dict[keys_for_data[keys_class][i]].append(eval(data))
