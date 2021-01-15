@@ -336,7 +336,6 @@ class Controller(object):
         self.time_decision = 0
         self.time_in = time.time()
 
-        self.last_steer_output = 0
         self.model_driven_by_model_action = VehicleDynamics()
         self.model_driven_by_real_action = VehicleDynamics()
 
@@ -603,7 +602,6 @@ class Controller(object):
                         obj_v, con_v = self.model.values(obs)
                         traj_return_value.append([obj_v.numpy(), con_v.numpy()])
                     traj_return_value = np.array(traj_return_value, dtype=np.float32)
-
                     # if np.max(traj_return_value[:, 1]) - np.min(traj_return_value[:, 1]) > 1.:
                     #     path_selection = 1
                     #     path_index = np.argmin(traj_return_value[:, path_selection])
@@ -617,10 +615,6 @@ class Controller(object):
                     path_dict = OrderedDict({'value': traj_return_value.tolist(),
                                              'index': [path_index, path_selection]
                                              })
-                    self.ref_path.set_path(path_index)
-                    obs, obs_dict, veh_vec = self._get_obs(state_gps_modified_by_model, state_other, model_flag=True)
-
-
                     self.ref_path.set_path(path_index)
                     obs, obs_dict, veh_vec = self._get_obs(state_gps_modified_by_model, state_other, model_flag=True)
 
