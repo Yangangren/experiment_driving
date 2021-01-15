@@ -10,6 +10,7 @@ import zmq
 
 from utils.endtoend_env_utils import *
 from utils.load_policy import LoadPolicy
+from utils.dynamics_and_models import *
 
 
 def deal_with_phi_diff(phi_diff):
@@ -308,20 +309,21 @@ class ReferencePath(object):
 
 
 class Controller(object):
-    def __init__(self, shared_list, receive_index, if_save, lock, task,
-                 noise_factor, load_dir, load_ite, result_dir, model_only_test, clipped_v):
+    def __init__(self, shared_list, receive_index, lock, args):
+        self.args = args
         self.time_out = 0
-        self.task = task
+        self.task = self.args.task
+        self.true_ss = self.args.true_ss
         self.ref_path = ReferencePath(self.task)
         self.num_future_data = 0
-        self.noise_factor = noise_factor
-        self.model = LoadPolicy(load_dir, load_ite)
+        self.noise_factor = self.args.noise_factor
+        self.model = LoadPolicy(self.args.load_dir, self.args.load_ite)
         self.steer_factor = 15
         self.shared_list = shared_list
         self.read_index_old = 0
         self.receive_index_shared = receive_index
-        self.model_only_test = model_only_test
-        self.clipped_v = clipped_v
+        self.model_only_test = self.args.model_only_test
+        self.clipped_v = self.args.clipped_v
         # self.read_index_old = Info_List[0]
 
         self.lock = lock
@@ -330,16 +332,16 @@ class Controller(object):
         self.socket_pub.bind("tcp://*:6970")
         self.time_initial = time.time()
         self.step = 0
-        self.if_save = if_save
-        self.save_path = result_dir
+        self.if_save = self.args.if_save
+        self.save_path = self.args.result_dir
         self.t_interval = 0
         self.time_decision = 0
         self.time_in = time.time()
 
-        self.last_steer_output = 0
         self.model_driven_by_model_action = VehicleDynamics()
         self.model_driven_by_real_action = VehicleDynamics()
 
+        self.predict_model = EnvironmentModel(self.task)
         self.run_time = 0.
 
     def _construct_ego_vector(self, state_gps, model_flag):
@@ -537,14 +539,6 @@ class Controller(object):
         front_wheel_norm_rad, a_x_norm = action[0], action[1]
         front_wheel_deg = 0.4 / pi * 180 * front_wheel_norm_rad
         steering_wheel = front_wheel_deg * self.steer_factor
-
-        # rule: used in right case 1
-        # ego_y = state_gps['GaussY'] if not model_flag else state_gps['y']
-        # if ego_y < -10:
-        #     steering_wheel = np.clip(steering_wheel, -5., 5)
-        # else:
-        #     steering_wheel = np.clip(steering_wheel, -360., 360)
-
         steering_wheel = np.clip(steering_wheel, -360., 360)
         a_x = 2.25*a_x_norm - 0.75
         if a_x > -0.1:
@@ -564,6 +558,27 @@ class Controller(object):
         # [-360,360]deg, [0., 350,]N (1), [0, 5]m/s^2 (0.05)
         return steering_wheel, torque, decel, tor_flag, dec_flag, front_wheel_deg, a_x
 
+    @tf.function
+    def _safety_sheild(self, obs, action, con_v):
+        flag = 0
+        if self.true_ss:
+            self.predict_model.add_traj(obs, self.ref_path, mode='selecting')
+            _, veh2veh4real = self.predict_model.safety_calculation(obs,action)
+            veh2veh4real = veh2veh4real[0]
+            if veh2veh4real != 0:
+                flag = 1
+                tf.print('original action will cause collision!!!')
+                safe_action = tf.convert_to_tensor([0., -1.0], dtype=tf.float32)
+            else:
+                safe_action = action[0]
+        else:
+            if con_v > 2.:
+                flag = 1
+                safe_action = tf.convert_to_tensor([0., -1.0], dtype=tf.float32)
+            else:
+                safe_action = action[0]
+        return safe_action, flag
+
     def hier_decision(self, state_gps, state_other, model_flag):
         traj_num = LANE_NUMBER_LR if self.task == 'right' or self.task == 'left' else LANE_NUMBER_UD
         obs_list = []
@@ -573,13 +588,20 @@ class Controller(object):
             obs_list.append(obs)
         all_obs = tf.convert_to_tensor(obs_list, dtype=tf.float32)
         obj_vs, con_vs = self.model.values(all_obs)
-        obj_vs, con_vs = obj_vs.numpy(), con_vs.numpy()
-        traj_return_value = np.stack([obj_vs, con_vs], axis=1)
-        path_index = np.argmax(obj_vs)
+        traj_return_value = np.stack([obj_vs.numpy(), con_vs.numpy()], axis=1)
+        path_selection = 0  # todo:0 or 1
+        path_index = np.argmax(traj_return_value[:, path_selection])
         self.ref_path.set_path(path_index)
         obs, obs_dict, veh_vec = self._get_obs(state_gps, state_other, model_flag=model_flag)
         action = self.model.run(obs)
-        return path_index, traj_return_value, action, obs_dict, veh_vec
+        obs, action = tf.convert_to_tensor(obs[np.newaxis, :]), tf.convert_to_tensor(action[np.newaxis, :])
+        action, ss_flag = self._safety_sheild(obs, action, con_vs[path_index])
+
+        path_dict = OrderedDict({'value': traj_return_value.tolist(),
+                                 'index': [path_index, path_selection],
+                                 'ss_flag': [ss_flag.numpy()]
+                                 })
+        return path_index, traj_return_value, action.numpy(), obs_dict, veh_vec, path_dict
 
     def run(self):
         start_time = time.time()
@@ -607,12 +629,9 @@ class Controller(object):
 
                     state_gps_modified_by_model = dict(v_x=v_x, v_y=v_y, r=r, x=x, y=y, phi=phi)
                     self.time_in = time.time()
-                    path_index, traj_return_value, action, obs_dict, veh_vec = \
+                    path_index, traj_return_value, action, obs_dict, veh_vec, path_dict = \
                         self.hier_decision(state_gps_modified_by_model, state_other, model_flag=True)
-                    path_selection = 0  # todo:0 or 1
-                    path_dict = OrderedDict({'value': traj_return_value.tolist(),
-                                             'index': [path_index, path_selection]
-                                             })
+
                     steer_wheel_deg, torque, decel, tor_flag, dec_flag, front_wheel_deg, a_x = \
                         self._action_transformation_for_end2end(action, state_gps_modified_by_model, model_flag=True)
                     action = np.array([[front_wheel_deg * np.pi / 180, a_x]], dtype=np.float32)
@@ -698,13 +717,8 @@ class Controller(object):
                         v_x, v_y, r, x, y, phi = state_driven_by_model_action[0], state_driven_by_model_action[1], state_driven_by_model_action[2], \
                                                  state_driven_by_model_action[3], state_driven_by_model_action[4], state_driven_by_model_action[5]
                         state_gps_modified_by_model = dict(v_x=v_x, v_y=v_y, r=r, x=x, y=y, phi=phi)
-
-                        path_index, traj_return_value, action_model, obs_dict_model, veh_vec_model = \
+                        path_index, traj_return_value, action_model, obs_dict_model, veh_vec_model, path_dict = \
                             self.hier_decision(state_gps_modified_by_model, state_other, model_flag=True)
-                        path_selection = 0  # todo:0 or 1
-                        path_dict = OrderedDict({'value': traj_return_value.tolist(),
-                                                 'index': [path_index, path_selection]
-                                                 })
                         steer_wheel_deg_model, torque_model, decel_model, tor_flag_model, dec_flag_model, front_wheel_deg_model, a_x_model = \
                             self._action_transformation_for_end2end(action_model, state_gps_modified_by_model, model_flag=True)
                         modelaction4model = np.array([[front_wheel_deg_model*np.pi/180, a_x_model]], dtype=np.float32)
