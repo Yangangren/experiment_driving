@@ -199,8 +199,8 @@ def single_plot_obs_other_vehicles(data_all, path, others_num = 6):
 
 
 if __name__ == '__main__':
-    exp_index = 'noise0/15_105105_model'
-    model_index = 'left/experiment-2021-01-14-15-08-33'
+    exp_index = 'noise0/15_143435_model'
+    model_index = 'straight/experiment-2021-01-14-20-02-17'
     data_all, keys_for_data = load_data(model_index, exp_index)
     print(keys_for_data)
     path = (exp_index, model_index)

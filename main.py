@@ -30,12 +30,8 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 # gps,can->traffic->controller->plot
 
 
-def controller_agent(shared_list, receive_index, if_save,
-                     lock, task, noise_factor, load_dir, load_ite,
-                     result_dir, model_only_test, clipped_v):
-    publisher_ = Controller(shared_list, receive_index,if_save,
-                            lock, task, noise_factor, load_dir, load_ite,
-                            result_dir, model_only_test, clipped_v)
+def controller_agent(shared_list, receive_index, lock, args):
+    publisher_ = Controller(shared_list, receive_index, lock, args)
     time.sleep(10)
     publisher_.run()
 
@@ -55,14 +51,14 @@ def traffic(shared_list, lock, step_length, mode, model_only_test, task):
     subscriber_.run()
 
 
-def plot_agent(shared_list, lock, task, model_only_test, visualization):
-    if visualization == 'plot':
-        plot_ = Plot(shared_list, lock, task, model_only_test)
-        time.sleep(13)
+def plot_agent(shared_list, lock, args):
+    if args.visualization == 'plot':
+        plot_ = Plot(shared_list, lock, args)
+        time.sleep(16)
         plot_.run()
     else:
-        render_ = Render(shared_list, lock, task, model_only_test)
-        time.sleep(13)
+        render_ = Render(shared_list, lock, args)
+        time.sleep(16)
         render_.run()
 
 
@@ -79,6 +75,7 @@ def built_parser():
     parser.add_argument('--model_only_test', type=bool, default=True)
     parser.add_argument('--traffic_step_length', type=float, default=100.)
     parser.add_argument('--clipped_v', type=float, default=300., help='m/s')
+    parser.add_argument('--true_ss', type=bool, default=False)
 
     parser.add_argument('--backup', type=str, default='exp1')
 
@@ -140,12 +137,10 @@ def main():
     lock = mp.Lock()
     procs = [Process(target=subscriber_gps_agent, args=(shared_list, receive_index, lock)),
              Process(target=subscriber_can_agent, args=(shared_list, receive_index, lock)),
-             Process(target=traffic, args=(shared_list, lock, args.traffic_step_length, 'training', args.model_only_test, args.task)),
-             Process(target=controller_agent, args=(shared_list, receive_index, args.if_save, lock,
-                                                    args.task, args.noise_factor, args.load_dir,
-                                                    args.load_ite, args.result_dir, args.model_only_test,
-                                                    args.clipped_v)),
-             Process(target=plot_agent, args=(shared_list, lock, args.task, args.model_only_test, args.visualization)),]
+             Process(target=traffic, args=(shared_list, lock, args.traffic_step_length, 'training',
+                                           args.model_only_test, args.task)),
+             Process(target=controller_agent, args=(shared_list, receive_index, lock, args)),
+             Process(target=plot_agent, args=(shared_list, lock, args)),]
 
     for p in procs:
         p.start()

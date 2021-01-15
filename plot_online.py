@@ -9,11 +9,12 @@ from utils.misc import TimerStat, find_closest_point
 
 
 class Plot():
-    def __init__(self, shared_list, lock, task, model_only_test=False):
+    def __init__(self, shared_list, lock, args):
+        self.args = args
         self.shared_list = shared_list
         self.lock = lock
-        self.task = task
-        self.model_only_test = model_only_test
+        self.task = self.args.task
+        self.model_only_test = self.args.model_only_test
         self.step_old = -1
         self.acc_timer = TimerStat()
         left_construct_traj = np.load('./map/left_ref.npy')
@@ -22,7 +23,7 @@ class Plot():
         self.ref_path_all = {'left': left_construct_traj, 'straight': straight_construct_traj,
                              'right': right_construct_traj,
                              }
-        self.ref_path = self.ref_path_all[task][0]  # todo
+        self.ref_path = self.ref_path_all[self.task][0]  # todo
 
     def run(self):
         extension = 40

@@ -39,11 +39,12 @@ def rotate_coordination(orig_x, orig_y, orig_d, coordi_rotate_d):
     return transformed_x, transformed_y, transformed_d
 
 class Render():
-    def __init__(self, shared_list, lock, task, model_only_test=False):
+    def __init__(self, shared_list, lock, args):
+        self.args = args
         self.shared_list = shared_list
         self.lock = lock
-        self.task = task
-        self.model_only_test = model_only_test
+        self.task = self.args.task
+        self.model_only_test = self.args.model_only_test
         self.step_old = -1
         self.acc_timer = TimerStat()
         self._load_xml()
@@ -56,7 +57,6 @@ class Render():
         right_construct_traj = np.load('./map/right_ref.npy')
         self.ref_path_all = {'left': left_construct_traj, 'straight': straight_construct_traj,
                              'right': right_construct_traj}
-
 
     def run(self):
         self._opengl_start()
