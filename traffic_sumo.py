@@ -125,7 +125,7 @@ class Traffic(object):
                 traci.vehicle.remove(vehID=egoID)
             except traci.exceptions.TraCIException:
                 pass
-            traci.simulationStep()
+            # traci.simulationStep()
             traci.vehicle.addLegacy(vehID=egoID, routeID=ego_dict['routeID'],
                                     #depart=0, pos=20, lane=3, speed=ego_dict['v_x'],
                                     typeID='self_car')
@@ -287,7 +287,15 @@ class Traffic(object):
         self.n_ego_collision_flag = flag_dict
 
     def is_triggered(self, model_only_test, vehicle_mode):
-        self.trigger = True if model_only_test or vehicle_mode == 1 else False
+        if model_only_test:
+            self.trigger = True
+            print('model only test, traffic is triggered directly')
+        elif vehicle_mode == 1:
+            self.trigger = True
+            print('switch to automated driving, traffic is triggered')
+        else:
+            self.trigger = False
+            print('traffic is not triggered')
 
     def run(self):
         start_time = time.time()
@@ -305,9 +313,9 @@ class Traffic(object):
                            phi=ego_phi, l=L, w=W, routeID=TASK2ROUTEID[self.training_task])
                 if not self.trigger:
                     self.is_triggered(self.model_only_test, state_ego['VehicleMode'])
-                    self.init_traffic(dict(ego=out))
-                    self._get_vehicles()
-                    print('traffic is not triggered')
+                    if self.trigger:
+                        self.init_traffic(dict(ego=out))
+                        self._get_vehicles()
                 else:
                     self.set_own_car(dict(ego=out))
                     self.sim_step()
