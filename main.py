@@ -68,10 +68,10 @@ def plot_agent(shared_list, lock, task, model_only_test, visualization):
 
 def built_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--task', type=str, default='right')
+    parser.add_argument('--task', type=str, default='straight')
     parser.add_argument('--if_save', type=bool, default=True)
     task = parser.parse_args().task
-    parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-14-23-13-26'.format(task))
+    parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-14-20-02-17'.format(task))
     parser.add_argument('--load_ite', type=str, default=100000)
     parser.add_argument('--visualization', type=str, default='render') # plot or render
 
