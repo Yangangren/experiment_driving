@@ -43,7 +43,7 @@ class VehicleDynamics(object):
         F_zf, F_zr = b * mass * g / (a + b), a * mass * g / (a + b)
         self.vehicle_params.update(dict(F_zf=F_zf,
                                         F_zr=F_zr))
-        self.states = np.array([[0., 0., 0., 1.75, -40., 90.]], dtype=np.float32)  # need to be consistent with gps init
+        self.states = np.array([[0., 0., 0., 1.75, -40., 90.]], dtype=np.float32)
         self.states = tf.convert_to_tensor(self.states, dtype=tf.float32)
 
     def f_xu(self, actions, tau):  # states and actions are tensors, [[], [], ...]
@@ -169,7 +169,7 @@ class ReferencePath(object):
                     self.path_len_list.append((sl * meter_pointnum_ratio, len(trj_data[0]), len(xs_1)))
 
         elif task == 'straight':
-            end_offsets = [LANE_WIDTH_UD*(i+0.5)-0.2 for i in range(LANE_NUMBER_UD)]
+            end_offsets = [LANE_WIDTH_UD*(i+0.5)-0.2 for i in range(LANE_NUMBER_UD)]  # todo ch
             start_offsets = [LANE_WIDTH_UD*0.5]
             for start_offset in start_offsets:
                 for end_offset in end_offsets:
@@ -426,8 +426,10 @@ class Controller(object):
             rl = rl  # not interest in case of traffic light
             ru = list(filter(lambda v: v['x'] < CROSSROAD_HALF_WIDTH + 10 and v['y'] < CROSSROAD_U_HEIGHT + 10, ru))
 
-            ur_straight = list(filter(lambda v: v['x'] < ego_x + 2 and ego_y < v['y'] < CROSSROAD_U_HEIGHT + 10, ur))
-            ur_right = list(filter(lambda v: v['x'] < CROSSROAD_HALF_WIDTH+10 and v['y'] < CROSSROAD_U_HEIGHT, ur))
+            if task == 'straight':
+                ur = list(filter(lambda v: v['x'] < ego_x + 2 and ego_y < v['y'] < CROSSROAD_U_HEIGHT + 10, ur))
+            elif task == 'right':
+                ur = list(filter(lambda v: v['x'] < CROSSROAD_HALF_WIDTH+10 and v['y'] < CROSSROAD_U_HEIGHT, ur))
             ud = list(filter(lambda v: max(ego_y-2, -CROSSROAD_D_HEIGHT) < v['y'] < CROSSROAD_U_HEIGHT
                                        and ego_x > v['x'] and ego_y > -CROSSROAD_D_HEIGHT, ud))
             ul = list(filter(lambda v: -CROSSROAD_HALF_WIDTH-10 < v['x'] < ego_x and v['y'] < CROSSROAD_U_HEIGHT, ul))
@@ -443,8 +445,10 @@ class Controller(object):
 
             ru = sorted(ru, key=lambda v: (-v['x'], v['y']), reverse=True)
 
-            ur_straight = sorted(ur_straight, key=lambda v: v['y'])
-            ur_right = sorted(ur_right, key=lambda v: (-v['y'], v['x']), reverse=True)
+            if task == 'straight':
+                ur = sorted(ur, key=lambda v: v['y'])
+            elif task == 'right':
+                ur = sorted(ur, key=lambda v: (-v['y'], v['x']), reverse=True)
 
             ud = sorted(ud, key=lambda v: v['y'])
             ul = sorted(ul, key=lambda v: (-v['y'], -v['x']), reverse=True)
@@ -459,37 +463,18 @@ class Controller(object):
                     while len(sorted_list) < num:
                         sorted_list.append(fill_value)
                     return sorted_list
-
-            fill_value_for_dl = dict(x=LANE_WIDTH_UD/2, y=-(CROSSROAD_D_HEIGHT+30), v=0, phi=90, w=2.5, l=5, route=('1o', '4i'))
-            fill_value_for_du = dict(x=LANE_WIDTH_UD/2, y=-(CROSSROAD_D_HEIGHT+30), v=0, phi=90, w=2.5, l=5, route=('1o', '3i'))
-            fill_value_for_dr = dict(x=LANE_WIDTH_UD*(LANE_NUMBER_UD-0.5), y=-(CROSSROAD_D_HEIGHT+30), v=0, phi=90, w=2.5, l=5, route=('1o', '2i'))
-
-            fill_value_for_ru = dict(x=(CROSSROAD_HALF_WIDTH+15), y=LANE_WIDTH_LR*(LANE_NUMBER_LR-0.5), v=0, phi=180, w=2.5, l=5, route=('2o', '3i'))
-
-            fill_value_for_ur_straight = dict(x=-LANE_WIDTH_UD/2, y=(CROSSROAD_U_HEIGHT+20), v=0, phi=-90, w=2.5, l=5, route=('3o', '2i'))
-            fill_value_for_ur_right = dict(x=-LANE_WIDTH_UD/2, y=(CROSSROAD_U_HEIGHT+20), v=0, phi=-90, w=2.5, l=5, route=('3o', '2i'))
-
-            fill_value_for_ud = dict(x=-LANE_WIDTH_UD*0.5, y=(CROSSROAD_U_HEIGHT+20), v=0, phi=-90, w=2.5, l=5, route=('3o', '1i'))
-            fill_value_for_ul = dict(x=-LANE_WIDTH_UD*(LANE_NUMBER_UD-0.5), y=(CROSSROAD_U_HEIGHT+20), v=0, phi=-90, w=2.5, l=5, route=('3o', '4i'))
-
-            fill_value_for_lr = dict(x=-(CROSSROAD_HALF_WIDTH+20), y=-LANE_WIDTH_LR*1.5, v=0, phi=0, w=2.5, l=5, route=('4o', '2i'))
+            mode2fillvalue = dict(dl=dict(x=LANE_WIDTH_UD/2, y=-(CROSSROAD_D_HEIGHT+30), v=0, phi=90, w=2.5, l=5, route=('1o', '4i')),
+                                  du=dict(x=LANE_WIDTH_UD/2, y=-(CROSSROAD_D_HEIGHT+30), v=0, phi=90, w=2.5, l=5, route=('1o', '3i')),
+                                  dr=dict(x=LANE_WIDTH_UD*(LANE_NUMBER_UD-0.5), y=-(CROSSROAD_D_HEIGHT+30), v=0, phi=90, w=2.5, l=5, route=('1o', '2i')),
+                                  ru=dict(x=(CROSSROAD_HALF_WIDTH+15), y=LANE_WIDTH_LR*(LANE_NUMBER_LR-0.5), v=0, phi=180, w=2.5, l=5, route=('2o', '3i')),
+                                  ur=dict(x=-LANE_WIDTH_UD/2, y=(CROSSROAD_U_HEIGHT+20), v=0, phi=-90, w=2.5, l=5, route=('3o', '2i')),
+                                  ud=dict(x=-LANE_WIDTH_UD*0.5, y=(CROSSROAD_U_HEIGHT+20), v=0, phi=-90, w=2.5, l=5, route=('3o', '1i')),
+                                  ul=dict(x=-LANE_WIDTH_UD*(LANE_NUMBER_UD-0.5), y=(CROSSROAD_U_HEIGHT+20), v=0, phi=-90, w=2.5, l=5, route=('3o', '4i')),
+                                  lr=dict(x=-(CROSSROAD_HALF_WIDTH+20), y=-LANE_WIDTH_LR*1.5, v=0, phi=0, w=2.5, l=5, route=('4o', '2i')))
 
             tmp = OrderedDict()
-            if task == 'left':
-                tmp['dl'] = slice_or_fill(dl, fill_value_for_dl, VEHICLE_MODE_DICT['left']['dl'])
-                tmp['du'] = slice_or_fill(du, fill_value_for_du, VEHICLE_MODE_DICT['left']['du'])
-                tmp['ud'] = slice_or_fill(ud, fill_value_for_ud, VEHICLE_MODE_DICT['left']['ud'])
-                tmp['ul'] = slice_or_fill(ul, fill_value_for_ul, VEHICLE_MODE_DICT['left']['ul'])
-            elif task == 'straight':
-                tmp['dl'] = slice_or_fill(dl, fill_value_for_dl, VEHICLE_MODE_DICT['straight']['dl'])
-                tmp['du'] = slice_or_fill(du, fill_value_for_du, VEHICLE_MODE_DICT['straight']['du'])
-                tmp['ud'] = slice_or_fill(ud, fill_value_for_ud, VEHICLE_MODE_DICT['straight']['ud'])
-                tmp['ru'] = slice_or_fill(ru, fill_value_for_ru, VEHICLE_MODE_DICT['straight']['ru'])
-                tmp['ur'] = slice_or_fill(ur_straight, fill_value_for_ur_straight, VEHICLE_MODE_DICT['straight']['ur'])
-            elif task == 'right':
-                tmp['dr'] = slice_or_fill(dr, fill_value_for_dr, VEHICLE_MODE_DICT['right']['dr'])
-                tmp['ur'] = slice_or_fill(ur_right, fill_value_for_ur_right, VEHICLE_MODE_DICT['right']['ur'])
-                tmp['lr'] = slice_or_fill(lr, fill_value_for_lr, VEHICLE_MODE_DICT['right']['lr'])
+            for mode, num in VEHICLE_MODE_DICT[task].items():
+                tmp[mode] = slice_or_fill(eval(mode), mode2fillvalue[mode], num)
 
             return tmp
 
@@ -607,24 +592,23 @@ class Controller(object):
                     self.time_in = time.time()
 
                     # path selection
-                    if self.step % 2 == 0:
-                        traj_return_value = []
-                        if self.task == 'right' or self.task == 'left':
-                            traj_num = LANE_NUMBER_LR
-                        elif self.task == 'straight':
-                            traj_num = LANE_NUMBER_UD
-                        for traj_index in range(traj_num):
-                            self.ref_path.set_path(traj_index)
-                            obs, _, _ = self._get_obs(state_gps_modified_by_model, state_other, model_flag=True)
-                            obj_v, con_v = self.model.values(obs)
-                            traj_return_value.append([obj_v.numpy(), con_v.numpy()])
-                        traj_return_value = np.array(traj_return_value, dtype=np.float32)
-                        if np.max(traj_return_value[:, 1]) - np.min(traj_return_value[:, 1]) > 5.:
-                            path_index = np.argmin(traj_return_value[:, 1])
-                        else:
-                            path_index = np.argmax(traj_return_value[:, 0])
-                        # path_index = np.argmax(traj_return_value[:, 0])
-                        self.ref_path.set_path(path_index)
+                    traj_return_value = []
+                    if self.task == 'right' or self.task == 'left':
+                        traj_num = LANE_NUMBER_LR
+                    elif self.task == 'straight':
+                        traj_num = LANE_NUMBER_UD
+                    for traj_index in range(traj_num):
+                        self.ref_path.set_path(traj_index)
+                        obs, _, _ = self._get_obs(state_gps_modified_by_model, state_other, model_flag=True)
+                        obj_v, con_v = self.model.values(obs)
+                        traj_return_value.append([obj_v.numpy(), con_v.numpy()])
+                    traj_return_value = np.array(traj_return_value, dtype=np.float32)
+                    path_index = np.argmax(traj_return_value[:, 0])
+                    # if np.max(traj_return_value[:, 1]) - np.min(traj_return_value[:, 1]) > 1.:
+                    #     path_index = np.argmin(traj_return_value[:, 1])
+                    # else:
+                    #     path_index = np.argmax(traj_return_value[:, 0])
+                    self.ref_path.set_path(path_index)
                     obs, obs_dict, veh_vec = self._get_obs(state_gps_modified_by_model, state_other, model_flag=True)
 
                     action = self.model.run(obs)
