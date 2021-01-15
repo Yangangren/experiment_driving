@@ -609,6 +609,10 @@ class Controller(object):
                     self.time_in = time.time()
                     path_index, traj_return_value, action, obs_dict, veh_vec = \
                         self.hier_decision(state_gps_modified_by_model, state_other, model_flag=True)
+                    path_selection = 0  # todo:0 or 1
+                    path_dict = OrderedDict({'value': traj_return_value.tolist(),
+                                             'index': [path_index, path_selection]
+                                             })
                     steer_wheel_deg, torque, decel, tor_flag, dec_flag, front_wheel_deg, a_x = \
                         self._action_transformation_for_end2end(action, state_gps_modified_by_model, model_flag=True)
                     action = np.array([[front_wheel_deg * np.pi / 180, a_x]], dtype=np.float32)
@@ -697,6 +701,10 @@ class Controller(object):
 
                         path_index, traj_return_value, action_model, obs_dict_model, veh_vec_model = \
                             self.hier_decision(state_gps_modified_by_model, state_other, model_flag=True)
+                        path_selection = 0  # todo:0 or 1
+                        path_dict = OrderedDict({'value': traj_return_value.tolist(),
+                                                 'index': [path_index, path_selection]
+                                                 })
                         steer_wheel_deg_model, torque_model, decel_model, tor_flag_model, dec_flag_model, front_wheel_deg_model, a_x_model = \
                             self._action_transformation_for_end2end(action_model, state_gps_modified_by_model, model_flag=True)
                         modelaction4model = np.array([[front_wheel_deg_model*np.pi/180, a_x_model]], dtype=np.float32)
@@ -759,6 +767,11 @@ class Controller(object):
                         file_handle.write("Obs_dict ")
                         for k4, v4 in obs_dict.items():
                             file_handle.write(k4 + ":" + str(v4) + ", ")
+                        file_handle.write('\n')
+
+                        file_handle.write("Path ")
+                        for k4, v4 in path_dict.items():
+                            file_handle.write(k4 + ":" + str(v4) + "| ")
                         file_handle.write('\n')
 
                         file_handle.write("Time Time:" + str(self.run_time) + ", " +
