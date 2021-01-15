@@ -141,7 +141,7 @@ def single_plot_time_series(data_all, path,):
     single_plot(data_all, ['YawRate'],
                 path=path, title='State-Yaw rate')
     single_plot(data_all, ['time_receive_gps','time_receive_can', 'time_receive_radar','time_decision'],
-                path=path, title='Time',y_lim=[0,0.2])
+                path=path, title='Time',y_lim=[0,0.02])
 
 def single_plot_compare_response(data_all, path):
     """
@@ -199,8 +199,8 @@ def single_plot_obs_other_vehicles(data_all, path, others_num = 6):
 
 
 if __name__ == '__main__':
-    exp_index = 'case0/noise0/09_172127_model'
-    model_index = 'left/experiment-2021-01-07-01-22-30'
+    exp_index = 'noise0/15_105105_model'
+    model_index = 'left/experiment-2021-01-14-15-08-33'
     data_all, keys_for_data = load_data(model_index, exp_index)
     print(keys_for_data)
     path = (exp_index, model_index)

@@ -35,13 +35,13 @@ class LoadPolicy(object):
 
     @tf.function
     def run(self, obs):
-        processed_obs = self.preprocessor.np_process_obses(obs)
+        processed_obs = self.preprocessor.tf_process_obses(obs)
         action, logp = self.policy.compute_action(processed_obs[np.newaxis, :])
         return action[0]
 
     @tf.function
     def values(self, obs):
-        processed_obs = self.preprocessor.np_process_obses(obs)
-        obj_v = self.policy.compute_obj_v(processed_obs[np.newaxis, :])
-        con_v = self.policy.compute_con_v(processed_obs[np.newaxis, :])
-        return obj_v[0], con_v[0]
+        processed_obs = self.preprocessor.tf_process_obses(obs)
+        obj_v = self.policy.compute_obj_v(processed_obs)
+        con_v = self.policy.compute_con_v(processed_obs)
+        return obj_v, con_v
