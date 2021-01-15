@@ -58,6 +58,7 @@ class Render():
         self.ref_path_all = {'left': left_construct_traj, 'straight': straight_construct_traj,
                              'right': right_construct_traj}
 
+
     def run(self):
         self._opengl_start()
 
@@ -330,6 +331,8 @@ class Render():
                 glColor3f(1.0, 0.647, 0.0)
             elif color == 'y':
                 glColor3f(1.0, 1.0, 0.878)
+            elif color == 'blue':
+                glColor3f(0.2, 0.3, 0.9)
             glVertex2f((RU_x + x) / scale, (RU_y + y) / scale)
             glVertex2f((RD_x + x) / scale, (RD_y + y) / scale)
             glVertex2f((LD_x + x) / scale, (LD_y + y) / scale)
@@ -375,6 +378,8 @@ class Render():
                 glColor3f(1.0, 0.647, 0.0)
             elif color == 'y':
                 glColor3f(1.0, 1.0, 0.878)
+            elif color == 'blue':
+                glColor3f(0.2, 0.3, 0.9)
             glVertex2f(x / scale,y / scale)
             glVertex2f(x_forw / scale,y_forw / scale)
             glEnd()
@@ -396,6 +401,14 @@ class Render():
             glVertex2f((LU_x + ego_x) / scale, (LU_y + ego_y) / scale)
             glVertex2f((LD_x + ego_x) / scale, (LD_y + ego_y) / scale)
             glEnd()
+
+        if not self.model_only_test:
+
+            model_action_x = state_ego['model_x_in_model_action']
+            model_action_y = state_ego['model_y_in_model_action']
+            model_action_phi = state_ego['model_phi_in_model_action']
+            plot_phi_line(model_action_x, model_action_y, model_action_phi, 'blue', scale)
+            _,_,_,_ = draw_vehicle(model_action_x, model_action_y, model_action_phi, EGO_LENGTH, EGO_WIDTH, scale, 'blue')
 
         # state_other = self.shared_list[4].copy()
         state_other = self.shared_list[4].copy()
