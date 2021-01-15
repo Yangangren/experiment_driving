@@ -73,7 +73,7 @@ def built_parser():
     task = parser.parse_args().task
     parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-14-15-08-33'.format(task))
     parser.add_argument('--load_ite', type=str, default=60000)
-    parser.add_argument('--visualization', type=str, default='render') # plot or render
+    parser.add_argument('--visualization', type=str, default='plot')  # plot or render
 
     parser.add_argument('--noise_factor', type=float, default=0.)
     parser.add_argument('--model_only_test', type=bool, default=True)
