@@ -10,6 +10,7 @@ import zmq
 
 from utils.endtoend_env_utils import *
 from utils.load_policy import LoadPolicy
+from utils.dynamics_and_models import *
 
 
 def deal_with_phi_diff(phi_diff):
@@ -564,7 +565,10 @@ class Controller(object):
         return steering_wheel, torque, decel, tor_flag, dec_flag, front_wheel_deg, a_x
 
     def hier_decision(self, state_gps, state_other, model_flag):
-        traj_num = LANE_NUMBER_LR if self.task == 'right' or self.task == 'left' else LANE_NUMBER_UD
+        if self.task == 'right' or self.task == 'left':
+            traj_num = LANE_NUMBER_LR
+        elif self.task == 'straight':
+            traj_num = LANE_NUMBER_UD
         obs_list = []
         for traj_index in range(traj_num):
             self.ref_path.set_path(traj_index)
@@ -572,13 +576,24 @@ class Controller(object):
             obs_list.append(obs)
         all_obs = tf.convert_to_tensor(obs_list, dtype=tf.float32)
         obj_vs, con_vs = self.model.values(all_obs)
-        obj_vs, con_vs = obj_vs.numpy(), con_vs.numpy()
-        traj_return_value = np.stack([obj_vs, con_vs], axis=1)
-        path_index = np.argmax(obj_vs)
+        traj_return_value = np.stack([obj_vs.numpy(), con_vs.numpy()], axis=1)
+        # if np.max(traj_return_value[:, 1]) - np.min(traj_return_value[:, 1]) > 1.:
+        #     path_selection = 1
+        #     path_index = np.argmin(traj_return_value[:, path_selection])
+        # else:
+        #     path_selection = 0
+        #     path_index = np.argmax(traj_return_value[:, path_selection])
+
+        path_selection = 0  # todo:0 or 1
+        path_index = np.argmax(traj_return_value[:, path_selection])
+
+        path_dict = OrderedDict({'value': traj_return_value.tolist(),
+                                 'index': [path_index, path_selection]
+                                 })
         self.ref_path.set_path(path_index)
         obs, obs_dict, veh_vec = self._get_obs(state_gps, state_other, model_flag=model_flag)
         action = self.model.run(obs)
-        return path_index, traj_return_value, action, obs_dict, veh_vec
+        return path_dict, path_index, traj_return_value, action, obs_dict, veh_vec
 
     def run(self):
         start_time = time.time()
@@ -606,32 +621,9 @@ class Controller(object):
 
                     state_gps_modified_by_model = dict(v_x=v_x, v_y=v_y, r=r, x=x, y=y, phi=phi)
                     self.time_in = time.time()
-                    path_index, traj_return_value, action, obs_dict, veh_vec = \
+                    path_dict, path_index, traj_return_value, action, obs_dict, veh_vec = \
                         self.hier_decision(state_gps_modified_by_model, state_other, model_flag=True)
 
-                    # path selection
-                    traj_return_value = []
-                    if self.task == 'right' or self.task == 'left':
-                        traj_num = LANE_NUMBER_LR
-                    elif self.task == 'straight':
-                        traj_num = LANE_NUMBER_UD
-                    for traj_index in range(traj_num):
-                        self.ref_path.set_path(traj_index)
-                        obs, _, _ = self._get_obs(state_gps_modified_by_model, state_other, model_flag=True)
-                        obj_v, con_v = self.model.values(obs)
-                        traj_return_value.append([obj_v.numpy(), con_v.numpy()])
-                    traj_return_value = np.array(traj_return_value, dtype=np.float32)
-                    # if np.max(traj_return_value[:, 1]) - np.min(traj_return_value[:, 1]) > 1.:
-                    #     path_selection = 1
-                    #     path_index = np.argmin(traj_return_value[:, path_selection])
-                    # else:
-                    #     path_selection = 0
-                    #     path_index = np.argmax(traj_return_value[:, path_selection])
-
-                    path_selection = 0  # todo:0 or 1
-                    path_dict = OrderedDict({'value': traj_return_value.tolist(),
-                                             'index': [path_index, path_selection]
-                                             })
                     steer_wheel_deg, torque, decel, tor_flag, dec_flag, front_wheel_deg, a_x = \
                         self._action_transformation_for_end2end(action, state_gps_modified_by_model, model_flag=True)
                     action = np.array([[front_wheel_deg * np.pi / 180, a_x]], dtype=np.float32)
