@@ -539,14 +539,6 @@ class Controller(object):
         front_wheel_norm_rad, a_x_norm = action[0], action[1]
         front_wheel_deg = 0.4 / pi * 180 * front_wheel_norm_rad
         steering_wheel = front_wheel_deg * self.steer_factor
-
-        # rule: used in right case 1
-        # ego_y = state_gps['GaussY'] if not model_flag else state_gps['y']
-        # if ego_y < -10:
-        #     steering_wheel = np.clip(steering_wheel, -5., 5)
-        # else:
-        #     steering_wheel = np.clip(steering_wheel, -360., 360)
-
         steering_wheel = np.clip(steering_wheel, -360., 360)
         a_x = 2.25*a_x_norm - 0.75
         if a_x > -0.1:
@@ -588,10 +580,7 @@ class Controller(object):
         return safe_action, flag
 
     def hier_decision(self, state_gps, state_other, model_flag):
-        if self.task == 'right' or self.task == 'left':
-            traj_num = LANE_NUMBER_LR
-        elif self.task == 'straight':
-            traj_num = LANE_NUMBER_UD
+        traj_num = LANE_NUMBER_LR if self.task == 'right' or self.task == 'left' else LANE_NUMBER_UD
         obs_list = []
         for traj_index in range(traj_num):
             self.ref_path.set_path(traj_index)

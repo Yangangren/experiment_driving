@@ -9,8 +9,8 @@ from PIL.Image import open
 import xml.dom.minidom
 EGO_LENGTH = 4.8
 EGO_WIDTH = 2.0
-STATE_OTHER_LENGTH = EGO_LENGTH
-STATE_OTHER_WIDTH = EGO_WIDTH
+STATE_OTHER_LENGTH = 4.2
+STATE_OTHER_WIDTH = 1.8
 SCALE = 60
 SIZE = 1000
 
@@ -278,7 +278,7 @@ class Render():
         glRasterPos3f(-1, 1.00 - 0.05 * column, 0.0)
         n = len(str)
         for i in range(n):
-            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, ord(str[i]))
+            glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, ord(str[i]))
 
     def render(self, real_x=0, real_y=0, scale=SCALE, **kwargs):
         time_st = time.time()
@@ -411,13 +411,13 @@ class Render():
 
         traj_value = self.shared_list[11]
         # print(traj_value)
-        str1 = 'Trajectory 0 collision risk value: ' + str(traj_value[0][1])
-        str2 = 'Trajectory 1 collision risk value: ' + str(traj_value[1][1])
+        str1 = 'Trajectory 0 path reward: ' + str(traj_value[0][1])[:7]
+        str2 = 'Trajectory 1 path reward: ' + str(traj_value[1][1])[:7]
         self._text(str1, 1)
         self._text(str2, 2)
         if self.task != 'straight':
-            str3 = 'Trajectory 2 collision risk value: ' + str(traj_value[2][1])
-            str4 = 'Trajectory 3 collision risk value: ' + str(traj_value[3][1])
+            str3 = 'Trajectory 2 path reward: ' + str(traj_value[2][1])[:7]
+            str4 = 'Trajectory 3 path reward: ' + str(traj_value[3][1])[:7]
             self._text(str3, 3)
             self._text(str4, 4)
 
