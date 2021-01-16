@@ -48,6 +48,7 @@ class VehicleDynamics(object):
         self.vehicle_params.update(dict(F_zf=F_zf,
                                         F_zr=F_zr))
         self.states = np.array([[0., 0., 0., 1.75, -40., 90.]], dtype=np.float32)
+        # self.states = np.array([[0., 0., 0., 1.75+3.5, -60., 90.]], dtype=np.float32)  # for right
         self.states = tf.convert_to_tensor(self.states, dtype=tf.float32)
 
     def f_xu(self, actions, tau):  # states and actions are tensors, [[], [], ...]
@@ -598,7 +599,9 @@ class Controller(object):
     @tf.function
     def _safety_sheild(self, obs, action, con_v):
         flag = 0
-        if self.true_ss:
+        if self.true_ss is None:
+            safe_action = action[0]
+        elif self.true_ss == 'pred':
             self.predict_model.add_traj(obs, self.ref_path, mode='selecting')
             _, veh2veh4real = self.predict_model.safety_calculation(obs,action)
             veh2veh4real = veh2veh4real[0]
@@ -609,6 +612,7 @@ class Controller(object):
             else:
                 safe_action = action[0]
         else:
+            assert self.true_ss == 'con_v'
             if con_v > self.ss_con_v:
                 flag = 1
                 safe_action = tf.convert_to_tensor([0., -1.0], dtype=tf.float32)
@@ -710,6 +714,8 @@ class Controller(object):
                         self.shared_list[10] = list(veh_vec)
                         self.shared_list[11] = traj_return_value
                         self.shared_list[12] = path_index
+                        self.shared_list[14] = path_dict['ss_flag'][0]
+
                     self.step += 1
                 else:  # real test
                     shared_index = self.receive_index_shared.value
@@ -801,7 +807,9 @@ class Controller(object):
                             self.shared_list[9] = state_ego.copy()
                             self.shared_list[10] = list(veh_vec)
                             self.shared_list[11] = traj_return_value
-                            self.shared_list[12] = path_index
+                            self.shared_list[12] = path_index  # 13 is v light
+                            self.shared_list[14] = path_dict['ss_flag'][0]
+
                         self.step += 1
 
                 if self.if_save:
