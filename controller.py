@@ -567,13 +567,13 @@ class Controller(object):
         if self.task == 'left' and path_index == 0:
             steering_wheel = -50 * delta_y - 10 * delta_phi
         if self.task == 'right' and path_index == 3:
-            steering_wheel = 50 * delta_y  - 10 * delta_phi
+            steering_wheel = -50 * delta_y - 10 * delta_phi
 
         # rules on straight line for all tasks
         if (ego_y < -CROSSROAD_D_HEIGHT) or (self.task == 'straight' and ego_y > CROSSROAD_U_HEIGHT) \
                                          or (self.task == 'right' and ego_x > CROSSROAD_HALF_WIDTH) \
                                          or (self.task == 'left' and ego_x < -CROSSROAD_HALF_WIDTH):
-            if abs(delta_y) < 1.5 or abs(delta_phi) < 10.:
+            if abs(delta_y) < 1.5 and abs(delta_phi) < 10.:
                 steering_wheel = np.clip(steering_wheel, -10., 10)
 
         steering_wheel = np.clip(steering_wheel, -360., 360)
