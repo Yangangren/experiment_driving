@@ -204,13 +204,12 @@ class Render():
                 if shape_point[0] != '':
                     glVertex2f((float(shape_point[0]) / scale) * 1, (float(shape_point[1]) / scale) * 1)
             glEnd()
-            # glutTimerFunc(20,self.render,0) # todo
+            # glutTimerFunc(20,self.render,0)
 
 
     def _draw_zebra(self, loc, width, length, scale, shape, single_height=0.8):
         glLineWidth(1)
         glColor3f(0.8275, 0.8275, 0.8275)
-        # glColor3f(1.0,1.0,1.0)
         if shape == 'vertical':
             for i in range(int(length/single_height)):
                 glBegin(GL_POLYGON)
@@ -261,7 +260,7 @@ class Render():
         glBegin(GL_POINTS)
         for i in range(self.ref_path_all[task].shape[0]):
             if i != highlight_index:
-                glColor3f(0.0, 0.4, 0.0)
+                glColor3f(0.5, 0.5, 0.5)
                 for j in range(self.ref_path_all[task].shape[2]):
                     x = self.ref_path_all[task][i][0][j] / scale
                     y =  self.ref_path_all[task][i][1][j] / scale
@@ -275,14 +274,16 @@ class Render():
                     glVertex2f(x, y)
         glEnd()
 
-    def _text(self, str, column):
-        glRasterPos3f(-1, 1.00 - 0.05 * column, 0.0)
+    def _text(self, str, column, loc):
+        if loc == 'left':
+            glRasterPos3f(-1, 1.00 - 0.05 * column, 0.0)
+        elif loc == 'right':
+            glRasterPos3f(0.4, 1.00 - 0.05 * column, 0.0)
         n = len(str)
         for i in range(n):
             glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, ord(str[i]))
 
     def render(self, real_x=0, real_y=0, scale=SCALE, **kwargs):
-        time_st = time.time()
         LOC_X = -real_x / scale
         LOC_Y = -real_y / scale
         glClearColor(0.753, 0.753, 0.753, 1)
@@ -321,7 +322,7 @@ class Render():
         self._plot_reference(self.task, path_index, scale)
 
         # draw vehicles
-        def draw_vehicle(x, y, a, l, w, scale, color='o'):
+        def draw_vehicle(x, y, a, l, w, scale, color='o', details=True):
             RU_x, RU_y, _ = rotate_coordination(l / 2, w / 2, 0, -a)
             RD_x, RD_y, _ = rotate_coordination(l / 2, -w / 2, 0, -a)
             LU_x, LU_y, _ = rotate_coordination(-l / 2, w / 2, 0, -a)
@@ -333,37 +334,41 @@ class Render():
                 glColor3f(1.0, 1.0, 0.878)
             elif color == 'blue':
                 glColor3f(0.2, 0.3, 0.9)
+            elif color == 'g':
+                glColor3f(0.5, 1.0, 0.0)
             glVertex2f((RU_x + x) / scale, (RU_y + y) / scale)
             glVertex2f((RD_x + x) / scale, (RD_y + y) / scale)
             glVertex2f((LD_x + x) / scale, (LD_y + y) / scale)
             glVertex2f((LU_x + x) / scale, (LU_y + y) / scale)
             glEnd()
 
-            RU1_x, RU1_y, _ = rotate_coordination(l / 4, w * 4 / 10, 0, -a)
-            RD1_x, RD1_y, _ = rotate_coordination(l / 4, - w * 4 / 10, 0, -a)
-            LU1_x, LU1_y, _ = rotate_coordination(l / 12, w * 3 / 10, 0, -a)
-            LD1_x, LD1_y, _ = rotate_coordination(l / 12, -w * 3 / 10, 0, -a)
+            if details:
 
-            glBegin(GL_POLYGON)
-            glColor3f(0.0,0.0,0.0)
-            glVertex2f((RU1_x + x) / scale, (RU1_y + y) / scale)
-            glVertex2f((RD1_x + x) / scale, (RD1_y + y) / scale)
-            glVertex2f((LD1_x + x) / scale, (LD1_y + y) / scale)
-            glVertex2f((LU1_x + x) / scale, (LU1_y + y) / scale)
-            glEnd()
+                RU1_x, RU1_y, _ = rotate_coordination(l / 4, w * 4 / 10, 0, -a)
+                RD1_x, RD1_y, _ = rotate_coordination(l / 4, - w * 4 / 10, 0, -a)
+                LU1_x, LU1_y, _ = rotate_coordination(l / 12, w * 3 / 10, 0, -a)
+                LD1_x, LD1_y, _ = rotate_coordination(l / 12, -w * 3 / 10, 0, -a)
 
-            RU2_x, RU2_y, _ = rotate_coordination(-l / 3, w * 4 / 10, 0, -a)
-            RD2_x, RD2_y, _ = rotate_coordination(-l / 3, - w * 4 / 10, 0, -a)
-            LU2_x, LU2_y, _ = rotate_coordination(-l / 6, w * 3 / 10, 0, -a)
-            LD2_x, LD2_y, _ = rotate_coordination(-l / 6, -w * 3 / 10, 0, -a)
+                glBegin(GL_POLYGON)
+                glColor3f(0.0,0.0,0.0)
+                glVertex2f((RU1_x + x) / scale, (RU1_y + y) / scale)
+                glVertex2f((RD1_x + x) / scale, (RD1_y + y) / scale)
+                glVertex2f((LD1_x + x) / scale, (LD1_y + y) / scale)
+                glVertex2f((LU1_x + x) / scale, (LU1_y + y) / scale)
+                glEnd()
 
-            glBegin(GL_POLYGON)
-            glColor3f(0.0, 0.0, 0.0)
-            glVertex2f((RU2_x + x) / scale, (RU2_y + y) / scale)
-            glVertex2f((RD2_x + x) / scale, (RD2_y + y) / scale)
-            glVertex2f((LD2_x + x) / scale, (LD2_y + y) / scale)
-            glVertex2f((LU2_x + x) / scale, (LU2_y + y) / scale)
-            glEnd()
+                RU2_x, RU2_y, _ = rotate_coordination(-l / 3, w * 4 / 10, 0, -a)
+                RD2_x, RD2_y, _ = rotate_coordination(-l / 3, - w * 4 / 10, 0, -a)
+                LU2_x, LU2_y, _ = rotate_coordination(-l / 6, w * 3 / 10, 0, -a)
+                LD2_x, LD2_y, _ = rotate_coordination(-l / 6, -w * 3 / 10, 0, -a)
+
+                glBegin(GL_POLYGON)
+                glColor3f(0.0, 0.0, 0.0)
+                glVertex2f((RU2_x + x) / scale, (RU2_y + y) / scale)
+                glVertex2f((RD2_x + x) / scale, (RD2_y + y) / scale)
+                glVertex2f((LD2_x + x) / scale, (LD2_y + y) / scale)
+                glVertex2f((LU2_x + x) / scale, (LU2_y + y) / scale)
+                glEnd()
 
             return LU_x, LU_y, LD_x, LD_y
 
@@ -392,6 +397,13 @@ class Render():
         ego_phi = state_ego['Heading']
         decision = self.shared_list[8].copy()
         acc = decision['a_x']
+
+        # draw safety shield
+        ss_flag = self.shared_list[14]
+        if ss_flag:
+            _, _, _, _ = draw_vehicle(ego_x, ego_y, ego_phi, EGO_LENGTH + 1, EGO_WIDTH+1,
+                                      scale, color='green', details=False)
+
         LU_x, LU_y, LD_x, LD_y = draw_vehicle(ego_x, ego_y, ego_phi, EGO_LENGTH, EGO_WIDTH, scale, color='o')
         plot_phi_line(ego_x,ego_y,ego_phi,'o',scale)
         if acc < 0:
@@ -410,8 +422,8 @@ class Render():
             plot_phi_line(model_action_x, model_action_y, model_action_phi, 'blue', scale)
             _,_,_,_ = draw_vehicle(model_action_x, model_action_y, model_action_phi, EGO_LENGTH, EGO_WIDTH, scale, 'blue')
 
-        # state_other = self.shared_list[4].copy()
         state_other = self.shared_list[4].copy()
+
         # plot cars
         for veh in state_other:
             veh_x = veh['x']
@@ -423,24 +435,21 @@ class Render():
             _,_,_,_ = draw_vehicle(veh_x, veh_y, veh_phi, veh_l, veh_w, scale, color='y')
 
         traj_value = self.shared_list[11]
-        # print(traj_value)
-        str1 = 'Trajectory 0 path reward: ' + str(traj_value[0][0])[:7]
-        str2 = 'Trajectory 1 path reward: ' + str(traj_value[1][0])[:7]
-        self._text(str1, 1)
-        self._text(str2, 2)
-        if self.task != 'straight':
-            str3 = 'Trajectory 2 path reward: ' + str(traj_value[2][0])[:7]
-            str4 = 'Trajectory 3 path reward: ' + str(traj_value[3][0])[:7]
-            self._text(str3, 3)
-            self._text(str4, 4)
-
+        for i in range(len(traj_value)):
+            if not path_index == i:
+                glColor3f(0.3, 0.3, 0.3)
+            else:
+                glColor3f(0.3, 0.5, 0.1)
+            str1 = 'Path ' + str(i) + ' reward: ' + str(traj_value[i][0])[:7]
+            self._text(str1, i + 1, 'left')
+            str2 = 'Path ' + str(i) + ' collision risk: ' + str(traj_value[i][1])[:7]
+            self._text(str2, i + 1, 'right')
 
         glutSwapBuffers()
 
         glDisable(GL_BLEND)
         glDisable(GL_LINE_SMOOTH)
         glDisable(GL_POLYGON_SMOOTH)
-        # print(time.time()-time_st)
 
 
     def _texture_light(self, img, loc, edge, scale, size=(8, 3)):
