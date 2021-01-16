@@ -64,19 +64,20 @@ def plot_agent(shared_list, lock, args):
 
 def built_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--task', type=str, default='right')
+    parser.add_argument('--task', type=str, default='straight')
     parser.add_argument('--if_save', type=bool, default=True)
     task = parser.parse_args().task
-    parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-15-13-27-30'.format(task))
-    parser.add_argument('--load_ite', type=str, default=100000)
-    parser.add_argument('--visualization', type=str, default='render') # plot or render
+    parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-16-12-10-42'.format(task))
+    parser.add_argument('--load_ite', type=str, default=80000)
+    parser.add_argument('--visualization', type=str, default='render')  # plot or render
 
     parser.add_argument('--noise_factor', type=float, default=0.)
     parser.add_argument('--model_only_test', type=bool, default=True)
     parser.add_argument('--traffic_step_length', type=float, default=100.)
-    parser.add_argument('--clipped_v', type=float, default=5., help='m/s')
-    parser.add_argument('--true_ss', type=bool, default=False)
-    parser.add_argument('--ss_con_v', type=float, default=5.0)
+    parser.add_argument('--traffic_mode', type=str, default='training')
+    parser.add_argument('--clipped_v', type=float, default=30., help='m/s')
+    parser.add_argument('--true_ss', type=str, default='con_v')  # None, pred, con_v
+    parser.add_argument('--ss_con_v', type=float, default=5.)
 
     parser.add_argument('--backup', type=str, default='test')
 
@@ -97,7 +98,7 @@ def main():
     os.makedirs(args.result_dir)
     with open(args.result_dir + '/config.json', 'w', encoding='utf-8') as f:
         json.dump(vars(args), f, ensure_ascii=False, indent=4)
-    shared_list = mp.Manager().list([0.] * 14)
+    shared_list = mp.Manager().list([0.] * 15)
     # [state_gps, time_gps, state_can, time_can, state_other, time_radar,
     #  step, runtime, decision, state_ego, obs_vec, traj_value, ref_index, v_light]
 
@@ -138,7 +139,7 @@ def main():
     lock = mp.Lock()
     procs = [Process(target=subscriber_gps_agent, args=(shared_list, receive_index, lock)),
              Process(target=subscriber_can_agent, args=(shared_list, receive_index, lock)),
-             Process(target=traffic, args=(shared_list, lock, args.traffic_step_length, 'training',
+             Process(target=traffic, args=(shared_list, lock, args.traffic_step_length, args.traffic_mode,
                                            args.model_only_test, args.task)),
              Process(target=controller_agent, args=(shared_list, receive_index, lock, args)),
              Process(target=plot_agent, args=(shared_list, lock, args)),]

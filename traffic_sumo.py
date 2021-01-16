@@ -55,9 +55,6 @@ class Traffic(object):
         self.training_task = training_task
         task2route = {'left': 'dl', 'straight': 'du', 'right': 'dr'}
         self.ego_route = task2route[self.training_task]
-        if training_task == 'right':
-            if random.random() > 0.5:
-                self.training_light_phase = 2
         try:
             traci.start(
                 [SUMO_BINARY, "-c", SUMOCFG_DIR,
