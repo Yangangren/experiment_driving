@@ -155,7 +155,7 @@ class Render():
                                 glLineStipple(3, bit_pattern(
                                     0, 0, 0, 0,
                                     0, 0, 0, 0,
-                                    1, 1, 1, 1,
+                                    0, 0, 1, 1,
                                     1, 1, 1, 1,
                                 ))
                                 glEnable(GL_LINE_STIPPLE)
@@ -163,8 +163,9 @@ class Render():
                                 glColor3f(1.0, 1.0, 1.0)
                                 glVertex2f(x2, y2)
                                 glVertex2f(x3, y3)
-                                glVertex2f(x1, y1)
-                                glVertex2f(x4, y4)
+                                if not j == sub_element_lane.length - 1:
+                                    glVertex2f(x1, y1)
+                                    glVertex2f(x4, y4)
                                 glEnd()
                                 glDisable(GL_LINE_STIPPLE)
                                 glLineWidth(10.0)
@@ -175,10 +176,21 @@ class Render():
                                 glEnd()
                                 glLineWidth(2.0)
                                 glBegin(GL_LINES)
-                                glColor3f(0.8275, 0.8275, 0.8275)
+                                glColor3f(0.9, 0.7, 0.05)
                                 if j == sub_element_lane.length - 1:
-                                    glVertex2f(x1, y1)
-                                    glVertex2f(x4, y4)
+                                    if not vertical:
+                                        glVertex2f(x1, y1 - 0.005)
+                                        glVertex2f(x4, y4 - 0.005)
+                                        glVertex2f(x1, y1 + 0.005)
+                                        glVertex2f(x4, y4 + 0.005)
+                                    if vertical:
+                                        glVertex2f(x1 - 0.005, y1)
+                                        glVertex2f(x4 - 0.005, y4)
+                                        glVertex2f(x1 + 0.005, y1)
+                                        glVertex2f(x4 + 0.005, y4)
+                                glEnd()
+                                glBegin(GL_LINES)
+                                glColor3f(0.8275, 0.8275, 0.8275)
                                 if not vertical:
                                     if j == 3:
                                         glVertex2f(x2, y2)
