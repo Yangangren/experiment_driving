@@ -10,6 +10,10 @@ import zmq
 
 from utils.endtoend_env_utils import *
 from utils.load_policy import LoadPolicy
+from utils.dynamics_and_models import *
+from utils.coordi_convert import ROTATE_ANGLE
+
+rotate4vy = ROTATE_ANGLE + 1.
 
 
 def deal_with_phi_diff(phi_diff):
@@ -43,7 +47,7 @@ class VehicleDynamics(object):
         F_zf, F_zr = b * mass * g / (a + b), a * mass * g / (a + b)
         self.vehicle_params.update(dict(F_zf=F_zf,
                                         F_zr=F_zr))
-        self.states = np.array([[0., 0., 0., 1.75, -40., 90.]], dtype=np.float32)  # need to be consistent with gps init
+        self.states = np.array([[0., 0., 0., 1.75, -40., 90.]], dtype=np.float32)
         self.states = tf.convert_to_tensor(self.states, dtype=tf.float32)
 
     def f_xu(self, actions, tau):  # states and actions are tensors, [[], [], ...]
@@ -76,6 +80,17 @@ class VehicleDynamics(object):
         self.states = self.f_xu(u_1, tau)
         return self.states.numpy()
 
+    def replace_ith_state(self, i, var):
+        states = self.states.numpy()
+        final = []
+        for idx, v in enumerate(states[0]):
+            if idx == i:
+                final.append(var)
+            else:
+                final.append(v)
+        final = np.array(final, dtype=np.float32)[np.newaxis, :]
+        self.states = tf.convert_to_tensor(final)
+
     def set_states(self, states):
         self.states = tf.convert_to_tensor(states, dtype=tf.float32)
 
@@ -99,9 +114,9 @@ class VehicleDynamics(object):
             return OrderedDict(out)
         else:
             front_wheel_rad, acc = action4model[0][0], action4model[0][1]
-            model_state = self.prediction(action4model, delta_t)
-            v_x, v_y, r, x, y, phi = model_state[0][0], model_state[0][1], model_state[0][2], \
-                                     model_state[0][3], model_state[0][4], model_state[0][5]
+            states = self.states.numpy()
+            v_x, v_y, r, x, y, phi = states[0][0], states[0][1], states[0][2], \
+                                     states[0][3], states[0][4], states[0][5]
             out = [('model_vx_in_{}_action'.format(prefix), v_x),
                    ('model_vy_in_{}_action'.format(prefix), v_y),
                    ('model_r_in_{}_action'.format(prefix), r),
@@ -111,6 +126,7 @@ class VehicleDynamics(object):
                    ('model_front_wheel_rad_in_{}_action'.format(prefix), front_wheel_rad),
                    ('model_acc_in_{}_action'.format(prefix), acc),
                    ]
+            self.prediction(action4model, delta_t)
             return OrderedDict(out)
 
 
@@ -169,7 +185,7 @@ class ReferencePath(object):
                     self.path_len_list.append((sl * meter_pointnum_ratio, len(trj_data[0]), len(xs_1)))
 
         elif task == 'straight':
-            end_offsets = [LANE_WIDTH_UD*(i+0.5)-0.2 for i in range(LANE_NUMBER_UD)]
+            end_offsets = [LANE_WIDTH_UD*(i+0.5)-0.2 for i in range(LANE_NUMBER_UD)]  # todo ch
             start_offsets = [LANE_WIDTH_UD*0.5]
             for start_offset in start_offsets:
                 for end_offset in end_offsets:
@@ -308,20 +324,22 @@ class ReferencePath(object):
 
 
 class Controller(object):
-    def __init__(self, shared_list, receive_index, if_save, lock, task,
-                 noise_factor, load_dir, load_ite, result_dir, model_only_test, clipped_v):
+    def __init__(self, shared_list, receive_index, lock, args):
+        self.args = args
         self.time_out = 0
-        self.task = task
+        self.task = self.args.task
+        self.true_ss = self.args.true_ss
+        self.ss_con_v = self.args.ss_con_v
         self.ref_path = ReferencePath(self.task)
         self.num_future_data = 0
-        self.noise_factor = noise_factor
-        self.model = LoadPolicy(load_dir, load_ite)
+        self.noise_factor = self.args.noise_factor
+        self.model = LoadPolicy(self.args.load_dir, self.args.load_ite)
         self.steer_factor = 15
         self.shared_list = shared_list
         self.read_index_old = 0
         self.receive_index_shared = receive_index
-        self.model_only_test = model_only_test
-        self.clipped_v = clipped_v
+        self.model_only_test = self.args.model_only_test
+        self.clipped_v = self.args.clipped_v
         # self.read_index_old = Info_List[0]
 
         self.lock = lock
@@ -330,16 +348,16 @@ class Controller(object):
         self.socket_pub.bind("tcp://*:6970")
         self.time_initial = time.time()
         self.step = 0
-        self.if_save = if_save
-        self.save_path = result_dir
+        self.if_save = self.args.if_save
+        self.save_path = self.args.result_dir
         self.t_interval = 0
         self.time_decision = 0
         self.time_in = time.time()
 
-        self.last_steer_output = 0
         self.model_driven_by_model_action = VehicleDynamics()
         self.model_driven_by_real_action = VehicleDynamics()
 
+        self.predict_model = EnvironmentModel(self.task)
         self.run_time = 0.
 
     def _construct_ego_vector(self, state_gps, model_flag):
@@ -353,7 +371,8 @@ class Controller(object):
             ego_phi = state_gps['Heading']
             ego_phi_rad = ego_phi * np.pi / 180.
             ego_x, ego_y = state_gps['GaussX'], state_gps['GaussY']
-            v_in_y_coord, v_in_x_coord = -state_gps['EastVelocity'], state_gps['NorthVelocity']
+            v_in_y_coord = state_gps['NorthVelocity']*np.cos(rotate4vy*np.pi/180) - state_gps['EastVelocity']*np.sin(rotate4vy*np.pi/180)
+            v_in_x_coord = state_gps['NorthVelocity']*np.sin(rotate4vy*np.pi/180) + state_gps['EastVelocity']*np.cos(rotate4vy*np.pi/180)
             ego_v_x = v_in_y_coord * np.sin(ego_phi_rad) + v_in_x_coord * np.cos(ego_phi_rad)
             ego_v_y = v_in_y_coord * np.cos(ego_phi_rad) - v_in_x_coord * np.sin(ego_phi_rad)  # todo: check the sign
             ego_v_y = - ego_v_y
@@ -426,8 +445,10 @@ class Controller(object):
             rl = rl  # not interest in case of traffic light
             ru = list(filter(lambda v: v['x'] < CROSSROAD_HALF_WIDTH + 10 and v['y'] < CROSSROAD_U_HEIGHT + 10, ru))
 
-            ur_straight = list(filter(lambda v: v['x'] < ego_x + 2 and ego_y < v['y'] < CROSSROAD_U_HEIGHT + 10, ur))
-            ur_right = list(filter(lambda v: v['x'] < CROSSROAD_HALF_WIDTH+10 and v['y'] < CROSSROAD_U_HEIGHT, ur))
+            if task == 'straight':
+                ur = list(filter(lambda v: v['x'] < ego_x + 2 and ego_y < v['y'] < CROSSROAD_U_HEIGHT + 10, ur))
+            elif task == 'right':
+                ur = list(filter(lambda v: v['x'] < CROSSROAD_HALF_WIDTH+10 and v['y'] < CROSSROAD_U_HEIGHT, ur))
             ud = list(filter(lambda v: max(ego_y-2, -CROSSROAD_D_HEIGHT) < v['y'] < CROSSROAD_U_HEIGHT
                                        and ego_x > v['x'] and ego_y > -CROSSROAD_D_HEIGHT, ud))
             ul = list(filter(lambda v: -CROSSROAD_HALF_WIDTH-10 < v['x'] < ego_x and v['y'] < CROSSROAD_U_HEIGHT, ul))
@@ -443,8 +464,10 @@ class Controller(object):
 
             ru = sorted(ru, key=lambda v: (-v['x'], v['y']), reverse=True)
 
-            ur_straight = sorted(ur_straight, key=lambda v: v['y'])
-            ur_right = sorted(ur_right, key=lambda v: (-v['y'], v['x']), reverse=True)
+            if task == 'straight':
+                ur = sorted(ur, key=lambda v: v['y'])
+            elif task == 'right':
+                ur = sorted(ur, key=lambda v: (-v['y'], v['x']), reverse=True)
 
             ud = sorted(ud, key=lambda v: v['y'])
             ul = sorted(ul, key=lambda v: (-v['y'], -v['x']), reverse=True)
@@ -459,37 +482,18 @@ class Controller(object):
                     while len(sorted_list) < num:
                         sorted_list.append(fill_value)
                     return sorted_list
-
-            fill_value_for_dl = dict(x=LANE_WIDTH_UD/2, y=-(CROSSROAD_D_HEIGHT+30), v=0, phi=90, w=2.5, l=5, route=('1o', '4i'))
-            fill_value_for_du = dict(x=LANE_WIDTH_UD/2, y=-(CROSSROAD_D_HEIGHT+30), v=0, phi=90, w=2.5, l=5, route=('1o', '3i'))
-            fill_value_for_dr = dict(x=LANE_WIDTH_UD*(LANE_NUMBER_UD-0.5), y=-(CROSSROAD_D_HEIGHT+30), v=0, phi=90, w=2.5, l=5, route=('1o', '2i'))
-
-            fill_value_for_ru = dict(x=(CROSSROAD_HALF_WIDTH+15), y=LANE_WIDTH_LR*(LANE_NUMBER_LR-0.5), v=0, phi=180, w=2.5, l=5, route=('2o', '3i'))
-
-            fill_value_for_ur_straight = dict(x=-LANE_WIDTH_UD/2, y=(CROSSROAD_U_HEIGHT+20), v=0, phi=-90, w=2.5, l=5, route=('3o', '2i'))
-            fill_value_for_ur_right = dict(x=-LANE_WIDTH_UD/2, y=(CROSSROAD_U_HEIGHT+20), v=0, phi=-90, w=2.5, l=5, route=('3o', '2i'))
-
-            fill_value_for_ud = dict(x=-LANE_WIDTH_UD*0.5, y=(CROSSROAD_U_HEIGHT+20), v=0, phi=-90, w=2.5, l=5, route=('3o', '1i'))
-            fill_value_for_ul = dict(x=-LANE_WIDTH_UD*(LANE_NUMBER_UD-0.5), y=(CROSSROAD_U_HEIGHT+20), v=0, phi=-90, w=2.5, l=5, route=('3o', '4i'))
-
-            fill_value_for_lr = dict(x=-(CROSSROAD_HALF_WIDTH+20), y=-LANE_WIDTH_LR*1.5, v=0, phi=0, w=2.5, l=5, route=('4o', '2i'))
+            mode2fillvalue = dict(dl=dict(x=LANE_WIDTH_UD/2, y=-(CROSSROAD_D_HEIGHT+30), v=0, phi=90, w=2.5, l=5, route=('1o', '4i')),
+                                  du=dict(x=LANE_WIDTH_UD/2, y=-(CROSSROAD_D_HEIGHT+30), v=0, phi=90, w=2.5, l=5, route=('1o', '3i')),
+                                  dr=dict(x=LANE_WIDTH_UD*(LANE_NUMBER_UD-0.5), y=-(CROSSROAD_D_HEIGHT+30), v=0, phi=90, w=2.5, l=5, route=('1o', '2i')),
+                                  ru=dict(x=(CROSSROAD_HALF_WIDTH+15), y=LANE_WIDTH_LR*(LANE_NUMBER_LR-0.5), v=0, phi=180, w=2.5, l=5, route=('2o', '3i')),
+                                  ur=dict(x=-LANE_WIDTH_UD/2, y=(CROSSROAD_U_HEIGHT+20), v=0, phi=-90, w=2.5, l=5, route=('3o', '2i')),
+                                  ud=dict(x=-LANE_WIDTH_UD*0.5, y=(CROSSROAD_U_HEIGHT+20), v=0, phi=-90, w=2.5, l=5, route=('3o', '1i')),
+                                  ul=dict(x=-LANE_WIDTH_UD*(LANE_NUMBER_UD-0.5), y=(CROSSROAD_U_HEIGHT+20), v=0, phi=-90, w=2.5, l=5, route=('3o', '4i')),
+                                  lr=dict(x=-(CROSSROAD_HALF_WIDTH+20), y=-LANE_WIDTH_LR*1.5, v=0, phi=0, w=2.5, l=5, route=('4o', '2i')))
 
             tmp = OrderedDict()
-            if task == 'left':
-                tmp['dl'] = slice_or_fill(dl, fill_value_for_dl, VEHICLE_MODE_DICT['left']['dl'])
-                tmp['du'] = slice_or_fill(du, fill_value_for_du, VEHICLE_MODE_DICT['left']['du'])
-                tmp['ud'] = slice_or_fill(ud, fill_value_for_ud, VEHICLE_MODE_DICT['left']['ud'])
-                tmp['ul'] = slice_or_fill(ul, fill_value_for_ul, VEHICLE_MODE_DICT['left']['ul'])
-            elif task == 'straight':
-                tmp['dl'] = slice_or_fill(dl, fill_value_for_dl, VEHICLE_MODE_DICT['straight']['dl'])
-                tmp['du'] = slice_or_fill(du, fill_value_for_du, VEHICLE_MODE_DICT['straight']['du'])
-                tmp['ud'] = slice_or_fill(ud, fill_value_for_ud, VEHICLE_MODE_DICT['straight']['ud'])
-                tmp['ru'] = slice_or_fill(ru, fill_value_for_ru, VEHICLE_MODE_DICT['straight']['ru'])
-                tmp['ur'] = slice_or_fill(ur_straight, fill_value_for_ur_straight, VEHICLE_MODE_DICT['straight']['ur'])
-            elif task == 'right':
-                tmp['dr'] = slice_or_fill(dr, fill_value_for_dr, VEHICLE_MODE_DICT['right']['dr'])
-                tmp['ur'] = slice_or_fill(ur_right, fill_value_for_ur_right, VEHICLE_MODE_DICT['right']['ur'])
-                tmp['lr'] = slice_or_fill(lr, fill_value_for_lr, VEHICLE_MODE_DICT['right']['lr'])
+            for mode, num in VEHICLE_MODE_DICT[task].items():
+                tmp[mode] = slice_or_fill(eval(mode), mode2fillvalue[mode], num)
 
             return tmp
 
@@ -545,20 +549,32 @@ class Controller(object):
                              'other{}_phi'.format(i): vehs_vector[self.per_veh_info_dim*i+3]})
         return vector_with_noise, obs_dict, vehs_vector  # todo: if output vector without noise
 
-    def _action_transformation_for_end2end(self, action, state_gps, model_flag):  # [-1, 1]
-        ego_v_x = state_gps['GpsSpeed'] if not model_flag else state_gps['v_x']
+    def _action_transformation_for_end2end(self, action, obs_dict, path_index=None):  # [-1, 1]
+        ego_v_x = obs_dict['ego_vx']
+        ego_x = obs_dict['ego_x']
+        ego_y = obs_dict['ego_y']
+        delta_y = obs_dict['tracking_delta_y']
+        delta_phi = obs_dict['tracking_delta_phi']
+        delta_v = obs_dict['tracking_delta_v']
+
         torque_clip = 100. if ego_v_x > self.clipped_v else 250.         # todo: clipped v
         action = np.clip(action, -1.0, 1.0)
         front_wheel_norm_rad, a_x_norm = action[0], action[1]
         front_wheel_deg = 0.4 / pi * 180 * front_wheel_norm_rad
         steering_wheel = front_wheel_deg * self.steer_factor
 
-        # rule: used in right case 1
-        # ego_y = state_gps['GaussY'] if not model_flag else state_gps['y']
-        # if ego_y < -10:
-        #     steering_wheel = np.clip(steering_wheel, -5., 5)
-        # else:
-        #     steering_wheel = np.clip(steering_wheel, -360., 360)
+        # rules for path selection for right and left task
+        if self.task == 'left' and path_index == 0:
+            steering_wheel = -50 * delta_y - 10 * delta_phi
+        if self.task == 'right' and path_index == 3:
+            steering_wheel = -50 * delta_y - 10 * delta_phi
+
+        # rules on straight line for all tasks
+        if (ego_y < -CROSSROAD_D_HEIGHT) or (self.task == 'straight' and ego_y > CROSSROAD_U_HEIGHT) \
+                                         or (self.task == 'right' and ego_x > CROSSROAD_HALF_WIDTH) \
+                                         or (self.task == 'left' and ego_x < -CROSSROAD_HALF_WIDTH):
+            if abs(delta_y) < 1.5 and abs(delta_phi) < 10.:
+                steering_wheel = np.clip(steering_wheel, -10., 10)
 
         steering_wheel = np.clip(steering_wheel, -360., 360)
         a_x = 2.25*a_x_norm - 0.75
@@ -578,6 +594,52 @@ class Controller(object):
         # out: steer_wheel_deg, torque, deceleration, tor_flag, dec_flag:
         # [-360,360]deg, [0., 350,]N (1), [0, 5]m/s^2 (0.05)
         return steering_wheel, torque, decel, tor_flag, dec_flag, front_wheel_deg, a_x
+
+    @tf.function
+    def _safety_sheild(self, obs, action, con_v):
+        flag = 0
+        if self.true_ss:
+            self.predict_model.add_traj(obs, self.ref_path, mode='selecting')
+            _, veh2veh4real = self.predict_model.safety_calculation(obs,action)
+            veh2veh4real = veh2veh4real[0]
+            if veh2veh4real != 0:
+                flag = 1
+                tf.print('original action will cause collision!!!')
+                safe_action = tf.convert_to_tensor([0., -1.0], dtype=tf.float32)
+            else:
+                safe_action = action[0]
+        else:
+            if con_v > self.ss_con_v:
+                flag = 1
+                safe_action = tf.convert_to_tensor([0., -1.0], dtype=tf.float32)
+            else:
+                safe_action = action[0]
+        return safe_action, flag
+
+    def hier_decision(self, state_gps, state_other, model_flag):
+        traj_num = LANE_NUMBER_LR if self.task == 'right' or self.task == 'left' else LANE_NUMBER_UD
+        obs_list = []
+        for traj_index in range(traj_num):
+            self.ref_path.set_path(traj_index)
+            obs, _, _ = self._get_obs(state_gps, state_other, model_flag=model_flag)
+            obs_list.append(obs)
+        all_obs = tf.convert_to_tensor(obs_list, dtype=tf.float32)
+        obj_vs, con_vs = self.model.values(all_obs)
+        traj_return_value = np.stack([obj_vs.numpy(), con_vs.numpy()], axis=1)
+        path_selection = 0
+        path_index = np.argmax(traj_return_value[:, path_selection])
+        self.ref_path.set_path(path_index)
+        obs, obs_dict, veh_vec = self._get_obs(state_gps, state_other, model_flag=model_flag)
+        action = self.model.run(obs)
+        obs, action = tf.convert_to_tensor(obs[np.newaxis, :]), tf.convert_to_tensor(action[np.newaxis, :])
+        action, ss_flag = self._safety_sheild(obs, action, con_vs[path_index])
+
+        path_dict = OrderedDict({'obj_value': traj_return_value[:, 0].tolist(),
+                                 'con_value': traj_return_value[:, 1].tolist(),
+                                 'index': [path_index, path_selection],
+                                 'ss_flag': [ss_flag.numpy()]
+                                 })
+        return path_index, traj_return_value, action.numpy(), obs_dict, veh_vec, path_dict
 
     def run(self):
         start_time = time.time()
@@ -605,29 +667,11 @@ class Controller(object):
 
                     state_gps_modified_by_model = dict(v_x=v_x, v_y=v_y, r=r, x=x, y=y, phi=phi)
                     self.time_in = time.time()
+                    path_index, traj_return_value, action, obs_dict, veh_vec, path_dict = \
+                        self.hier_decision(state_gps_modified_by_model, state_other, model_flag=True)
 
-                    # path selection
-                    traj_return_value = []
-                    if self.task == 'right' or self.task == 'left':
-                        traj_num = LANE_NUMBER_LR
-                    elif self.task == 'straight':
-                        traj_num = LANE_NUMBER_UD
-                    for traj_index in range(traj_num):
-                        self.ref_path.set_path(traj_index)
-                        obs, _, _ = self._get_obs(state_gps_modified_by_model, state_other, model_flag=True)
-                        obj_v, con_v = self.model.values(obs)
-                        traj_return_value.append([obj_v.numpy(), con_v.numpy()])
-                    traj_return_value = np.array(traj_return_value, dtype=np.float32)
-                    if np.max(traj_return_value[:, 1]) - np.min(traj_return_value[:, 1]) > 1.:
-                        path_index = np.argmin(traj_return_value[:, 1])
-                    else:
-                        path_index = np.argmax(traj_return_value[:, 0])
-                    self.ref_path.set_path(path_index)
-                    obs, obs_dict, veh_vec = self._get_obs(state_gps_modified_by_model, state_other, model_flag=True)
-
-                    action = self.model.run(obs)
                     steer_wheel_deg, torque, decel, tor_flag, dec_flag, front_wheel_deg, a_x = \
-                        self._action_transformation_for_end2end(action, state_gps_modified_by_model, model_flag=True)
+                        self._action_transformation_for_end2end(action, obs_dict, path_index)
                     action = np.array([[front_wheel_deg * np.pi / 180, a_x]], dtype=np.float32)
                     state_model_in_model_action = self.model_driven_by_model_action.model_step(state_gps, 1,
                                                                                                action,
@@ -687,7 +731,7 @@ class Controller(object):
                         obs, obs_dict, veh_vec = self._get_obs(state_gps, state_other, model_flag=False)
                         action = self.model.run(obs)
                         steer_wheel_deg, torque, decel, tor_flag, dec_flag, front_wheel_deg, a_x = \
-                            self._action_transformation_for_end2end(action, state_gps, model_flag=False)
+                            self._action_transformation_for_end2end(action, obs_dict)
                         # ==============================================================================================
                         # ------------------drive model in real action---------------------------------
                         realaction4model = np.array([[front_wheel_deg*np.pi/180, a_x]], dtype=np.float32)
@@ -698,7 +742,10 @@ class Controller(object):
 
                         # ------------------drive model in model action---------------------------------
                         if self.step % 5 == 0:
-                            v_in_y_coord, v_in_x_coord = -state_gps['EastVelocity'], state_gps['NorthVelocity']
+                            v_in_y_coord = state_gps['NorthVelocity'] * np.cos(rotate4vy * np.pi / 180) - state_gps[
+                                'EastVelocity'] * np.sin(rotate4vy * np.pi / 180)
+                            v_in_x_coord = state_gps['NorthVelocity'] * np.sin(rotate4vy * np.pi / 180) + state_gps[
+                                'EastVelocity'] * np.cos(rotate4vy * np.pi / 180)
                             ego_phi = state_gps['Heading']
                             ego_phi_rad = ego_phi * np.pi / 180.
                             ego_vx = v_in_y_coord * np.sin(ego_phi_rad) + v_in_x_coord * np.cos(ego_phi_rad)
@@ -711,24 +758,10 @@ class Controller(object):
                         v_x, v_y, r, x, y, phi = state_driven_by_model_action[0], state_driven_by_model_action[1], state_driven_by_model_action[2], \
                                                  state_driven_by_model_action[3], state_driven_by_model_action[4], state_driven_by_model_action[5]
                         state_gps_modified_by_model = dict(v_x=v_x, v_y=v_y, r=r, x=x, y=y, phi=phi)
-
-                        # path selection
-                        traj_return_value = []
-                        traj_num = LANE_NUMBER_LR if self.task == 'right' or 'left' else LANE_NUMBER_UD
-                        for traj_index in range(traj_num):
-                            self.ref_path.set_path(traj_index)
-                            obs, _, _ = self._get_obs(state_gps_modified_by_model, state_other, model_flag=True)
-                            obj_v, con_v = self.model.values(obs)
-                            traj_return_value.append([obj_v.numpy(), con_v.numpy()])
-                        traj_return_value = np.array(traj_return_value, dtype=np.float32)
-                        path_index = np.argmin(traj_return_value[:, 1])
-                        self.ref_path.set_path(path_index)
-
-                        obs_model, obs_dict_model, veh_vec_model = self._get_obs(state_gps_modified_by_model,
-                                                                                 state_other, model_flag=True)
-                        action_model = self.model.run(obs_model)
+                        path_index, traj_return_value, action_model, obs_dict_model, veh_vec_model, path_dict = \
+                            self.hier_decision(state_gps_modified_by_model, state_other, model_flag=True)
                         steer_wheel_deg_model, torque_model, decel_model, tor_flag_model, dec_flag_model, front_wheel_deg_model, a_x_model = \
-                            self._action_transformation_for_end2end(action_model, state_gps_modified_by_model, model_flag=True)
+                            self._action_transformation_for_end2end(action_model, obs_dict_model, path_index)
                         modelaction4model = np.array([[front_wheel_deg_model*np.pi/180, a_x_model]], dtype=np.float32)
                         state_model_in_model_action = self.model_driven_by_model_action.model_step(state_gps, state_can['VehicleMode'],
                                                                                                    modelaction4model,
@@ -789,6 +822,11 @@ class Controller(object):
                         file_handle.write("Obs_dict ")
                         for k4, v4 in obs_dict.items():
                             file_handle.write(k4 + ":" + str(v4) + ", ")
+                        file_handle.write('\n')
+
+                        file_handle.write("Path ")
+                        for k4, v4 in path_dict.items():
+                            file_handle.write(k4 + ":" + str(v4) + "| ")
                         file_handle.write('\n')
 
                         file_handle.write("Time Time:" + str(self.run_time) + ", " +

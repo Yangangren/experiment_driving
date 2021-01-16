@@ -1,18 +1,20 @@
 import time
+import numpy as np
 from math import cos, sin, pi
 
 import matplotlib.pyplot as plt
 
 from utils.endtoend_env_utils import *
-from utils.misc import TimerStat
+from utils.misc import TimerStat, find_closest_point
 
 
 class Plot():
-    def __init__(self, shared_list, lock, task, model_only_test=False):
+    def __init__(self, shared_list, lock, args):
+        self.args = args
         self.shared_list = shared_list
         self.lock = lock
-        self.task = task
-        self.model_only_test = model_only_test
+        self.task = self.args.task
+        self.model_only_test = self.args.model_only_test
         self.step_old = -1
         self.acc_timer = TimerStat()
         left_construct_traj = np.load('./map/left_ref.npy')
@@ -21,7 +23,7 @@ class Plot():
         self.ref_path_all = {'left': left_construct_traj, 'straight': straight_construct_traj,
                              'right': right_construct_traj,
                              }
-        self.ref_path = self.ref_path_all[task][0]  # todo
+        self.ref_path = self.ref_path_all[self.task][0]  # todo
 
     def run(self):
         extension = 40
@@ -140,8 +142,8 @@ class Plot():
                 veh_x = veh['x']
                 veh_y = veh['y']
                 veh_phi = veh['phi']
-                veh_l = STATE_OTHER_LENGTH
-                veh_w = STATE_OTHER_WIDTH
+                veh_l = L
+                veh_w = W
                 if is_in_plot_area(veh_x, veh_y):
                     plot_phi_line(veh_x, veh_y, veh_phi, 'black')
                     draw_rotate_rec(veh_x, veh_y, veh_phi, veh_l, veh_w, 'black')
@@ -153,8 +155,8 @@ class Plot():
                 veh_y = interested_vehs[4 * i + 1]
                 # plt.text(veh_x, veh_y, i, fontsize=12)
                 veh_phi = interested_vehs[4 * i + 3]
-                veh_l = STATE_OTHER_LENGTH
-                veh_w = STATE_OTHER_WIDTH
+                veh_l = L
+                veh_w = W
                 if is_in_plot_area(veh_x, veh_y):
                     plot_phi_line(veh_x, veh_y, veh_phi, 'black')
                     draw_rotate_rec(veh_x, veh_y, veh_phi, veh_l, veh_w, 'b', linestyle='--')
@@ -197,8 +199,8 @@ class Plot():
             ego_longitude = state_ego['Longitude']
             ego_latitude = state_ego['Latitude']
             ego_phi = state_ego['Heading']
-            ego_l = EGO_LENGTH
-            ego_w = EGO_WIDTH
+            ego_l = L
+            ego_w = W
 
             if not self.model_only_test:
                 real_action_x = state_ego['model_x_in_real_action']
@@ -213,8 +215,8 @@ class Plot():
                 plot_phi_line(model_action_x, model_action_y, model_action_phi, 'coral')
                 draw_rotate_rec(model_action_x, model_action_y, model_action_phi, ego_l, ego_w, 'coral')
 
-            ego_l = EGO_LENGTH
-            ego_w = EGO_WIDTH
+            ego_l = L
+            ego_w = W
             plot_phi_line(ego_x, ego_y, ego_phi, 'red')
             draw_rotate_rec(ego_x, ego_y, ego_phi, ego_l, ego_w, 'red')
             # model_x = state_ego['model_x']

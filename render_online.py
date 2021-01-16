@@ -9,9 +9,9 @@ from PIL.Image import open
 import xml.dom.minidom
 EGO_LENGTH = 4.8
 EGO_WIDTH = 2.0
-STATE_OTHER_LENGTH = EGO_LENGTH
-STATE_OTHER_WIDTH = EGO_WIDTH
-SCALE = 80
+STATE_OTHER_LENGTH = 4.2
+STATE_OTHER_WIDTH = 1.8
+SCALE = 60
 SIZE = 1000
 
 def rotate_coordination(orig_x, orig_y, orig_d, coordi_rotate_d):
@@ -39,11 +39,12 @@ def rotate_coordination(orig_x, orig_y, orig_d, coordi_rotate_d):
     return transformed_x, transformed_y, transformed_d
 
 class Render():
-    def __init__(self, shared_list, lock, task, model_only_test=False):
+    def __init__(self, shared_list, lock, args):
+        self.args = args
         self.shared_list = shared_list
         self.lock = lock
-        self.task = task
-        self.model_only_test = model_only_test
+        self.task = self.args.task
+        self.model_only_test = self.args.model_only_test
         self.step_old = -1
         self.acc_timer = TimerStat()
         self._load_xml()
@@ -278,7 +279,7 @@ class Render():
         glRasterPos3f(-1, 1.00 - 0.05 * column, 0.0)
         n = len(str)
         for i in range(n):
-            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, ord(str[i]))
+            glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, ord(str[i]))
 
     def render(self, real_x=0, real_y=0, scale=SCALE, **kwargs):
         time_st = time.time()
@@ -330,6 +331,8 @@ class Render():
                 glColor3f(1.0, 0.647, 0.0)
             elif color == 'y':
                 glColor3f(1.0, 1.0, 0.878)
+            elif color == 'blue':
+                glColor3f(0.2, 0.3, 0.9)
             glVertex2f((RU_x + x) / scale, (RU_y + y) / scale)
             glVertex2f((RD_x + x) / scale, (RD_y + y) / scale)
             glVertex2f((LD_x + x) / scale, (LD_y + y) / scale)
@@ -375,6 +378,8 @@ class Render():
                 glColor3f(1.0, 0.647, 0.0)
             elif color == 'y':
                 glColor3f(1.0, 1.0, 0.878)
+            elif color == 'blue':
+                glColor3f(0.2, 0.3, 0.9)
             glVertex2f(x / scale,y / scale)
             glVertex2f(x_forw / scale,y_forw / scale)
             glEnd()
@@ -397,6 +402,14 @@ class Render():
             glVertex2f((LD_x + ego_x) / scale, (LD_y + ego_y) / scale)
             glEnd()
 
+        if not self.model_only_test:
+
+            model_action_x = state_ego['model_x_in_model_action']
+            model_action_y = state_ego['model_y_in_model_action']
+            model_action_phi = state_ego['model_phi_in_model_action']
+            plot_phi_line(model_action_x, model_action_y, model_action_phi, 'blue', scale)
+            _,_,_,_ = draw_vehicle(model_action_x, model_action_y, model_action_phi, EGO_LENGTH, EGO_WIDTH, scale, 'blue')
+
         # state_other = self.shared_list[4].copy()
         state_other = self.shared_list[4].copy()
         # plot cars
@@ -411,13 +424,13 @@ class Render():
 
         traj_value = self.shared_list[11]
         # print(traj_value)
-        str1 = 'Trajectory 0 collision risk value: ' + str(traj_value[0][1])
-        str2 = 'Trajectory 1 collision risk value: ' + str(traj_value[1][1])
+        str1 = 'Trajectory 0 path reward: ' + str(traj_value[0][0])[:7]
+        str2 = 'Trajectory 1 path reward: ' + str(traj_value[1][0])[:7]
         self._text(str1, 1)
         self._text(str2, 2)
         if self.task != 'straight':
-            str3 = 'Trajectory 2 collision risk value: ' + str(traj_value[2][1])
-            str4 = 'Trajectory 3 collision risk value: ' + str(traj_value[3][1])
+            str3 = 'Trajectory 2 path reward: ' + str(traj_value[2][0])[:7]
+            str4 = 'Trajectory 3 path reward: ' + str(traj_value[3][0])[:7]
             self._text(str3, 3)
             self._text(str4, 4)
 

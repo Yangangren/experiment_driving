@@ -71,3 +71,23 @@ class ValueSmooth:
         if not self._samples:
             return 0
         return np.mean(np.array(self._samples), axis=0)
+
+
+def find_closest_point(path, xs, ys, ratio=6):
+    path_len = len(path[0])
+    reduced_idx = np.arange(0, path_len, ratio)
+    reduced_len = len(reduced_idx)
+    reduced_path_x, reduced_path_y = path[0][reduced_idx], path[1][reduced_idx]
+    xs_tile = np.tile(np.reshape(xs, (-1, 1)), (1, reduced_len))
+    ys_tile = np.tile(np.reshape(ys, (-1, 1)), (1, reduced_len))
+    pathx_tile = np.tile(np.reshape(reduced_path_x, (1, -1)), (len(xs), 1))
+    pathy_tile = np.tile(np.reshape(reduced_path_y, (1, -1)), (len(xs), 1))
+
+    dist_array = np.square(xs_tile - pathx_tile) + np.square(ys_tile - pathy_tile)
+
+    indexes = np.argmin(dist_array, 1) * ratio
+    if len(indexes) > 1:
+        indexes = indexes[0]
+    points = path[0][indexes], path[1][indexes], path[2][indexes]
+    return indexes, points
+
