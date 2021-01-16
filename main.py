@@ -72,10 +72,11 @@ def built_parser():
     parser.add_argument('--visualization', type=str, default='render') # plot or render
 
     parser.add_argument('--noise_factor', type=float, default=0.)
-    parser.add_argument('--model_only_test', type=bool, default=False)
+    parser.add_argument('--model_only_test', type=bool, default=True)
     parser.add_argument('--traffic_step_length', type=float, default=100.)
     parser.add_argument('--clipped_v', type=float, default=5., help='m/s')
     parser.add_argument('--true_ss', type=bool, default=False)
+    parser.add_argument('--ss_con_v', type=float, default=5.0)
 
     parser.add_argument('--backup', type=str, default='test')
 
