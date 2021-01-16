@@ -1,7 +1,8 @@
 import matplotlib.pyplot as plt
 from utils.plot_new.plot_utils.load_record import load_data
-from utils.plot_new.plot_utils.search_index import search_geq,search_leq
+from utils.plot_new.plot_utils.search_index import search_geq,search_leq,search_automode_index
 import os
+from utils.endtoend_env_utils import *
 
 
 def single_plot(data_all, keys, path, title, **kwargs):
@@ -40,6 +41,12 @@ def single_plot(data_all, keys, path, title, **kwargs):
         else:
             try:
                 plt.plot(data_all['Time'], data_all[key])
+                if isinstance(data_all[key][0], list):
+                    for i in range(len(data_all[key][0])):
+                        n_key = key + str(i)
+                        labels.append(n_key)
+                else:
+                    labels.append(key)
             except (KeyError):
                 print('No key {} in record!'.format(key))
 
@@ -47,28 +54,23 @@ def single_plot(data_all, keys, path, title, **kwargs):
         plt.xlabel(keys[0][0])
     else:
         plt.xlabel('time /s')
-        labels = keys
+        # labels = keys
         if model_or_real == 'real':
 
             # search autonomous driving zone
 
             try:
-
-                min_index = data_all['VehicleMode'].index(1.0)
-                max_index = min_index + data_all['VehicleMode'].count(1.0)
-                if max_index >= len(data_all['VehicleMode']):
-                    max_index = -1
-
+                index_list = search_automode_index(data_all['VehicleMode'])
                 axes = plt.gca()
                 ylim = axes.get_ylim()
-                plt.plot([data_all['Time'][min_index], data_all['Time'][min_index]], ylim, c='red', linestyle='--')
-                plt.plot([data_all['Time'][max_index], data_all['Time'][max_index]], ylim, c='red', linestyle='--')
+                for index in index_list:
+                    plt.plot([data_all['Time'][index], data_all['Time'][index]], ylim, c='red', linestyle='--')
 
             except:
                 pass
 
             try:
-                in_index, _ = search_geq(data_all['GaussY'], -14.0)
+                in_index, _ = search_geq(data_all['GaussY'], -CROSSROAD_D_HEIGHT)
                 plt.plot([data_all['Time'][in_index], data_all['Time'][in_index]], ylim, c='coral', linestyle='--')
             except:
                 pass
@@ -76,11 +78,11 @@ def single_plot(data_all, keys, path, title, **kwargs):
 
             try:
                 if task == 'left':
-                    out_index, _ = search_leq(data_all['GaussX'], -11.0)
+                    out_index, _ = search_leq(data_all['GaussX'], -CROSSROAD_HALF_WIDTH)
                 elif task == 'straight':
-                    out_index, _ = search_geq(data_all['GaussY'], 11.0)
+                    out_index, _ = search_geq(data_all['GaussY'], CROSSROAD_U_HEIGHT)
                 elif task == 'right':
-                    out_index, _ = search_geq(data_all['GaussX'], 11.0)
+                    out_index, _ = search_geq(data_all['GaussX'], CROSSROAD_HALF_WIDTH)
                 plt.plot([data_all['Time'][out_index], data_all['Time'][out_index]], ylim, c='coral', linestyle='--')
             except:
                 pass
@@ -142,6 +144,9 @@ def single_plot_time_series(data_all, path,):
                 path=path, title='State-Yaw rate')
     single_plot(data_all, ['time_receive_gps','time_receive_can', 'time_receive_radar','time_decision'],
                 path=path, title='Time',y_lim=[0,0.02])
+    single_plot(data_all, ['obj_value','con_value'],
+                path=path, title='hire_decision_value',y_lim=[-10,5])
+    single_plot(data_all, ['index','ss_flag'], path=path, title='hire_decision_flag')
 
 def single_plot_compare_response(data_all, path):
     """
@@ -167,6 +172,7 @@ def single_plot_compare_response(data_all, path):
                 path=path, title='Response-steering')
     single_plot(data_all, ['accActual','Deceleration', 'model_acc_in_real_action', 'model_acc_in_model_action'],
                 path=path, title='Response-acc')
+
 
 
 def single_plot_other_series(data_all, path):
@@ -199,8 +205,8 @@ def single_plot_obs_other_vehicles(data_all, path, others_num = 6):
 
 
 if __name__ == '__main__':
-    exp_index = 'noise0/15_143435_model'
-    model_index = 'straight/experiment-2021-01-14-20-02-17'
+    exp_index = 'noise0/15_215838_real'
+    model_index = 'left/experiment-2021-01-14-15-08-33'
     data_all, keys_for_data = load_data(model_index, exp_index)
     print(keys_for_data)
     path = (exp_index, model_index)
