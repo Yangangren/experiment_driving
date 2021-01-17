@@ -426,13 +426,13 @@ class Render():
             glVertex2f((LD_x + ego_x) / scale, (LD_y + ego_y) / scale)
             glEnd()
 
-        if not self.model_only_test:
-
-            model_action_x = state_ego['model_x_in_model_action']
-            model_action_y = state_ego['model_y_in_model_action']
-            model_action_phi = state_ego['model_phi_in_model_action']
-            plot_phi_line(model_action_x, model_action_y, model_action_phi, 'blue', scale)
-            _,_,_,_ = draw_vehicle(model_action_x, model_action_y, model_action_phi, EGO_LENGTH, EGO_WIDTH, scale, 'blue')
+        # if not self.model_only_test:
+        #
+        #     model_action_x = state_ego['model_x_in_model_action']
+        #     model_action_y = state_ego['model_y_in_model_action']
+        #     model_action_phi = state_ego['model_phi_in_model_action']
+        #     plot_phi_line(model_action_x, model_action_y, model_action_phi, 'blue', scale)
+        #     _,_,_,_ = draw_vehicle(model_action_x, model_action_y, model_action_phi, EGO_LENGTH, EGO_WIDTH, scale, 'blue')
 
         state_other = self.shared_list[4].copy()
 

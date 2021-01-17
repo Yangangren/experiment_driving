@@ -288,7 +288,7 @@
     <tlLogic id="0" type="static" programID="0" offset="0">
         <phase duration="38" state="rrrGrGGrrrGGrrGrrrrGrGGrrrGGrrGrrrrrr"/>
         <phase duration="5"  state="rrrGrYYrrrGGrrGrrrrGrYYrrrGGrrGrrrrrr"/>
-        <phase duration="38" state="rrrGrrrrrrGGGGGGrrrGrrrrrrGGGGGGrrrrr"/>
+        <phase duration="10" state="rrrGrrrrrrGGGGGGrrrGrrrrrrGGGGGGrrrrr"/>
         <phase duration="5"  state="rrrGrrrrrrGGYYGYrrrGrrrrrrGGYYGYrrrrr"/>
     </tlLogic>
 
