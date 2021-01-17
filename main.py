@@ -64,18 +64,25 @@ def plot_agent(shared_list, lock, args):
 
 def built_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--task', type=str, default='straight')
+    parser.add_argument('--task', type=str, default='left')
     parser.add_argument('--if_save', type=bool, default=True)
     task = parser.parse_args().task
-    parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-16-12-10-42'.format(task))
-    parser.add_argument('--load_ite', type=str, default=80000)
+    if task == 'left':
+        parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-16-10-34-37'.format(task))
+        parser.add_argument('--load_ite', type=str, default=100000)
+    elif task == 'right':
+        parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-16-09-53-14'.format(task))
+        parser.add_argument('--load_ite', type=str, default=55000)
+    elif task == 'straight':
+        parser.add_argument('--load_dir', type=str, default='./utils/models/{}/experiment-2021-01-16-12-10-42'.format(task))
+        parser.add_argument('--load_ite', type=str, default=80000)
     parser.add_argument('--visualization', type=str, default='render')  # plot or render
 
-    parser.add_argument('--noise_factor', type=float, default=0.)
-    parser.add_argument('--model_only_test', type=bool, default=True)
+    parser.add_argument('--noise_factor', type=float, default=6)
+    parser.add_argument('--model_only_test', type=bool, default=False)
     parser.add_argument('--traffic_step_length', type=float, default=100.)
     parser.add_argument('--traffic_mode', type=str, default='training')
-    parser.add_argument('--clipped_v', type=float, default=30., help='m/s')
+    parser.add_argument('--clipped_v', type=float, default=5., help='m/s')
     parser.add_argument('--true_ss', type=str, default='con_v')  # None, pred, con_v
     parser.add_argument('--ss_con_v', type=float, default=5.)
 
