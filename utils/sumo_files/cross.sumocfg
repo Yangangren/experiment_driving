@@ -4,7 +4,7 @@
 
     <input>
         <net-file value="a.net.bef.xml"/>
-        <route-files value="cross.rou_original.xml"/>
+        <route-files value="cross.rou.xml"/>
         <additional-files value="cross.add.xml"/>
     </input>
 
