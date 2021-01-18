@@ -1,10 +1,13 @@
 import matplotlib.pyplot as plt
 from utils.plot_new.plot_utils.load_record import load_data
-from utils.plot_new.plot_utils.search_index import search_geq,search_leq
+from utils.plot_new.plot_utils.search_index import search_geq,search_leq,search_automode_index
 import os
+# from utils.endtoend_env_utils import *
 
 
-def single_plot(data_all, keys, path, title, **kwargs):
+def single_plot(data_all, keys, path, title,
+                automode_only=True,
+                **kwargs):
     """
 
     :param data_all:
@@ -18,6 +21,7 @@ def single_plot(data_all, keys, path, title, **kwargs):
 
     exp_index = path[0]
     model_index = path[1]
+    index_list = search_automode_index(data_all['VehicleMode'])
 
     if 'fig_num' in kwargs.keys():
         plt.figure(kwargs['fig_num'])
@@ -39,7 +43,16 @@ def single_plot(data_all, keys, path, title, **kwargs):
                 print('No key {} in record!'.format(key))
         else:
             try:
-                plt.plot(data_all['Time'], data_all[key])
+                if model_or_real == 'real' and automode_only:
+                    plt.plot(data_all['Time'][index_list[0]:index_list[-1]], data_all[key][index_list[0]:index_list[-1]])
+                else:
+                    plt.plot(data_all['Time'], data_all[key])
+                if isinstance(data_all[key][0], list):
+                    for i in range(len(data_all[key][0])):
+                        n_key = key + str(i)
+                        labels.append(n_key)
+                else:
+                    labels.append(key)
             except (KeyError):
                 print('No key {} in record!'.format(key))
 
@@ -47,25 +60,17 @@ def single_plot(data_all, keys, path, title, **kwargs):
         plt.xlabel(keys[0][0])
     else:
         plt.xlabel('time /s')
-        labels = keys
+        # labels = keys
         if model_or_real == 'real':
-
             # search autonomous driving zone
-
-            try:
-
-                min_index = data_all['VehicleMode'].index(1.0)
-                max_index = min_index + data_all['VehicleMode'].count(1.0)
-                if max_index >= len(data_all['VehicleMode']):
-                    max_index = -1
-
-                axes = plt.gca()
-                ylim = axes.get_ylim()
-                plt.plot([data_all['Time'][min_index], data_all['Time'][min_index]], ylim, c='red', linestyle='--')
-                plt.plot([data_all['Time'][max_index], data_all['Time'][max_index]], ylim, c='red', linestyle='--')
-
-            except:
-                pass
+            # try:
+            #     axes = plt.gca()
+            #     ylim = axes.get_ylim()
+            #     for index in index_list:
+            #         plt.plot([data_all['Time'][index], data_all['Time'][index]], ylim, c='red', linestyle='--')
+            #
+            # except:
+            #     pass
 
             try:
                 in_index, _ = search_geq(data_all['GaussY'], -14.0)
@@ -73,7 +78,6 @@ def single_plot(data_all, keys, path, title, **kwargs):
             except:
                 pass
                 # print("Not enter the intersection!")
-
             try:
                 if task == 'left':
                     out_index, _ = search_leq(data_all['GaussX'], -11.0)
@@ -141,7 +145,10 @@ def single_plot_time_series(data_all, path,):
     single_plot(data_all, ['YawRate'],
                 path=path, title='State-Yaw rate')
     single_plot(data_all, ['time_receive_gps','time_receive_can', 'time_receive_radar','time_decision'],
-                path=path, title='Time',y_lim=[0,0.2])
+                path=path, title='Time',y_lim=[0,0.02])
+    single_plot(data_all, ['obj_value','con_value'],
+                path=path, title='hire_decision_value',y_lim=[-10,5])
+    single_plot(data_all, ['index','ss_flag'], path=path, title='hire_decision_flag')
 
 def single_plot_compare_response(data_all, path):
     """
@@ -167,6 +174,7 @@ def single_plot_compare_response(data_all, path):
                 path=path, title='Response-steering')
     single_plot(data_all, ['accActual','Deceleration', 'model_acc_in_real_action', 'model_acc_in_model_action'],
                 path=path, title='Response-acc')
+
 
 
 def single_plot_other_series(data_all, path):
@@ -199,7 +207,7 @@ def single_plot_obs_other_vehicles(data_all, path, others_num = 6):
 
 
 if __name__ == '__main__':
-    exp_index = 'case0/noise0/09_172127_model'
+    exp_index = 'case0/noise0/10_144620_real'
     model_index = 'left/experiment-2021-01-07-01-22-30'
     data_all, keys_for_data = load_data(model_index, exp_index)
     print(keys_for_data)
@@ -210,5 +218,5 @@ if __name__ == '__main__':
     # plots whose x-axis is not time, for example trajectory
     single_plot_other_series(data_all, path)
     # for convenience
-    single_plot_obs_other_vehicles(data_all, path)
+    # single_plot_obs_other_vehicles(data_all, path)
     single_plot_compare_response(data_all, path)

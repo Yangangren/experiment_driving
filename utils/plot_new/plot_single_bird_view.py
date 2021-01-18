@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 from utils.plot_new.plot_utils.load_record import load_data
-from utils.plot_new.plot_utils.search_index import search_geq, search_automode_time, search_leq
+from utils.plot_new.plot_utils.search_index import search_geq, search_automode_index, search_leq
 import math
 import os
 
@@ -28,13 +28,14 @@ class Single_bird_view_plot(object):
         self.x_others = data_all['x_other']
         self.y_others = data_all['y_other']
         self.phi_others = data_all['phi_other']
+        self.vehicle_mode = data_all['VehicleMode']
         def join_path(name):
             return proj_root_dir + name
-        left_construct_traj = np.load(join_path('/map/left_construct.npy'))
-        straight_construct_traj = np.load(join_path('/map/straight_construct.npy'))
-        right_construct_traj = np.load(join_path('/map/right_construct.npy'))
-        self.ref_path_all = {'left': left_construct_traj, 'straight': straight_construct_traj,
-                             'right': right_construct_traj}
+        # left_construct_traj = np.load(join_path('/map/left_construct.npy'))
+        # straight_construct_traj = np.load(join_path('/map/straight_construct.npy'))
+        # right_construct_traj = np.load(join_path('/map/right_construct.npy'))
+        # self.ref_path_all = {'left': left_construct_traj, 'straight': straight_construct_traj,
+        #                      'right': right_construct_traj}
         # self.ref_path = self.ref_path_all[task]
         self.fig = plt.figure(dpi=200)
         self._preprocess_data()
@@ -60,6 +61,7 @@ class Single_bird_view_plot(object):
         self.sparse_x_others = preprocess_data(self.x_others)
         self.sparse_y_others = preprocess_data(self.y_others)
         self.sparse_phi_others = preprocess_data(self.phi_others)
+        self.sparse_vehicle_mode = preprocess_data(self.vehicle_mode)
 
 
     def _rotate_coordination(self, orig_x, orig_y, orig_d, coordi_rotate_d):
@@ -89,6 +91,11 @@ class Single_bird_view_plot(object):
     def set_time(self, init_time, stop_time):
         self.start_index, _ = search_geq(self.sparse_time, init_time)
         self.stop_index, _ = search_geq(self.sparse_time, stop_time)
+        self.sparse_time -= self.sparse_time[self.start_index]
+
+    def set_index(self, start_index, stop_index):
+        self.start_index = start_index
+        self.stop_index = stop_index
         self.sparse_time -= self.sparse_time[self.start_index]
 
     def draw_rotate_rec(self, x, y, a, l, w, color, linestyle='-'):
@@ -271,16 +278,17 @@ class Single_bird_view_plot(object):
 
 
 if __name__ == '__main__':
-    exp_index = 'case0/noise1/05_211334_real'
-    model_index = 'right/experiment-2021-01-05-01-07-20'
+    exp_index = 'case0/noise0/10_144620_real'
+    model_index = 'left/experiment-2021-01-07-01-22-30'
     path = (exp_index, model_index)
     data_all, keys_for_data = load_data(model_index, exp_index)
     bird_view_plot = Single_bird_view_plot(data_all, draw_other_veh='scatter', # rectangular, scatter
                                            path=path)
     try:
-        automode_start_time, automode_stop_time = search_automode_time(data_all)
-        print('Auto mode start: {:.2f}s, stop: {:.2f}s'.format(automode_start_time, automode_stop_time))
-        bird_view_plot.set_time(automode_start_time, automode_stop_time)
+        index_list = search_automode_index(bird_view_plot.sparse_vehicle_mode)
+        # print('Auto mode start: {:.2f}s, stop: {:.2f}s'.format(automode_start_time, automode_stop_time))
+        bird_view_plot.set_index(index_list[0], index_list[-1])
+        print(index_list)
     except (ValueError):
         print('Not switch into autonomous mode!')
 
