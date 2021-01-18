@@ -35,20 +35,21 @@ def noise_box_plot(data, key, case, **kwargs):
         PD = pd.DataFrame(dict(YawRate=np.array(data[i][key][min_index:max_index]).squeeze(), Noise=Noise[i], ))
         df_list.append(PD)
     YawRate_dataframe = df_list[0].append(df_list[1:], ignore_index=True, )
-    sns.set(style="darkgrid")
-    f2 = plt.figure()
-    ax2 = f2.add_axes([0.13, 0.14, 0.86, 0.85])
+    sns.set(style="darkgrid", font_scale=1.3)
+    f2 = plt.figure(figsize=[10,5])
+    ax2 = f2.add_axes([0.16, 0.14, 0.83, 0.85])
     title = 'case' + str(case)
     ax2.set_title(title)
     sns.boxplot(ax=ax2, x="Noise", y="YawRate", data=YawRate_dataframe, palette="bright",
                 order=np.arange(0, 6.1, 1.0))
-    y_label = {'a_x':'Acceleration',
-               'SteerAngleAct':'Steering Angle',
-               'tracking_delta_phi':'Heading angle error',
-               'tracking_delta_y':'Tracking error'}
-    ax2.set_ylabel(y_label[key], fontsize=12)
-    plt.yticks(fontsize=12)
-    plt.xticks(fontsize=12)
+    y_label = {'a_x':r'Acceleration $(m/s^2)$',
+               'SteerAngleAct':r'Steering Angle $(\degree)$',
+               'tracking_delta_phi':r'Heading angle error $(\degree)$',
+               'tracking_delta_y':r'Tracking error $(m)$'}
+    ax2.set_ylabel(y_label[key], fontsize=22)
+    ax2.set_xlabel('Noise Level', fontsize=22)
+    # plt.yticks(fontsize=12)
+    # plt.xticks(fontsize=12)
 
     if 'path' in kwargs.keys():
         fig_name = kwargs['path'] + '/' + key + '.jpg'
@@ -63,7 +64,7 @@ if __name__ == '__main__':
     # support only one experiment in one noise directory, e.g., only exists 10_144620_real in noise0/.
     # pls delete redundant experiment directory.
     model_index = 'left/experiment-2021-01-07-01-22-30'
-    for case in [0,1,2]:
+    for case in [0]:
         for key in ['tracking_delta_phi','tracking_delta_y','SteerAngleAct','a_x']:
             multi_exp_data, fig_dir = load_all_data(model_index, case)
             noise_box_plot(multi_exp_data, key, case, path = fig_dir)

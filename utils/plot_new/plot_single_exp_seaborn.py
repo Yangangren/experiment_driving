@@ -2,11 +2,15 @@ import matplotlib.pyplot as plt
 from utils.plot_new.plot_utils.load_record import load_data
 from utils.plot_new.plot_utils.search_index import search_geq,search_leq,search_automode_index
 import os
+import seaborn as sns
+import pandas as pd
 # from utils.endtoend_env_utils import *
-
+import numpy as np
+fontstyle = {'fontsize': 22}
 
 def single_plot(data_all, keys, path, title,
                 automode_only=True,
+                dual_axes = False,
                 **kwargs):
     """
 
@@ -23,11 +27,13 @@ def single_plot(data_all, keys, path, title,
     model_index = path[1]
     index_list = search_automode_index(data_all['VehicleMode'])
     print(index_list)
+    sns.set(style="darkgrid", font_scale=1.5)
 
     if 'fig_num' in kwargs.keys():
-        plt.figure(kwargs['fig_num'])
+        fig = plt.figure(kwargs['fig_num'])
     else:
-        plt.figure(dpi=200)
+        fig = plt.figure(dpi=200)
+        ax = fig.add_axes([0.16, 0.14, 0.86, 0.85])
 
     task = model_index.split('/')[0]
     model_or_real = exp_index.split('_')[-1]
@@ -35,7 +41,7 @@ def single_plot(data_all, keys, path, title,
     # ----------- plot ---------------
 
     labels = []
-    for key in keys:
+    for i, key in enumerate(keys):
         if isinstance(key, tuple):
             try:
                 plt.plot(data_all[key[0]], data_all[key[1]])
@@ -45,7 +51,14 @@ def single_plot(data_all, keys, path, title,
         else:
             try:
                 if model_or_real == 'real' and automode_only:
-                    plt.plot(data_all['Time'][index_list[0]:index_list[-1]], data_all[key][index_list[0]:index_list[-1]])
+                    time = np.array(data_all['Time'][index_list[0]:index_list[-1]])
+                    time -= data_all['Time'][index_list[0]]
+                    df1 = pd.DataFrame(dict(time=time, data=data_all[key][index_list[0]:index_list[-1]]))
+                    if dual_axes is True and i == 1:
+                        ax2 = ax.twinx()
+                        sns.lineplot(x='time', y='data', data=df1, palette="bright", ax=ax2, lw=3)
+                    else:
+                        sns.lineplot(x='time', y='data', data=df1, palette="bright",ax=ax, lw=3)
                 else:
                     plt.plot(data_all['Time'], data_all[key])
                 if isinstance(data_all[key][0], list):
@@ -58,9 +71,13 @@ def single_plot(data_all, keys, path, title,
                 print('No key {} in record!'.format(key))
 
     if isinstance(keys[0], tuple):
-        plt.xlabel(keys[0][0])
+        plt.xlabel(keys[0][0], fontdict=fontstyle)
     else:
-        plt.xlabel('time /s')
+        plt.xlabel('time (s)', fontdict=fontstyle)
+        if 'ylabel' in kwargs.keys():
+            plt.ylabel(kwargs['ylabel'], fontdict=fontstyle)
+        else:
+            plt.ylabel(title, fontdict=fontstyle)
         # labels = keys
         if model_or_real == 'real':
             # search autonomous driving zone
@@ -94,14 +111,17 @@ def single_plot(data_all, keys, path, title,
     if 'legend' in kwargs.keys():
         labels = kwargs.get('legend')
     plt.legend(labels=labels, loc='best')
-    plt.grid()
+    # plt.grid()
 
     if 'x_lim' in kwargs.keys():
         plt.xlim(kwargs['x_lim'])
     if 'y_lim' in kwargs.keys():
         plt.ylim(kwargs['y_lim'])
 
-    plt.title(title)
+    # ax.set_title(title, fontdict=fontstyle)
+
+    # plt.setp(ax.get_legend().get_texts(),fontsize = '16')
+
 
     proj_root_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     fig_path = proj_root_dir + '/utils/models/'+ model_index + '/record/' + exp_index + '/figure/'
@@ -209,15 +229,15 @@ def single_plot_obs_other_vehicles(data_all, path, others_num = 6):
 
 def single_plot_ppt_figure(data_all, path):
     single_plot(data_all, ['SteerAngleAct', 'SteerAngleAim'],
-                path=path, title='Steering', legend=['Vehicle','Decision'])
+                path=path, title='Steering', ylabel=r'Steering ($\degree$)', legend=[r'Vehicle $\degree$','Decision'])
     single_plot(data_all, ['accActual', 'a_x'],
-                path=path, title='Acceleration', legend=['Vehicle','Decision'])
+                path=path, title='Acceleration', ylabel=r'Acceleration ($m/s^2$)', legend=['Vehicle','Decision'])
     single_plot(data_all, ['ego_vy', 'YawRate'],
-                path=path, title='Other states', legend=['lateral velocity', 'yaw rate'])
+                path=path, title='Other states', legend=['lateral velocity (m/s)', 'yaw rate (rad/s)'])
     single_plot(data_all, ['tracking_delta_y','tracking_delta_phi'],
-                path=path, title='Tracking Error', legend=['distance','heading angle'])
+                path=path, title='Tracking Error', legend=['distance (m)', r'heading angle ($\degree$)'])
     single_plot(data_all, ['VehicleSPeedAct'],
-                path=path, title='Speed')
+                path=path, title='Speed', ylabel=r'Speed ($m/s$)', legend=['Vehicle Speed'])
 
 
 if __name__ == '__main__':

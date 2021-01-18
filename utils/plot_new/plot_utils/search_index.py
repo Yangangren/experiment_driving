@@ -42,13 +42,20 @@ def search_leq(data, threshold):
         if data[i] <= threshold:
             return i, data[i]
 
-def search_automode_index(data):
-    min_index = data['VehicleMode'].index(1.0)
-    max_index = min_index + data['VehicleMode'].count(1.0)
-    if max_index == len(data['VehicleMode']):
-        max_index = -1
 
-    return min_index, max_index
+def search_automode_index(data):
+    index_list = []
+    for i in range(len(data)-1):
+        if data[i] != data[i+1]:
+            index_list.append(i)
+    return index_list
+# def search_automode_index(data):
+#     min_index = data['VehicleMode'].index(1.0)
+#     max_index = min_index + data['VehicleMode'].count(1.0)
+#     if max_index == len(data['VehicleMode']):
+#         max_index = -1
+#
+#     return min_index, max_index
 
 def search_automode_time(data):
     min_index, max_index = search_automode_index(data)
