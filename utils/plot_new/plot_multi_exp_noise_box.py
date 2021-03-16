@@ -10,15 +10,15 @@ def load_all_data(model_index, case):
     multi_exp_data = []
     for noise_factor in [0,1,2,3,4,5,6]:
         proj_root_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-        short_exp_father_dir = 'case'+str(case)+'/noise'+str(noise_factor)
+        short_exp_father_dir = 'noise'+str(noise_factor)
         full_exp_father_dir = proj_root_dir + '/utils/models/' + model_index + '/record/' + short_exp_father_dir
         exp_name = os.listdir(full_exp_father_dir)[0]
         exp_index = short_exp_father_dir + '/' + exp_name
         data, _ = load_data(model_index, exp_index)
         multi_exp_data.append(data)
 
-        fig_dir_in_full_exp_father_dir = proj_root_dir + '/utils/models/' + model_index  + '/record/case' \
-                                         + str(case) + '/noise_figure'
+        fig_dir_in_full_exp_father_dir = proj_root_dir + '/utils/models/' + model_index  + '/record' \
+                                          + '/noise_figure'
 
         if not os.path.exists(fig_dir_in_full_exp_father_dir):
             os.mkdir(fig_dir_in_full_exp_father_dir)
@@ -26,44 +26,55 @@ def load_all_data(model_index, case):
     return multi_exp_data, fig_dir_in_full_exp_father_dir
 
 def noise_box_plot(data, key, case, **kwargs):
+    fontsize = 15
     df_list = []
     Noise=[0.0,1.0,2.0,3.0,4.0,5.0,6.0]
     for i in range(0, 7, 1):
         # min_index, max_index = search_automode_index(data[i])
-        min_index, _ = search_geq(data[i]['ego_y'], -30)
-        max_index, _ = search_leq(data[i]['ego_x'], -30)
+        index_list = search_automode_index(data[i]['VehicleMode'])
+        min_index, max_index = index_list[0], index_list[-1]
+        print(i, min_index, max_index)
         PD = pd.DataFrame(dict(YawRate=np.array(data[i][key][min_index:max_index]).squeeze(), Noise=Noise[i], ))
         df_list.append(PD)
     YawRate_dataframe = df_list[0].append(df_list[1:], ignore_index=True, )
     sns.set(style="darkgrid")
     f2 = plt.figure()
-    ax2 = f2.add_axes([0.13, 0.14, 0.86, 0.85])
+    ax2 = f2.add_axes([0.16, 0.14, 0.83, 0.85])
     title = 'case' + str(case)
     ax2.set_title(title)
     sns.boxplot(ax=ax2, x="Noise", y="YawRate", data=YawRate_dataframe, palette="bright",
-                order=np.arange(0, 6.1, 1.0))
-    y_label = {'a_x':'Acceleration',
-               'SteerAngleAct':'Steering Angle',
-               'tracking_delta_phi':'Heading angle error',
-               'tracking_delta_y':'Tracking error'}
-    ax2.set_ylabel(y_label[key], fontsize=12)
-    plt.yticks(fontsize=12)
-    plt.xticks(fontsize=12)
+                order=np.arange(0, 7, 1))
+    y_label = {'a_x': 'Acceleration [$\mathrm {m/s^2}$]',
+               'SteerAngleAct': 'Steering Angle [$\circ$]',
+               'tracking_delta_phi': 'Heading angle error',
+               'tracking_delta_y': 'Position error [m]',
+               'ego_vx': 'Speed [m/s]',
+               'ego_vy': 'Lateral velocity [m/s]',
+               'ego_r': 'Yaw rate [rad/s]',
+               'ego_phi': 'Heading [$\circ$]',
+               'tracking_delta_v': 'Velocity error [m/s]',
+               'Time': 'Computing time [ms]',
+
+               }
+    ax2.set_xlabel('Noise level', fontsize=fontsize)
+    ax2.set_ylabel(y_label[key], fontsize=fontsize)
+    plt.yticks(fontsize=fontsize)
+    plt.xticks(fontsize=fontsize)
 
     if 'path' in kwargs.keys():
-        fig_name = kwargs['path'] + '/' + key + '.jpg'
+        fig_name = kwargs['path'] + '/' + key + '.pdf'
         plt.savefig(fig_name)
     else:
         plt.show()
-
 
 
 if __name__ == '__main__':
     # IMPORTANT:
     # support only one experiment in one noise directory, e.g., only exists 10_144620_real in noise0/.
     # pls delete redundant experiment directory.
-    model_index = 'left/experiment-2021-01-07-01-22-30'
-    for case in [0,1,2]:
-        for key in ['tracking_delta_phi','tracking_delta_y','SteerAngleAct','a_x']:
-            multi_exp_data, fig_dir = load_all_data(model_index, case)
-            noise_box_plot(multi_exp_data, key, case, path = fig_dir)
+    model_index = 'left/experiment-2021-01-16-10-34-37'
+    # for case in [0,1,2]:
+    case = 0
+    for key in ['SteerAngleAct', 'a_x', 'ego_r', 'ego_vy']:
+        multi_exp_data, fig_dir = load_all_data(model_index, case)
+        noise_box_plot(multi_exp_data, key, case, path=fig_dir)
