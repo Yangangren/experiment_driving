@@ -34,16 +34,23 @@ def noise_box_plot(data, key, case, **kwargs):
         index_list = search_automode_index(data[i]['VehicleMode'])
         min_index, max_index = index_list[0], index_list[-1]
         print(i, min_index, max_index)
-        PD = pd.DataFrame(dict(YawRate=np.array(data[i][key][min_index:max_index]).squeeze(), Noise=Noise[i], ))
+        PD = pd.DataFrame(dict(data=np.array(data[i][key][min_index:max_index]).squeeze(), Noise=i, ))
         df_list.append(PD)
     YawRate_dataframe = df_list[0].append(df_list[1:], ignore_index=True, )
+    std_list = []
+    for i in range(0, 7, 1):
+        df4anoise = YawRate_dataframe[YawRate_dataframe['Noise'].isin([i])]
+        std_list.append(np.std(df4anoise['data']))
     sns.set(style="darkgrid")
     f2 = plt.figure()
     ax2 = f2.add_axes([0.16, 0.14, 0.83, 0.85])
     title = 'case' + str(case)
     ax2.set_title(title)
-    sns.boxplot(ax=ax2, x="Noise", y="YawRate", data=YawRate_dataframe, palette="bright",
+    sns.boxplot(ax=ax2, x="Noise", y="data", data=YawRate_dataframe, palette="bright",
                 order=np.arange(0, 7, 1))
+    std_plot = ax2.plot(list(range(0, 7, )), std_list, color='indigo')
+    if key == 'ego_vy':
+        ax2.legend(handles=[std_plot[-1]], labels=['Standard variance'], loc='upper left', frameon=False)
     y_label = {'a_x': 'Acceleration [$\mathrm {m/s^2}$]',
                'SteerAngleAct': 'Steering Angle [$\circ$]',
                'tracking_delta_phi': 'Heading angle error',
