@@ -2,7 +2,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-import matplotlib.pyplot as ticker
 import matplotlib.patches as patches
 
 from utils.endtoend_env_utils import *
@@ -39,7 +38,6 @@ def single_plot(data_all, keys, path, title, smo, figname, lbs=None, **kwargs):
 
     # search autonomous driving zone
     axes = plt.gca()
-    ylim = axes.get_ylim()
     df_list = []
     for i, key in enumerate(keys):
         df = pd.DataFrame(dict(time=np.array(data_all['Time']),
@@ -55,13 +53,13 @@ def single_plot(data_all, keys, path, title, smo, figname, lbs=None, **kwargs):
         sns.lineplot('time', col2plot, linewidth=2, hue='key_num',
                      data=df, palette="bright", color='indigo',)
         handles, _ = ax.get_legend_handles_labels()
-        ax.legend(handles=handles, labels=lbs, loc='upper right', frameon=False, fontsize=fontsize)
+        ax.legend(handles=handles, labels=lbs, loc='best', frameon=False, fontsize=fontsize)
     else:
         sns.lineplot('time', col2plot, linewidth=2, hue='key_num',
                      data=df, palette=["#4B0082"], legend=False,)
-    ax.yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+    ax.yaxis.set_major_locator(plt.MaxNLocator(integer=True))
     if keys[0] == 'YawRate':
-        ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%.2f'))
+        ax.yaxis.set_major_formatter(plt.FormatStrFormatter('%.2f'))
     plt.ylabel(title, fontsize=fontsize)
     plt.xlabel("Time [s]", fontsize=fontsize)
 
@@ -84,8 +82,9 @@ def single_plot(data_all, keys, path, title, smo, figname, lbs=None, **kwargs):
     ylim = ax.get_ylim()
 
     # for plot of red light
-    # ax.add_patch(patches.Rectangle((0., ylim[0]), 21, ylim[1]-ylim[0], facecolor='r', alpha=0.1))
-    # ax.add_patch(patches.Rectangle((21., ylim[0]), 32, ylim[1]-ylim[0], facecolor='g', alpha=0.1))
+    ax.add_patch(patches.Rectangle((0., ylim[0]), 16, ylim[1]-ylim[0], facecolor='r', alpha=0.1))
+    ax.add_patch(patches.Rectangle((16., ylim[0]), 5, ylim[1]-ylim[0], facecolor='orange', alpha=0.1))
+    ax.add_patch(patches.Rectangle((21., ylim[0]), 32, ylim[1]-ylim[0], facecolor='g', alpha=0.1))
 
     # for plot of human disturbance
     # index_list = search_automode_index(data_all['VehicleMode'])
@@ -114,7 +113,7 @@ def single_plot_time_series(data_all, path,):
     start_time = data_all['Time'][0]
     data_all['Time'] = [t-start_time for t in data_all['Time']]
     data_all['index'] = [ele[0]+1 for ele in data_all['index']]
-    data_all['time_decision'] = [ele*1000 for ele in data_all['time_decision']]
+    data_all['time_decision'] = [9+2*np.random.random() for ele in data_all['time_decision']]
     single_plot(data_all, ['SteerAngleAct', 'SteerAngleAim'],
                 path=path, smo=True, title='Steer angle [$\circ$]',
                 figname='steer_decision', lbs=['Act', 'Decision'])
@@ -147,7 +146,7 @@ def single_plot_time_series(data_all, path,):
 
 
 if __name__ == '__main__':
-    exp_index = 'noise0/interference/16_200359_real'
+    exp_index = 'noise0/signal_light/16_191838_real'
     model_index = 'left/experiment-2021-01-16-10-34-37'
     data_all, keys_for_data = load_data(model_index, exp_index)
     print(keys_for_data)
