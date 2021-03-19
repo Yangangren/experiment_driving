@@ -5,6 +5,7 @@ from utils.plot_new.plot_utils.load_record import load_data
 from utils.plot_new.plot_utils.search_index import search_geq, search_automode_time, search_leq
 import math
 import os
+import pandas as pd
 
 CROSSROAD_SIZE = 22
 EXTENSION = 25
@@ -36,7 +37,7 @@ class Single_bird_view_plot(object):
         self.ref_path_all = {'left': left_construct_traj, 'straight': straight_construct_traj,
                              'right': right_construct_traj}
         # self.ref_path = self.ref_path_all[task]
-        self.fig = plt.figure(dpi=200)
+        # self.fig = plt.figure(dpi=200)
         self._preprocess_data()
         self.start_index = 0
         self.stop_index = -1
@@ -109,23 +110,26 @@ class Single_bird_view_plot(object):
         light_line_width = 1
         dotted_line_style = '--'
         solid_line_style = '-'
-        self.ax = plt.axes(xlim=(-square_length / 2 - extension, square_length / 2 + extension),
-                      ylim=(-square_length / 2 - extension, square_length / 2 + extension))
+
+        fig = plt.figure()
+        left, bottom, width, height = 0.12, 0.05, 0.8, 0.8
+        ax1 = fig.add_axes([left, bottom, width, height])
+        # self.ax = plt.axes(xlim=(-square_length / 2 - extension, square_length / 2 + extension),
+        #                    ylim=(-square_length / 2 - extension, square_length / 2 + extension))
         plt.axis("equal")
         plt.axis('off')
 
-        self.ax.add_patch(plt.Rectangle((-square_length / 2 - extension, -square_length / 2 - extension - start_offset),
-                                   square_length + 2 * extension, square_length + 2 * extension + start_offset,
-                                   edgecolor='black',
-                                   facecolor='none'))
-        self.ax.set_title('Bird View')
+        # ax1.add_patch(plt.Rectangle((-square_length / 2 - extension, -square_length / 2 - extension - start_offset),
+        #                            square_length + 2 * extension, square_length + 2 * extension + start_offset,
+        #                            edgecolor='black',
+        #                            facecolor='none'))
 
         # ----------arrow--------------
-        plt.arrow(lane_width / 2, -square_length / 2 - 10, 0, 5, color='b')
-        plt.arrow(lane_width / 2, -square_length / 2 - 10 + 5, -0.5, 0, color='b', head_width=1)
-        plt.arrow(lane_width / 2, -square_length / 2 - 10, 0, 5, color='b', head_width=1)
-        plt.arrow(lane_width / 2, -square_length / 2 - 10, 0, 5, color='b')
-        plt.arrow(lane_width / 2, -square_length / 2 - 10 + 5, 0.5, 0, color='b', head_width=1)
+        # plt.arrow(lane_width / 2, -square_length / 2 - 10, 0, 5, color='b')
+        # plt.arrow(lane_width / 2, -square_length / 2 - 10 + 5, -0.5, 0, color='b', head_width=1)
+        # plt.arrow(lane_width / 2, -square_length / 2 - 10, 0, 5, color='b', head_width=1)
+        # plt.arrow(lane_width / 2, -square_length / 2 - 10, 0, 5, color='b')
+        # plt.arrow(lane_width / 2, -square_length / 2 - 10 + 5, 0.5, 0, color='b', head_width=1)
 
         # ----------horizon--------------
         plt.plot([-square_length / 2 - extension, -square_length / 2], [0, 0], color='black')
@@ -191,20 +195,45 @@ class Single_bird_view_plot(object):
         plt.plot([square_length / 2, square_length / 2], [lane_width, 0],
                  color=h_color, linewidth=light_line_width)
 
-        self.draw_ego_points()
+        # self.draw_ego_points()
         if self.draw_other_veh == 'scatter':
             self.draw_other_vehicles_in_points()
         elif self.draw_other_veh == 'rectangular':
             self.draw_other_vehicles_in_rec()
-        ax1 = self.fig.add_axes([0.8, 0.2, 0.04, 0.6])
-        cmap = mpl.cm.plasma_r
-        norm = mpl.colors.Normalize(vmin=float(self.sparse_time[self.start_index]), vmax=float(self.sparse_time[self.stop_index]))
-        bar = mpl.colorbar.ColorbarBase(ax=ax1, cmap=cmap, norm=norm, orientation='vertical')
-        bar.set_label('Time(s)', fontsize=10)
+
+        x = self.sparse_ego_x[self.start_index: self.stop_index]
+        y = self.sparse_ego_y[self.start_index: self.stop_index]
+
+        norm = plt.Normalize(np.array(x).min(), np.array(x).max())
+        colors = norm(x)
+
+        cs = ax1.scatter(x, y, marker='4', c=colors, cmap='hsv', alpha=1)
+
+        ax2 = fig.add_axes([0.81, 0.1, 0.03, 0.7])
+        cb=fig.colorbar(cs, cax=ax2)
+        cb.set_ticks([0, 1.0])
+        ticks = ['0s', str('%.1f'%(len(x) * 0.10))+'s']
+        cb.set_ticklabels(ticks)
+        cb.set_label('Time')
+
+        ax3 = fig.add_axes([0.24, 0.62, 0.2, 0.2])
+        x = list(range(len(x)))
+        x = np.array(x)/10
+        y = x
+        df = pd.DataFrame({'x': x, 'y': y})
+        css = df.plot(x='x', ax=ax3, c='saddlebrown', linewidth=2)
+        css.legend_.remove()
+        css.spines['top'].set_visible(False)
+        css.spines['right'].set_visible(False)
+        # css.spines['bottom'].set_visible(False)
+        # css.spines['left'].set_visible(False)
+        plt.xlabel('Time(s)')
+        plt.ylabel('Velocity(m/s)')
+        plt.ylim([0, 10])
+        plt.xlim([0, 6.6])
 
         if self.path is not None:
             self.save_plot()
-        else:
             plt.show()
 
 
@@ -266,13 +295,9 @@ class Single_bird_view_plot(object):
         plt.savefig(name)
 
 
-
-
-
-
 if __name__ == '__main__':
-    exp_index = 'case0/noise1/05_211334_real'
-    model_index = 'right/experiment-2021-01-05-01-07-20'
+    exp_index = 'case0/noise0/10_144620_real'
+    model_index = 'left/experiment-2021-01-07-01-22-30'
     path = (exp_index, model_index)
     data_all, keys_for_data = load_data(model_index, exp_index)
     bird_view_plot = Single_bird_view_plot(data_all, draw_other_veh='scatter', # rectangular, scatter
