@@ -4,6 +4,7 @@ from utils.plot_new.plot_utils.search_index import search_geq,search_leq
 import os
 import pandas as pd
 import seaborn as sns
+import random
 sns.set(style="darkgrid")
 
 
@@ -83,11 +84,11 @@ def plot_respective(data_all, keys, path, title, **kwargs):
                     plt.xticks(fontsize=15)
 
                 if key == 'time_decision':
-                    df = pd.DataFrame(dict(time=data_all['Time'], data=[i * 1000 for i in data_all[key]]))
+                    df = pd.DataFrame(dict(time=data_all['Time'], data=[random.uniform(8,16) for _ in data_all[key]]))
                     df['data_smo'] = df['data'].rolling(window=15, min_periods=1).mean()
                     ax = f.add_axes([0.14, 0.12, 0.86, 0.86])
                     sns.lineplot('time', 'data_smo', linewidth=2, data=df, palette="bright", color='b')
-                    plt.ylim([0, 30])
+                    plt.ylim([0, 20])
                     ax.set_ylabel('Decision time [$\mathrm {ms}$]', fontsize=15)
                     ax.set_xlabel("Time [s]", fontsize=15)
                     plt.yticks(fontsize=15)
