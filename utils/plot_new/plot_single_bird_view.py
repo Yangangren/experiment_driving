@@ -6,6 +6,8 @@ from utils.plot_new.plot_utils.search_index import search_geq, search_automode_t
 import math
 import os
 import pandas as pd
+import matplotlib.pyplot as ticker
+import seaborn as sns
 
 CROSSROAD_SIZE = 22
 EXTENSION = 25
@@ -29,6 +31,7 @@ class Single_bird_view_plot(object):
         self.x_others = data_all['x_other']
         self.y_others = data_all['y_other']
         self.phi_others = data_all['phi_other']
+        self.ego_steer = (np.array(data_all['front_wheel_deg']) * 15).tolist()
         def join_path(name):
             return proj_root_dir + name
         left_construct_traj = np.load(join_path('/map/left_construct.npy'))
@@ -61,6 +64,7 @@ class Single_bird_view_plot(object):
         self.sparse_x_others = preprocess_data(self.x_others)
         self.sparse_y_others = preprocess_data(self.y_others)
         self.sparse_phi_others = preprocess_data(self.phi_others)
+        self.sparse_ego_steer = preprocess_data(self.ego_steer)
 
 
     def _rotate_coordination(self, orig_x, orig_y, orig_d, coordi_rotate_d):
@@ -110,19 +114,39 @@ class Single_bird_view_plot(object):
         light_line_width = 1
         dotted_line_style = '--'
         solid_line_style = '-'
+        self.fig = plt.figure(figsize=(6.5, 5), dpi=200)
 
-        fig = plt.figure()
-        left, bottom, width, height = 0.12, 0.05, 0.8, 0.8
-        ax1 = fig.add_axes([left, bottom, width, height])
-        # self.ax = plt.axes(xlim=(-square_length / 2 - extension, square_length / 2 + extension),
-        #                    ylim=(-square_length / 2 - extension, square_length / 2 + extension))
+        self.ax = plt.axes(xlim=(-square_length / 2 - extension, square_length / 2 + extension),
+                           ylim=(-square_length / 2 - extension, square_length / 2 + extension))
         plt.axis("equal")
         plt.axis('off')
 
-        # ax1.add_patch(plt.Rectangle((-square_length / 2 - extension, -square_length / 2 - extension - start_offset),
+        # self.ax.add_patch(plt.Rectangle((-square_length / 2 - extension, -square_length / 2 - extension - start_offset),
         #                            square_length + 2 * extension, square_length + 2 * extension + start_offset,
         #                            edgecolor='black',
         #                            facecolor='none'))
+
+        self.ax.add_patch(plt.Rectangle((-square_length / 2 - extension - 10, -square_length / 2 - extension - start_offset),
+                                         9.8, square_length + 2 * extension + start_offset,
+                                   edgecolor='white',
+                                   facecolor='white'))
+
+        self.ax.add_patch(plt.Rectangle((-square_length / 2 - extension, -square_length / 2 - extension - start_offset - 10),
+                                         square_length + 2 * extension, 9.8,
+                                   edgecolor='white',
+                                   facecolor='white'))
+
+        self.ax.add_patch(plt.Rectangle((-square_length / 2 - extension, square_length / 2 + extension),
+                                         square_length + 2 * extension, 9.8,
+                                   edgecolor='white',
+                                   facecolor='white'))
+        self.ax.add_patch(plt.Rectangle((square_length / 2 + extension, -square_length / 2 - extension - start_offset),
+                                         5., square_length + 2 * extension + start_offset,
+                                   edgecolor='white',
+                                   facecolor='white'))
+
+
+        # self.ax.set_title('Bird View')
 
         # ----------arrow--------------
         # plt.arrow(lane_width / 2, -square_length / 2 - 10, 0, 5, color='b')
@@ -178,9 +202,6 @@ class Single_bird_view_plot(object):
         plt.plot([-LANE_NUMBER * lane_width, -square_length / 2], [square_length / 2, LANE_NUMBER * lane_width],
                  color='black')
 
-        # ----------------------ref_path--------------------
-        # self.ax.plot(self.ref_path[0], self.ref_path[1], color='g', linestyle='--')
-
         v_color, h_color = 'black', 'black'
 
         plt.plot([0, lane_width], [-square_length / 2 - start_offset, -square_length / 2 - start_offset],
@@ -195,45 +216,53 @@ class Single_bird_view_plot(object):
         plt.plot([square_length / 2, square_length / 2], [lane_width, 0],
                  color=h_color, linewidth=light_line_width)
 
-        # self.draw_ego_points()
+        self.draw_ego_points()
         if self.draw_other_veh == 'scatter':
             self.draw_other_vehicles_in_points()
         elif self.draw_other_veh == 'rectangular':
             self.draw_other_vehicles_in_rec()
 
-        x = self.sparse_ego_x[self.start_index: self.stop_index]
-        y = self.sparse_ego_y[self.start_index: self.stop_index]
+        ax1 = self.fig.add_axes([0.75, 0.23, 0.04, 0.5])
+        cmap = mpl.cm.hsv
+        norm = mpl.colors.Normalize(vmin=float(self.sparse_time[self.start_index]), vmax=float(self.sparse_time[self.stop_index]))
+        bar = mpl.colorbar.ColorbarBase(ax=ax1, cmap=cmap, norm=norm, orientation='vertical', alpha=0.8)
+        bar.set_label('Time(s)', fontsize=10)
 
-        norm = plt.Normalize(np.array(x).min(), np.array(x).max())
-        colors = norm(x)
-
-        cs = ax1.scatter(x, y, marker='4', c=colors, cmap='hsv', alpha=1)
-
-        ax2 = fig.add_axes([0.81, 0.1, 0.03, 0.7])
-        cb=fig.colorbar(cs, cax=ax2)
-        cb.set_ticks([0, 1.0])
-        ticks = ['0s', str('%.1f'%(len(x) * 0.10))+'s']
-        cb.set_ticklabels(ticks)
-        cb.set_label('Time')
-
-        ax3 = fig.add_axes([0.24, 0.62, 0.2, 0.2])
-        x = list(range(len(x)))
-        x = np.array(x)/10
-        y = x
+        ax2 = self.fig.add_axes([0.3, 0.625, 0.18, 0.18])
+        x = self.sparse_time[self.start_index: self.stop_index]
+        y = self.sparse_ego_v[self.start_index: self.stop_index]
         df = pd.DataFrame({'x': x, 'y': y})
-        css = df.plot(x='x', ax=ax3, c='saddlebrown', linewidth=2)
-        css.legend_.remove()
-        css.spines['top'].set_visible(False)
-        css.spines['right'].set_visible(False)
-        # css.spines['bottom'].set_visible(False)
-        # css.spines['left'].set_visible(False)
-        plt.xlabel('Time(s)')
-        plt.ylabel('Velocity(m/s)')
-        plt.ylim([0, 10])
-        plt.xlim([0, 6.6])
+        df['smo'] = df['y'].rolling(window=8, min_periods=1).mean()
+        speed = df.plot(x='x', y='smo', ax=ax2, c='saddlebrown', linewidth=2)
+        speed.legend_.remove()
+        speed.spines['top'].set_visible(False)
+        speed.spines['right'].set_visible(False)
+        plt.xlabel('Time(s)', fontsize=10)
+        plt.ylabel('Speed(m/s)', fontsize=10)
+        plt.yticks([0,2,4],['   0','   2','   4'])
+        plt.ylim([0, 4.5])
+
+        # add steering wheel
+        ax3 = self.fig.add_axes([0.3, 0.28, 0.18, 0.18])
+        ax3.set_facecolor('none')
+        x = self.sparse_time[self.start_index: self.stop_index]
+        y = self.sparse_ego_steer[self.start_index: self.stop_index]
+        df = pd.DataFrame({'x': x, 'y': y})
+        df['smo'] = df['y'].rolling(window=8, min_periods=1).mean()
+        df['smo'] = df['smo'] / 100
+        speed = df.plot(x='x', y='smo', ax=ax3, c='blue', linewidth=2)
+        speed.legend_.remove()
+        speed.spines['top'].set_visible(False)
+        speed.spines['right'].set_visible(False)
+        plt.xlabel('Time(s)', fontsize=10)
+        plt.ylabel(r'Steer($\times 100^{\circ}$)', fontsize=10)
+        ax3.yaxis.set_major_locator(ticker.MaxNLocator(nbins=3, integer=True))
+        plt.ylim([-3.6, 3.6])
 
         if self.path is not None:
             self.save_plot()
+            plt.show()
+        else:
             plt.show()
 
 
@@ -268,14 +297,19 @@ class Single_bird_view_plot(object):
             plt.scatter(self.sparse_x_others[self.start_index: stop_index, i], self.sparse_y_others[self.start_index: stop_index, i],
                         marker='D',
                         alpha=0.5,
-                        s = 20,
-                        c=self.sparse_time[self.start_index: stop_index], cmap='plasma_r')
+                        s=10,
+                        c=self.sparse_time[self.start_index: stop_index], cmap='hsv')
 
     def draw_ego_points(self):
-        plt.scatter(self.sparse_ego_x[self.start_index: self.stop_index], self.sparse_ego_y[self.start_index: self.stop_index],
-                    marker='o',
-                    s = 20,
-                    c=self.sparse_time[self.start_index: self.stop_index], cmap='plasma_r')
+        x = self.sparse_ego_x[self.start_index: self.stop_index]
+        y = self.sparse_ego_y[self.start_index: self.stop_index]
+        c = self.sparse_time[self.start_index: self.stop_index]
+
+        reduce_x = [x[i] for i in range(0, len(x), 1)]
+        reduce_y = [y[i] for i in range(0, len(y), 1)]
+        reduce_c = [c[i] for i in range(0, len(c), 1)]
+
+        plt.scatter(reduce_x, reduce_y, marker='4', s=20, c=reduce_c, alpha=0.5, cmap='hsv')
 
 
     def draw_others_points(self):
@@ -296,8 +330,8 @@ class Single_bird_view_plot(object):
 
 
 if __name__ == '__main__':
-    exp_index = 'case0/noise0/10_144620_real'
-    model_index = 'left/experiment-2021-01-07-01-22-30'
+    exp_index = 'case2/noise0/10_161557_real'
+    model_index = 'straight/experiment-2021-01-07-01-22-31'
     path = (exp_index, model_index)
     data_all, keys_for_data = load_data(model_index, exp_index)
     bird_view_plot = Single_bird_view_plot(data_all, draw_other_veh='scatter', # rectangular, scatter
