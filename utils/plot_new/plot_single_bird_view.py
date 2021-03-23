@@ -239,7 +239,7 @@ class Single_bird_view_plot(object):
         speed.spines['right'].set_visible(False)
         plt.xlabel('Time(s)', fontsize=10)
         plt.ylabel('Speed(m/s)', fontsize=10)
-        plt.yticks([0,2,4],['   0','   2','   4'])
+        plt.yticks([0, 2, 4], ['   0','   2','   4'])
         plt.ylim([0, 4.5])
 
         # add steering wheel
@@ -294,11 +294,15 @@ class Single_bird_view_plot(object):
                     break
                 else:
                     stop_index = self.stop_index
-            plt.scatter(self.sparse_x_others[self.start_index: stop_index, i], self.sparse_y_others[self.start_index: stop_index, i],
+            self.p2 = plt.scatter(self.sparse_x_others[self.start_index: stop_index, i], self.sparse_y_others[self.start_index: stop_index, i],
                         marker='D',
                         alpha=0.5,
                         s=10,
                         c=self.sparse_time[self.start_index: stop_index], cmap='hsv')
+        if (self.path[0].split('/')[0] == 'case0') and (self.path[1].split('/')[0] == 'left'):
+            plt.legend([self.p1, self.p2], ['ego vehicle','surrounding vehicle'], fontsize=8,
+                       loc='upper right', bbox_to_anchor=(0.47, 0.42, 0.34, 0.5))
+
 
     def draw_ego_points(self):
         x = self.sparse_ego_x[self.start_index: self.stop_index]
@@ -309,8 +313,7 @@ class Single_bird_view_plot(object):
         reduce_y = [y[i] for i in range(0, len(y), 1)]
         reduce_c = [c[i] for i in range(0, len(c), 1)]
 
-        plt.scatter(reduce_x, reduce_y, marker='4', s=20, c=reduce_c, alpha=0.5, cmap='hsv')
-
+        self.p1 = plt.scatter(reduce_x, reduce_y, marker='2', s=20, c=reduce_c, alpha=0.5, cmap='hsv')
 
     def draw_others_points(self):
         return None
@@ -325,7 +328,8 @@ class Single_bird_view_plot(object):
             os.mkdir(fig_path)
         if not os.path.exists(class_fig_path):
             os.mkdir(class_fig_path)
-        name = class_fig_path + 'bird_view.jpg'
+        fig_name = fig_path.split('/')[4] + "_" + fig_path.split('/')[7] + '.jpg'
+        name = class_fig_path + fig_name
         plt.savefig(name)
 
 
